@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 const commitments = [
@@ -69,22 +70,32 @@ export default function DashboardPage() {
           </div>
 
           <nav className="mt-16 space-y-3">
-            <button className="flex w-full items-center gap-4 rounded-2xl bg-[#EAD8D3] px-4 py-4 text-left">
+
+            {/* TODAY */}
+            <Link
+              href="/dashboard"
+              className="flex w-full items-center gap-4 rounded-2xl bg-[#EAD8D3] px-4 py-4 text-left"
+            >
               <span className="font-serif text-lg">♡</span>
 
               <span className="text-[9px] tracking-[0.25em]">
                 TODAY
               </span>
-            </button>
+            </Link>
 
-            <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
+            {/* JOURNEY */}
+            <Link
+              href="/dashboard/journey"
+              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
+            >
               <span className="font-serif text-lg">○</span>
 
               <span className="text-[9px] tracking-[0.25em]">
                 JOURNEY
               </span>
-            </button>
+            </Link>
 
+            {/* GUIDE */}
             <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
               <span className="font-serif text-lg">□</span>
 
@@ -93,6 +104,7 @@ export default function DashboardPage() {
               </span>
             </button>
 
+            {/* RESOURCES */}
             <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
               <span className="font-serif text-lg">⌁</span>
 
@@ -101,6 +113,7 @@ export default function DashboardPage() {
               </span>
             </button>
 
+            {/* PROGRESS */}
             <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
               <span className="font-serif text-lg">◇</span>
 
@@ -110,6 +123,7 @@ export default function DashboardPage() {
             </button>
           </nav>
 
+          {/* ACCOUNT */}
           <div className="mt-auto border-t border-[#E1D3CE] pt-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DDB5AE] font-serif">
@@ -152,6 +166,7 @@ export default function DashboardPage() {
           {/* DAY HERO */}
           <div className="mt-12 grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
 
+            {/* CHALLENGE CARD */}
             <div className="rounded-[2rem] bg-[#211C19] p-8 text-[#F7F1ED] md:p-10">
               <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
                 YOUR CHALLENGE
@@ -213,7 +228,9 @@ export default function DashboardPage() {
 
               <div className="mt-9 grid grid-cols-3 text-center">
                 <div>
-                  <p className="font-serif text-3xl">01</p>
+                  <p className="font-serif text-3xl">
+                    01
+                  </p>
 
                   <p className="mt-2 text-[6px] tracking-[0.2em] text-[#8C7770]">
                     CURRENT
@@ -241,9 +258,13 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <button className="mt-9 w-full rounded-full border border-[#CBA9A2] py-3 text-[7px] tracking-[0.3em] transition hover:bg-[#EAD8D3]">
+              {/* WORKING JOURNEY LINK */}
+              <Link
+                href="/dashboard/journey"
+                className="mt-9 block w-full rounded-full border border-[#CBA9A2] py-3 text-center text-[7px] tracking-[0.3em] transition hover:bg-[#EAD8D3]"
+              >
                 VIEW JOURNEY
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -305,7 +326,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
 
-                    {/* CHECK BUTTON */}
+                    {/* CHECK */}
                     <button
                       type="button"
                       aria-label={`Mark ${item.title} ${
