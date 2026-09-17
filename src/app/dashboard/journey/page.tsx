@@ -1,8 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import DashboardSidebar from "@/components/DashboardSidebar";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import {
+  type DailyProgressRow,
+  calculateStreak,
+  getChallengePercentage,
+  getCompletedDayNumbers,
+  getCurrentChallengeDay,
+  parseChallengeDate,
+} from "@/lib/challenge";
 
 type ChallengeMonth = {
   key: string;
@@ -12,16 +21,6 @@ type ChallengeMonth = {
     challengeDay: number;
     date: Date;
   }[];
-};
-
-type DailyProgressRow = {
-  challenge_day: number;
-  move: boolean;
-  get_outside: boolean;
-  hydrate: boolean;
-  read: boolean;
-  nourish: boolean;
-  document: boolean;
 };
 
 function formatCalendarDate(date: Date) {
@@ -82,40 +81,6 @@ function buildChallengeMonths(startDate: Date): ChallengeMonth[] {
       days: month.days,
     };
   });
-}
-
-function isDayComplete(row: DailyProgressRow) {
-  return (
-    row.move &&
-    row.get_outside &&
-    row.hydrate &&
-    row.read &&
-    row.nourish &&
-    row.document
-  );
-}
-
-function calculateStreak(
-  completedDayNumbers: number[],
-  currentDay: number
-) {
-  const completedSet = new Set(completedDayNumbers);
-
-  let dayToCheck = currentDay;
-
-  // If today isn't complete yet, calculate the streak ending yesterday.
-  if (!completedSet.has(dayToCheck)) {
-    dayToCheck -= 1;
-  }
-
-  let streak = 0;
-
-  while (dayToCheck >= 1 && completedSet.has(dayToCheck)) {
-    streak += 1;
-    dayToCheck -= 1;
-  }
-
-  return streak;
 }
 
 export default function JourneyPage() {
@@ -196,41 +161,18 @@ export default function JourneyPage() {
     loadJourney();
   }, []);
 
-  const today = new Date();
-
   let currentDay = 1;
   let startDate: Date | null = null;
 
   if (challengeStartDate) {
-    const [year, month, day] = challengeStartDate
-      .split("-")
-      .map(Number);
-
-    startDate = new Date(year, month - 1, day);
-
-    const startUtc = Date.UTC(year, month - 1, day);
-
-    const todayUtc = Date.UTC(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    );
-
-    const differenceInDays = Math.floor(
-      (todayUtc - startUtc) / (1000 * 60 * 60 * 24)
-    );
-
-    currentDay = Math.min(
-      Math.max(differenceInDays + 1, 1),
-      75
-    );
+    startDate = parseChallengeDate(challengeStartDate);
+    currentDay = getCurrentChallengeDay(challengeStartDate);
   }
 
   const dayNumber = String(currentDay).padStart(2, "0");
 
-  const completedDayNumbers = dailyProgress
-    .filter(isDayComplete)
-    .map((row) => row.challenge_day);
+  const completedDayNumbers =
+    getCompletedDayNumbers(dailyProgress);
 
   const completedDays = completedDayNumbers.length;
 
@@ -239,9 +181,8 @@ export default function JourneyPage() {
     currentDay
   );
 
-  const challengeProgress = Math.round(
-    (completedDays / 75) * 100
-  );
+  const challengeProgress =
+    getChallengePercentage(completedDays);
 
   const months = startDate
     ? buildChallengeMonths(startDate)
@@ -256,93 +197,11 @@ export default function JourneyPage() {
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
         {/* SIDEBAR */}
-        <aside className="hidden w-[250px] flex-col border-r border-[#E1D3CE] bg-[#FBF8F6] px-7 py-8 md:flex">
-          <div>
-            <p className="font-serif text-2xl tracking-[0.08em]">
-              LOCK IN
-            </p>
-
-            <p className="mt-1 text-[8px] tracking-[0.5em]">
-              WITH LAV
-            </p>
-          </div>
-
-          <nav className="mt-16 space-y-3">
-            <Link
-              href="/dashboard"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">♡</span>
-
-              <span className="text-[9px] tracking-[0.25em]">
-                TODAY
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/journey"
-              className="flex w-full items-center gap-4 rounded-2xl bg-[#EAD8D3] px-4 py-4 text-left"
-            >
-              <span className="font-serif text-lg">○</span>
-
-              <span className="text-[9px] tracking-[0.25em]">
-                JOURNEY
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/guide"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">□</span>
-
-              <span className="text-[9px] tracking-[0.25em]">
-                THE GUIDE
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/resources"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">⌁</span>
-
-              <span className="text-[9px] tracking-[0.25em]">
-                RESOURCES
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/progress"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">◇</span>
-
-              <span className="text-[9px] tracking-[0.25em]">
-                PROGRESS
-              </span>
-            </Link>
-          </nav>
-
-          {/* ACCOUNT */}
-          <div className="mt-auto border-t border-[#E1D3CE] pt-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DDB5AE] font-serif">
-                {initial}
-              </div>
-
-              <div>
-                <p className="text-[9px] tracking-[0.18em] uppercase">
-                  {isLoadingUser ? "..." : firstName}
-                </p>
-
-                <p className="mt-1 text-[8px] text-[#9A8780]">
-                  MY ACCOUNT
-                </p>
-              </div>
-            </div>
-          </div>
-        </aside>
+        <DashboardSidebar
+          firstName={firstName}
+          initial={initial}
+          isLoadingUser={isLoadingUser}
+        />
 
         {/* MAIN CONTENT */}
         <section className="flex-1 px-6 py-8 md:px-10 lg:px-14">

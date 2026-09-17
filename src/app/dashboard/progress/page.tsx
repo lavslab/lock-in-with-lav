@@ -3,6 +3,16 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import DashboardSidebar from "@/components/DashboardSidebar";
+import {
+  type DailyProgressRow,
+  calculateStreak,
+  getChallengeEndDate,
+  getChallengePercentage,
+  getCompletedDayNumbers,
+  getCurrentChallengeDay,
+  parseChallengeDate,
+} from "@/lib/challenge";
 
 const measurements = [
   ["WEIGHT", "—"],
@@ -18,16 +28,6 @@ const wins = [
   "My clothes fit differently",
 ];
 
-type DailyProgressRow = {
-  challenge_day: number;
-  move: boolean;
-  get_outside: boolean;
-  hydrate: boolean;
-  read: boolean;
-  nourish: boolean;
-  document: boolean;
-};
-
 function formatShortDate(date: Date) {
   return date
     .toLocaleDateString("en-US", {
@@ -37,69 +37,22 @@ function formatShortDate(date: Date) {
     .toUpperCase();
 }
 
-function isDayComplete(row: DailyProgressRow) {
-  return (
-    row.move &&
-    row.get_outside &&
-    row.hydrate &&
-    row.read &&
-    row.nourish &&
-    row.document
-  );
-}
-
-function calculateStreak(
-  completedDayNumbers: number[],
-  currentDay: number
-) {
-  const completedSet = new Set(completedDayNumbers);
-
-  let dayToCheck = currentDay;
-
-  if (!completedSet.has(dayToCheck)) {
-    dayToCheck -= 1;
-  }
-
-  let streak = 0;
-
-  while (dayToCheck >= 1 && completedSet.has(dayToCheck)) {
-    streak += 1;
-    dayToCheck -= 1;
-  }
-
-  return streak;
-}
-
 export default function ProgressPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
-
-  const [challengeStartDate, setChallengeStartDate] = useState<
-    string | null
-  >(null);
-
-  const [dailyProgress, setDailyProgress] = useState<
-    DailyProgressRow[]
-  >([]);
+  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
+    null
+  );
+  const [dailyProgress, setDailyProgress] = useState<DailyProgressRow[]>([]);
 
   useEffect(() => {
-    const loadProgress = async () => {
-      setIsLoadingUser(true);
-      setIsLoadingProgress(true);
-
+    const getUserAndProfile = async () => {
       const {
         data: { user },
-        error: userError,
       } = await supabase.auth.getUser();
-
-      if (userError) {
-        console.error("Could not load user:", userError);
-      }
 
       if (!user) {
         setIsLoadingUser(false);
-        setIsLoadingProgress(false);
         return;
       }
 
@@ -111,41 +64,36 @@ export default function ProgressPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
         .select("challenge_start_date")
         .eq("id", user.id)
         .single();
 
-      if (profileError) {
-        console.error("Could not load profile:", profileError);
+      if (error) {
+        console.error("Could not load profile:", error);
       } else if (profile) {
         setChallengeStartDate(profile.challenge_start_date);
       }
 
-      const { data: progressRows, error: progressError } =
-        await supabase
-          .from("daily_progress")
-          .select(
-            "challenge_day, move, get_outside, hydrate, read, nourish, document"
-          )
-          .eq("user_id", user.id)
-          .order("challenge_day", { ascending: true });
+      const { data: progressRows, error: progressError } = await supabase
+        .from("daily_progress")
+        .select(
+          "challenge_day, move, get_outside, hydrate, read, nourish, document"
+        )
+        .eq("user_id", user.id)
+        .order("challenge_day", { ascending: true });
 
       if (progressError) {
-        console.error(
-          "Could not load daily progress:",
-          progressError
-        );
+        console.error("Could not load daily progress:", progressError);
       } else {
-        setDailyProgress(progressRows ?? []);
+        setDailyProgress((progressRows ?? []) as DailyProgressRow[]);
       }
 
       setIsLoadingUser(false);
-      setIsLoadingProgress(false);
     };
 
-    loadProgress();
+    getUserAndProfile();
   }, []);
 
   const today = new Date();
@@ -155,57 +103,19 @@ export default function ProgressPage() {
   let endDate: Date | null = null;
 
   if (challengeStartDate) {
-    const [year, month, day] = challengeStartDate
-      .split("-")
-      .map(Number);
-
-    startDate = new Date(year, month - 1, day);
-
-    const startUtc = Date.UTC(year, month - 1, day);
-
-    const todayUtc = Date.UTC(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    );
-
-    const differenceInDays = Math.floor(
-      (todayUtc - startUtc) / (1000 * 60 * 60 * 24)
-    );
-
-    currentDay = Math.min(
-      Math.max(differenceInDays + 1, 1),
-      75
-    );
-
-    endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + 74);
+    startDate = parseChallengeDate(challengeStartDate);
+    endDate = getChallengeEndDate(challengeStartDate);
+    currentDay = getCurrentChallengeDay(challengeStartDate, today);
   }
 
   const dayNumber = String(currentDay).padStart(2, "0");
-
-  const completedDayNumbers = dailyProgress
-    .filter(isDayComplete)
-    .map((row) => row.challenge_day);
-
+  const completedDayNumbers = getCompletedDayNumbers(dailyProgress);
   const completedDays = completedDayNumbers.length;
+  const currentStreak = calculateStreak(completedDayNumbers, currentDay);
+  const challengePercentage = getChallengePercentage(completedDays);
 
-  const currentStreak = calculateStreak(
-    completedDayNumbers,
-    currentDay
-  );
-
-  const challengePercentage = Math.round(
-    (completedDays / 75) * 100
-  );
-
-  const startLabel = startDate
-    ? formatShortDate(startDate)
-    : "—";
-
-  const endLabel = endDate
-    ? formatShortDate(endDate)
-    : "—";
+  const startLabel = startDate ? formatShortDate(startDate) : "—";
+  const endLabel = endDate ? formatShortDate(endDate) : "—";
 
   const initial =
     !isLoadingUser && firstName !== "there"
@@ -213,13 +123,13 @@ export default function ProgressPage() {
       : "♡";
 
   const progressMessage =
-    completedDays === 0
+    currentDay === 1
       ? "we're just getting started. ♡"
-      : completedDays < 26
+      : currentDay < 26
         ? "keep showing up. ♡"
-        : completedDays < 51
+        : currentDay < 51
           ? "look how far you've come. ♡"
-          : completedDays < 75
+          : currentDay < 75
             ? "you're in it now. keep going. ♡"
             : "75 days. you did that. ♡";
 
@@ -229,15 +139,11 @@ export default function ProgressPage() {
       label: "CURRENT DAY",
     },
     {
-      value: isLoadingProgress
-        ? "—"
-        : String(completedDays),
+      value: String(completedDays),
       label: "DAYS COMPLETE",
     },
     {
-      value: isLoadingProgress
-        ? "—"
-        : String(currentStreak),
+      value: String(currentStreak),
       label: "CURRENT STREAK",
     },
     {
@@ -250,88 +156,11 @@ export default function ProgressPage() {
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
         {/* SIDEBAR */}
-        <aside className="hidden w-[250px] flex-col border-r border-[#E1D3CE] bg-[#FBF8F6] px-7 py-8 md:flex">
-          <div>
-            <p className="font-serif text-2xl tracking-[0.08em]">
-              LOCK IN
-            </p>
-
-            <p className="mt-1 text-[8px] tracking-[0.5em]">
-              WITH LAV
-            </p>
-          </div>
-
-          <nav className="mt-16 space-y-3">
-            <Link
-              href="/dashboard"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">♡</span>
-              <span className="text-[9px] tracking-[0.25em]">
-                TODAY
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/journey"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">○</span>
-              <span className="text-[9px] tracking-[0.25em]">
-                JOURNEY
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/guide"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">□</span>
-              <span className="text-[9px] tracking-[0.25em]">
-                THE GUIDE
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/resources"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">⌁</span>
-              <span className="text-[9px] tracking-[0.25em]">
-                RESOURCES
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/progress"
-              className="flex w-full items-center gap-4 rounded-2xl bg-[#EAD8D3] px-4 py-4 text-left"
-            >
-              <span className="font-serif text-lg">◇</span>
-              <span className="text-[9px] tracking-[0.25em]">
-                PROGRESS
-              </span>
-            </Link>
-          </nav>
-
-          {/* ACCOUNT */}
-          <div className="mt-auto border-t border-[#E1D3CE] pt-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DDB5AE] font-serif">
-                {initial}
-              </div>
-
-              <div>
-                <p className="text-[9px] tracking-[0.18em] uppercase">
-                  {isLoadingUser ? "..." : firstName}
-                </p>
-
-                <p className="mt-1 text-[8px] text-[#9A8780]">
-                  MY ACCOUNT
-                </p>
-              </div>
-            </div>
-          </div>
-        </aside>
+        <DashboardSidebar
+          firstName={firstName}
+          initial={initial}
+          isLoadingUser={isLoadingUser}
+        />
 
         {/* MAIN */}
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
@@ -382,9 +211,7 @@ export default function ProgressPage() {
                   </span>
 
                   <span className="font-serif text-lg text-[#DDB5AE]">
-                    {isLoadingProgress
-                      ? "—"
-                      : `${challengePercentage}%`}
+                    {challengePercentage}%
                   </span>
                 </div>
 
@@ -530,16 +357,12 @@ export default function ProgressPage() {
                     </p>
 
                     <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                      {currentDay === 1
-                        ? "keep going."
-                        : "right now."}
+                      {currentDay === 1 ? "keep going." : "right now."}
                     </p>
                   </div>
 
                   <span className="text-[7px] text-[#927D76]">
-                    {currentDay === 1
-                      ? "LOCKED"
-                      : "TODAY"}
+                    {currentDay === 1 ? "LOCKED" : "TODAY"}
                   </span>
                 </div>
               </div>
@@ -682,9 +505,7 @@ export default function ProgressPage() {
                   </span>
 
                   <span className="rounded-full bg-[#EAD8D3] px-3 py-1.5 text-[6px] tracking-[0.18em] text-[#8F655E]">
-                    {currentDay >= 7
-                      ? "READY"
-                      : "UPCOMING"}
+                    {currentDay >= 7 ? "READY" : "UPCOMING"}
                   </span>
                 </div>
 
@@ -704,33 +525,32 @@ export default function ProgressPage() {
               </button>
 
               {/* LOCKED FUTURE CHECK-INS */}
-              {Array.from(
-                { length: 10 },
-                (_, index) => index + 2
-              ).map((week) => (
-                <div
-                  key={week}
-                  className="rounded-[1.5rem] border border-[#DED0CB] bg-[#F5EFEC] p-5 opacity-60"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-serif text-2xl text-[#BDA6A0]">
-                      {String(week).padStart(2, "0")}
-                    </span>
+              {Array.from({ length: 10 }, (_, index) => index + 2).map(
+                (week) => (
+                  <div
+                    key={week}
+                    className="rounded-[1.5rem] border border-[#DED0CB] bg-[#F5EFEC] p-5 opacity-60"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-serif text-2xl text-[#BDA6A0]">
+                        {String(week).padStart(2, "0")}
+                      </span>
 
-                    <span className="text-[10px] text-[#AA9690]">
-                      ♡
-                    </span>
+                      <span className="text-[10px] text-[#AA9690]">
+                        ♡
+                      </span>
+                    </div>
+
+                    <p className="mt-5 text-[7px] tracking-[0.22em] text-[#806E68]">
+                      WEEK {String(week).padStart(2, "0")}
+                    </p>
+
+                    <p className="mt-1 font-serif text-lg italic text-[#A7938D]">
+                      keep going.
+                    </p>
                   </div>
-
-                  <p className="mt-5 text-[7px] tracking-[0.22em] text-[#806E68]">
-                    WEEK {String(week).padStart(2, "0")}
-                  </p>
-
-                  <p className="mt-1 font-serif text-lg italic text-[#A7938D]">
-                    keep going.
-                  </p>
-                </div>
-              ))}
+                )
+              )}
             </div>
           </section>
 

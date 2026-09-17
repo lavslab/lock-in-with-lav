@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import DashboardSidebar from "@/components/DashboardSidebar";
 
 const resources = [
   {
@@ -108,93 +109,11 @@ export default function ResourcesPage() {
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
         {/* SIDEBAR */}
-        <aside className="hidden w-[250px] flex-col border-r border-[#E1D3CE] bg-[#FBF8F6] px-7 py-8 md:flex">
-          <div>
-            <p className="font-serif text-2xl tracking-[0.08em]">
-              LOCK IN
-            </p>
-
-            <p className="mt-1 text-[8px] tracking-[0.5em]">
-              WITH LAV
-            </p>
-          </div>
-
-          <nav className="mt-16 space-y-3">
-            <Link
-              href="/dashboard"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">♡</span>
-
-              <span className="text-[9px] tracking-[0.25em]">
-                TODAY
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/journey"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">○</span>
-
-              <span className="text-[9px] tracking-[0.25em]">
-                JOURNEY
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/guide"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">□</span>
-
-              <span className="text-[9px] tracking-[0.25em]">
-                THE GUIDE
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/resources"
-              className="flex w-full items-center gap-4 rounded-2xl bg-[#EAD8D3] px-4 py-4 text-left"
-            >
-              <span className="font-serif text-lg">⌁</span>
-
-              <span className="text-[9px] tracking-[0.25em]">
-                RESOURCES
-              </span>
-            </Link>
-
-            <Link
-              href="/dashboard/progress"
-              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
-            >
-              <span className="font-serif text-lg">◇</span>
-
-              <span className="text-[9px] tracking-[0.25em]">
-                PROGRESS
-              </span>
-            </Link>
-          </nav>
-
-          {/* ACCOUNT */}
-          <div className="mt-auto border-t border-[#E1D3CE] pt-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DDB5AE] font-serif">
-                {initial}
-              </div>
-
-              <div>
-                <p className="text-[9px] tracking-[0.18em] uppercase">
-                  {isLoadingUser ? "..." : firstName}
-                </p>
-
-                <p className="mt-1 text-[8px] text-[#9A8780]">
-                  MY ACCOUNT
-                </p>
-              </div>
-            </div>
-          </div>
-        </aside>
+        <DashboardSidebar
+          firstName={firstName}
+          initial={initial}
+          isLoadingUser={isLoadingUser}
+        />
 
         {/* MAIN */}
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">

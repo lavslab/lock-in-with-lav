@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { getCurrentChallengeDay } from "@/lib/challenge";
 
 const commitments = [
   {
@@ -92,25 +93,9 @@ export default function DashboardPage() {
     })
     .toUpperCase();
 
-  let currentDay = 1;
-
-  if (challengeStartDate) {
-    const [year, month, day] = challengeStartDate.split("-").map(Number);
-
-    const startUtc = Date.UTC(year, month - 1, day);
-
-    const todayUtc = Date.UTC(
-      today.getFullYear(),
-      today.getMonth(),
-      today.getDate()
-    );
-
-    const differenceInDays = Math.floor(
-      (todayUtc - startUtc) / (1000 * 60 * 60 * 24)
-    );
-
-    currentDay = Math.min(Math.max(differenceInDays + 1, 1), 75);
-  }
+  const currentDay = challengeStartDate
+    ? getCurrentChallengeDay(challengeStartDate, today)
+    : 1;
 
   const dayNumber = String(currentDay).padStart(2, "0");
 
@@ -180,27 +165,8 @@ export default function DashboardPage() {
 
       setChallengeStartDate(profile.challenge_start_date);
 
-      const [year, month, day] = profile.challenge_start_date
-        .split("-")
-        .map(Number);
-
-      const startUtc = Date.UTC(year, month - 1, day);
-
-      const now = new Date();
-
-      const todayUtc = Date.UTC(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate()
-      );
-
-      const differenceInDays = Math.floor(
-        (todayUtc - startUtc) / (1000 * 60 * 60 * 24)
-      );
-
-      const calculatedDay = Math.min(
-        Math.max(differenceInDays + 1, 1),
-        75
+      const calculatedDay = getCurrentChallengeDay(
+        profile.challenge_start_date
       );
 
       const { data: savedProgress, error: progressError } = await supabase
