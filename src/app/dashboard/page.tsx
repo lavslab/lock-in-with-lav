@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const commitments = [
   {
@@ -38,6 +39,104 @@ const commitments = [
 
 export default function DashboardPage() {
   const [completed, setCompleted] = useState<number[]>([]);
+  const [firstName, setFirstName] = useState("there");
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
+    null
+  );
+
+  // Get logged-in user + their personal challenge start date
+  useEffect(() => {
+    const getUserAndProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setIsLoadingUser(false);
+        return;
+      }
+
+      const savedName = user.user_metadata?.name;
+
+      if (savedName) {
+        setFirstName(savedName);
+      } else if (user.email) {
+        setFirstName(user.email.split("@")[0]);
+      }
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("challenge_start_date")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Could not load profile:", error);
+      } else if (profile) {
+        setChallengeStartDate(profile.challenge_start_date);
+      }
+
+      setIsLoadingUser(false);
+    };
+
+    getUserAndProfile();
+  }, []);
+
+  // Today's real date
+  const today = new Date();
+
+  const formattedDate = today
+    .toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "2-digit",
+      year: "numeric",
+    })
+    .toUpperCase();
+
+  // Calculate this user's personal challenge day
+  let currentDay = 1;
+
+  if (challengeStartDate) {
+    const [year, month, day] = challengeStartDate.split("-").map(Number);
+
+    const startDate = new Date(year, month - 1, day);
+
+    const todayOnly = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    const differenceInMilliseconds =
+      todayOnly.getTime() - startDate.getTime();
+
+    const differenceInDays = Math.floor(
+      differenceInMilliseconds / (1000 * 60 * 60 * 24)
+    );
+
+    currentDay = Math.min(Math.max(differenceInDays + 1, 1), 75);
+  }
+
+  const dayNumber = String(currentDay).padStart(2, "0");
+
+  // Dynamic greeting
+  const currentHour = today.getHours();
+
+  let greeting = "good morning";
+
+  if (currentHour >= 12 && currentHour < 17) {
+    greeting = "good afternoon";
+  } else if (currentHour >= 17) {
+    greeting = "good evening";
+  }
+
+  // First initial for avatar
+  const initial =
+    !isLoadingUser && firstName !== "there"
+      ? firstName.charAt(0).toUpperCase()
+      : "♡";
 
   const toggleCommitment = (index: number) => {
     setCompleted((current) =>
@@ -56,7 +155,6 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
-
         {/* SIDEBAR */}
         <aside className="hidden w-[250px] flex-col border-r border-[#E1D3CE] bg-[#FBF8F6] px-7 py-8 md:flex">
           <div>
@@ -70,69 +168,67 @@ export default function DashboardPage() {
           </div>
 
           <nav className="mt-16 space-y-3">
-
-            {/* TODAY */}
             <Link
               href="/dashboard"
               className="flex w-full items-center gap-4 rounded-2xl bg-[#EAD8D3] px-4 py-4 text-left"
             >
               <span className="font-serif text-lg">♡</span>
-
               <span className="text-[9px] tracking-[0.25em]">
                 TODAY
               </span>
             </Link>
 
-            {/* JOURNEY */}
             <Link
               href="/dashboard/journey"
               className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
             >
               <span className="font-serif text-lg">○</span>
-
               <span className="text-[9px] tracking-[0.25em]">
                 JOURNEY
               </span>
             </Link>
 
-            {/* GUIDE */}
-            <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
+            <Link
+              href="/dashboard/guide"
+              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
+            >
               <span className="font-serif text-lg">□</span>
-
               <span className="text-[9px] tracking-[0.25em]">
                 THE GUIDE
               </span>
-            </button>
+            </Link>
 
-            {/* RESOURCES */}
-            <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
+            <Link
+              href="/dashboard/resources"
+              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
+            >
               <span className="font-serif text-lg">⌁</span>
-
               <span className="text-[9px] tracking-[0.25em]">
                 RESOURCES
               </span>
-            </button>
+            </Link>
 
-            {/* PROGRESS */}
-            <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
+            <Link
+              href="/dashboard/progress"
+              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
+            >
               <span className="font-serif text-lg">◇</span>
-
               <span className="text-[9px] tracking-[0.25em]">
                 PROGRESS
               </span>
-            </button>
+            </Link>
           </nav>
 
           {/* ACCOUNT */}
           <div className="mt-auto border-t border-[#E1D3CE] pt-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DDB5AE] font-serif">
-                L
+                {initial}
               </div>
 
               <div>
-                <p className="text-[9px] tracking-[0.18em]">
-                  LAV
+                <p className="text-[9px] tracking-[0.18em] uppercase">
+                  {isLoadingUser ? "..." : firstName}
                 </p>
 
                 <p className="mt-1 text-[8px] text-[#9A8780]">
@@ -145,27 +241,27 @@ export default function DashboardPage() {
 
         {/* DASHBOARD */}
         <section className="flex-1 px-6 py-8 md:px-10 lg:px-14">
-
           {/* TOP BAR */}
           <header className="flex items-center justify-between">
             <div>
               <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                THURSDAY • JANUARY 01, 2027
+                {formattedDate}
               </p>
 
               <p className="mt-2 font-serif text-2xl italic text-[#A77B73]">
-                good morning, Lav. ♡
+                {isLoadingUser
+                  ? `${greeting}. ♡`
+                  : `${greeting}, ${firstName}. ♡`}
               </p>
             </div>
 
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EAD8D3] font-serif md:hidden">
-              L
+              {initial}
             </div>
           </header>
 
           {/* DAY HERO */}
           <div className="mt-12 grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
-
             {/* CHALLENGE CARD */}
             <div className="rounded-[2rem] bg-[#211C19] p-8 text-[#F7F1ED] md:p-10">
               <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
@@ -175,7 +271,7 @@ export default function DashboardPage() {
               <div className="mt-7 flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
                 <div>
                   <h1 className="font-serif text-6xl leading-none md:text-8xl">
-                    Day 01
+                    Day {dayNumber}
                   </h1>
 
                   <p className="mt-4 text-[9px] tracking-[0.35em] text-[#BFAEAA]">
@@ -183,7 +279,6 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
-                {/* PERCENTAGE */}
                 <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-full border-[7px] border-[#DDB5AE]">
                   <div className="text-center">
                     <p className="font-serif text-3xl">
@@ -207,8 +302,10 @@ export default function DashboardPage() {
 
               <p className="mt-5 font-serif text-xl italic text-[#DDB5AE]">
                 {dayComplete
-                  ? "Day 01 complete. You showed up. ♡"
-                  : "day one. show up for yourself. ♡"}
+                  ? `Day ${dayNumber} complete. You showed up. ♡`
+                  : currentDay === 1
+                    ? "day one. show up for yourself. ♡"
+                    : `day ${currentDay}. keep showing up. ♡`}
               </p>
             </div>
 
@@ -220,7 +317,6 @@ export default function DashboardPage() {
 
               <h2 className="mt-5 font-serif text-4xl leading-none">
                 75 days of
-
                 <span className="block italic text-[#A77B73]">
                   choosing you.
                 </span>
@@ -229,7 +325,7 @@ export default function DashboardPage() {
               <div className="mt-9 grid grid-cols-3 text-center">
                 <div>
                   <p className="font-serif text-3xl">
-                    01
+                    {dayNumber}
                   </p>
 
                   <p className="mt-2 text-[6px] tracking-[0.2em] text-[#8C7770]">
@@ -258,7 +354,6 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* WORKING JOURNEY LINK */}
               <Link
                 href="/dashboard/journey"
                 className="mt-9 block w-full rounded-full border border-[#CBA9A2] py-3 text-center text-[7px] tracking-[0.3em] transition hover:bg-[#EAD8D3]"
@@ -273,7 +368,7 @@ export default function DashboardPage() {
             <div className="flex items-end justify-between">
               <div>
                 <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                  DAY 01
+                  DAY {dayNumber}
                 </p>
 
                 <h2 className="mt-3 font-serif text-4xl md:text-5xl">
@@ -326,7 +421,6 @@ export default function DashboardPage() {
                       </p>
                     </div>
 
-                    {/* CHECK */}
                     <button
                       type="button"
                       aria-label={`Mark ${item.title} ${
@@ -350,7 +444,7 @@ export default function DashboardPage() {
           {dayComplete && (
             <section className="mt-8 rounded-[2rem] border border-[#D4B0A8] bg-[#FBF8F6] px-8 py-10 text-center">
               <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
-                DAY 01 COMPLETE
+                DAY {dayNumber} COMPLETE
               </p>
 
               <p className="mt-5 font-serif text-4xl italic text-[#A77B73] md:text-5xl">
@@ -378,7 +472,6 @@ export default function DashboardPage() {
               ONE DAY AT A TIME ♡
             </p>
           </section>
-
         </section>
       </div>
     </main>

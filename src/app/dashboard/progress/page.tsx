@@ -1,23 +1,8 @@
-import Link from "next/link";
+"use client";
 
-const stats = [
-  {
-    value: "01",
-    label: "CURRENT DAY",
-  },
-  {
-    value: "0",
-    label: "DAYS COMPLETE",
-  },
-  {
-    value: "0",
-    label: "CURRENT STREAK",
-  },
-  {
-    value: "0",
-    label: "CHECK-INS",
-  },
-];
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const measurements = [
   ["WEIGHT", "—"],
@@ -33,11 +18,130 @@ const wins = [
   "My clothes fit differently",
 ];
 
+function formatShortDate(date: Date) {
+  return date
+    .toLocaleDateString("en-US", {
+      month: "short",
+      day: "2-digit",
+    })
+    .toUpperCase();
+}
+
 export default function ProgressPage() {
+  const [firstName, setFirstName] = useState("there");
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    const getUserAndProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setIsLoadingUser(false);
+        return;
+      }
+
+      const savedName = user.user_metadata?.name;
+
+      if (savedName) {
+        setFirstName(savedName);
+      } else if (user.email) {
+        setFirstName(user.email.split("@")[0]);
+      }
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("challenge_start_date")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Could not load profile:", error);
+      } else if (profile) {
+        setChallengeStartDate(profile.challenge_start_date);
+      }
+
+      setIsLoadingUser(false);
+    };
+
+    getUserAndProfile();
+  }, []);
+
+  const today = new Date();
+
+  let currentDay = 1;
+  let startDate: Date | null = null;
+  let endDate: Date | null = null;
+
+  if (challengeStartDate) {
+    const [year, month, day] = challengeStartDate.split("-").map(Number);
+
+    startDate = new Date(year, month - 1, day);
+
+    const todayOnly = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    const differenceInDays = Math.floor(
+      (todayOnly.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    currentDay = Math.min(Math.max(differenceInDays + 1, 1), 75);
+
+    endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + 74);
+  }
+
+  const dayNumber = String(currentDay).padStart(2, "0");
+  const challengePercentage = Math.round((currentDay / 75) * 100);
+
+  const startLabel = startDate ? formatShortDate(startDate) : "—";
+  const endLabel = endDate ? formatShortDate(endDate) : "—";
+
+  const initial =
+    !isLoadingUser && firstName !== "there"
+      ? firstName.charAt(0).toUpperCase()
+      : "♡";
+
+  const progressMessage =
+    currentDay === 1
+      ? "we're just getting started. ♡"
+      : currentDay < 26
+        ? "keep showing up. ♡"
+        : currentDay < 51
+          ? "look how far you've come. ♡"
+          : currentDay < 75
+            ? "you're in it now. keep going. ♡"
+            : "75 days. you did that. ♡";
+
+  const stats = [
+    {
+      value: dayNumber,
+      label: "CURRENT DAY",
+    },
+    {
+      value: "0",
+      label: "DAYS COMPLETE",
+    },
+    {
+      value: "0",
+      label: "CURRENT STREAK",
+    },
+    {
+      value: "0",
+      label: "CHECK-INS",
+    },
+  ];
+
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
-
         {/* SIDEBAR */}
         <aside className="hidden w-[250px] flex-col border-r border-[#E1D3CE] bg-[#FBF8F6] px-7 py-8 md:flex">
           <div>
@@ -56,7 +160,6 @@ export default function ProgressPage() {
               className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
             >
               <span className="font-serif text-lg">♡</span>
-
               <span className="text-[9px] tracking-[0.25em]">
                 TODAY
               </span>
@@ -67,7 +170,6 @@ export default function ProgressPage() {
               className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
             >
               <span className="font-serif text-lg">○</span>
-
               <span className="text-[9px] tracking-[0.25em]">
                 JOURNEY
               </span>
@@ -78,7 +180,6 @@ export default function ProgressPage() {
               className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
             >
               <span className="font-serif text-lg">□</span>
-
               <span className="text-[9px] tracking-[0.25em]">
                 THE GUIDE
               </span>
@@ -89,7 +190,6 @@ export default function ProgressPage() {
               className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
             >
               <span className="font-serif text-lg">⌁</span>
-
               <span className="text-[9px] tracking-[0.25em]">
                 RESOURCES
               </span>
@@ -100,22 +200,22 @@ export default function ProgressPage() {
               className="flex w-full items-center gap-4 rounded-2xl bg-[#EAD8D3] px-4 py-4 text-left"
             >
               <span className="font-serif text-lg">◇</span>
-
               <span className="text-[9px] tracking-[0.25em]">
                 PROGRESS
               </span>
             </Link>
           </nav>
 
+          {/* ACCOUNT */}
           <div className="mt-auto border-t border-[#E1D3CE] pt-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DDB5AE] font-serif">
-                L
+                {initial}
               </div>
 
               <div>
-                <p className="text-[9px] tracking-[0.18em]">
-                  LAV
+                <p className="text-[9px] tracking-[0.18em] uppercase">
+                  {isLoadingUser ? "..." : firstName}
                 </p>
 
                 <p className="mt-1 text-[8px] text-[#9A8780]">
@@ -128,7 +228,6 @@ export default function ProgressPage() {
 
         {/* MAIN */}
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
-
           {/* TOP */}
           <header className="flex items-center justify-between">
             <div>
@@ -152,21 +251,20 @@ export default function ProgressPage() {
           {/* HERO */}
           <section className="mt-10 rounded-[2rem] bg-[#211C19] px-8 py-9 text-[#F7F1ED] md:px-10 md:py-10">
             <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-
               <div>
                 <p className="text-[7px] tracking-[0.4em] text-[#DDB5AE]">
                   YOUR PROGRESS
                 </p>
 
                 <h1 className="mt-4 font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
-                  Day 01
+                  Day {dayNumber}
                   <span className="italic text-[#DDB5AE]">
                     {" "}/ 75
                   </span>
                 </h1>
 
                 <p className="mt-3 font-serif text-xl italic text-[#DDB5AE]">
-                  we&apos;re just getting started. ♡
+                  {progressMessage}
                 </p>
               </div>
 
@@ -177,20 +275,24 @@ export default function ProgressPage() {
                   </span>
 
                   <span className="font-serif text-lg text-[#DDB5AE]">
-                    1%
+                    {challengePercentage}%
                   </span>
                 </div>
 
                 <div className="mt-3 h-[5px] overflow-hidden rounded-full bg-[#493D39]">
-                  <div className="h-full w-[1.33%] rounded-full bg-[#DDB5AE]" />
+                  <div
+                    className="h-full rounded-full bg-[#DDB5AE] transition-all duration-500"
+                    style={{
+                      width: `${(currentDay / 75) * 100}%`,
+                    }}
+                  />
                 </div>
 
                 <div className="mt-2 flex justify-between text-[6px] tracking-[0.18em] text-[#8F7C76]">
-                  <span>JAN 01</span>
-                  <span>MAR 16</span>
+                  <span>{startLabel}</span>
+                  <span>{endLabel}</span>
                 </div>
               </div>
-
             </div>
           </section>
 
@@ -235,7 +337,6 @@ export default function ProgressPage() {
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
-
               {/* DAY 1 */}
               <div className="group overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
                 <div className="flex aspect-[4/5] items-center justify-center bg-[#EEE3DF]">
@@ -262,42 +363,70 @@ export default function ProgressPage() {
                   </div>
 
                   <span className="text-[7px] text-[#927D76]">
-                    JAN 01
+                    {startLabel}
                   </span>
                 </div>
               </div>
 
-              {/* CURRENT */}
-              <div className="group overflow-hidden rounded-[1.75rem] border border-[#CBA9A2] bg-[#FBF8F6]">
-                <div className="relative flex aspect-[4/5] items-center justify-center bg-[#EAD8D3]">
-                  <span className="absolute left-4 top-4 rounded-full bg-[#211C19] px-4 py-2 text-[6px] tracking-[0.2em] text-[#F7F1ED]">
-                    CURRENT
-                  </span>
+              {/* CURRENT / NEXT PHOTO */}
+              <div
+                className={`group overflow-hidden rounded-[1.75rem] border bg-[#FBF8F6] ${
+                  currentDay > 1
+                    ? "border-[#CBA9A2]"
+                    : "border-[#DED0CB]"
+                }`}
+              >
+                <div
+                  className={`relative flex aspect-[4/5] items-center justify-center ${
+                    currentDay > 1
+                      ? "bg-[#EAD8D3]"
+                      : "bg-[#F1EAE7]"
+                  }`}
+                >
+                  {currentDay > 1 ? (
+                    <>
+                      <span className="absolute left-4 top-4 rounded-full bg-[#211C19] px-4 py-2 text-[6px] tracking-[0.2em] text-[#F7F1ED]">
+                        CURRENT
+                      </span>
 
-                  <button className="flex flex-col items-center">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#B48A82] font-serif text-2xl text-[#9D6F67] transition group-hover:bg-[#DFC7C1]">
-                      +
-                    </span>
+                      <button className="flex flex-col items-center">
+                        <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#B48A82] font-serif text-2xl text-[#9D6F67] transition group-hover:bg-[#DFC7C1]">
+                          +
+                        </span>
 
-                    <span className="mt-3 text-[7px] tracking-[0.2em] text-[#8F655E]">
-                      ADD PHOTO
-                    </span>
-                  </button>
+                        <span className="mt-3 text-[7px] tracking-[0.2em] text-[#8F655E]">
+                          ADD PHOTO
+                        </span>
+                      </button>
+                    </>
+                  ) : (
+                    <div className="text-center">
+                      <span className="font-serif text-4xl text-[#D0B7B1]">
+                        ♡
+                      </span>
+
+                      <p className="mt-3 text-[7px] tracking-[0.2em] text-[#A7938D]">
+                        KEEP SHOWING UP
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between p-5">
                   <div>
                     <p className="text-[7px] tracking-[0.25em]">
-                      DAY 01
+                      {currentDay === 1
+                        ? "YOUR NEXT PHOTO"
+                        : `DAY ${dayNumber}`}
                     </p>
 
                     <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                      right now.
+                      {currentDay === 1 ? "keep going." : "right now."}
                     </p>
                   </div>
 
                   <span className="text-[7px] text-[#927D76]">
-                    TODAY
+                    {currentDay === 1 ? "LOCKED" : "TODAY"}
                   </span>
                 </div>
               </div>
@@ -328,17 +457,15 @@ export default function ProgressPage() {
                   </div>
 
                   <span className="text-[7px] text-[#927D76]">
-                    MAR 16
+                    {endLabel}
                   </span>
                 </div>
               </div>
-
             </div>
           </section>
 
           {/* MEASUREMENTS + WINS */}
           <section className="grid gap-5 border-t border-[#DED0CB] py-12 lg:grid-cols-2">
-
             {/* MEASUREMENTS */}
             <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-8">
               <div className="flex items-start justify-between">
@@ -434,7 +561,6 @@ export default function ProgressPage() {
             </div>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-
               {/* WEEK 1 */}
               <button className="group rounded-[1.5rem] border border-[#CBA9A2] bg-[#FBF8F6] p-5 text-left transition hover:bg-[#F3EAE6]">
                 <div className="flex items-center justify-between">
@@ -443,7 +569,7 @@ export default function ProgressPage() {
                   </span>
 
                   <span className="rounded-full bg-[#EAD8D3] px-3 py-1.5 text-[6px] tracking-[0.18em] text-[#8F655E]">
-                    UPCOMING
+                    {currentDay >= 7 ? "READY" : "UPCOMING"}
                   </span>
                 </div>
 
@@ -489,7 +615,6 @@ export default function ProgressPage() {
                   </div>
                 )
               )}
-
             </div>
           </section>
 
@@ -526,7 +651,7 @@ export default function ProgressPage() {
           {/* END */}
           <section className="py-14 text-center">
             <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-              keep going. you&apos;re becoming her. ♡
+              keep going. ♡
             </p>
 
             <Link
@@ -536,7 +661,6 @@ export default function ProgressPage() {
               BACK TO TODAY
             </Link>
           </section>
-
         </section>
       </div>
     </main>

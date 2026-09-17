@@ -1,48 +1,162 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
-const januaryDays = Array.from({ length: 31 }, (_, i) => i + 1);
-const februaryDays = Array.from({ length: 28 }, (_, i) => i + 32);
-const marchDays = Array.from({ length: 16 }, (_, i) => i + 60);
+type ChallengeMonth = {
+  key: string;
+  name: string;
+  subtitle: string;
+  days: {
+    challengeDay: number;
+    date: Date;
+  }[];
+};
 
-const months = [
-  {
-    name: "JANUARY",
-    subtitle: "Days 01 — 31",
-    days: januaryDays,
-  },
-  {
-    name: "FEBRUARY",
-    subtitle: "Days 32 — 59",
-    days: februaryDays,
-  },
-  {
-    name: "MARCH",
-    subtitle: "Days 60 — 75",
-    days: marchDays,
-  },
-];
-
-function getDateForDay(day: number) {
-  const date = new Date(2027, 0, day);
-
+function formatCalendarDate(date: Date) {
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
   });
 }
 
+function buildChallengeMonths(startDate: Date): ChallengeMonth[] {
+  const grouped = new Map<
+    string,
+    {
+      name: string;
+      days: {
+        challengeDay: number;
+        date: Date;
+      }[];
+    }
+  >();
+
+  for (let challengeDay = 1; challengeDay <= 75; challengeDay++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + challengeDay - 1);
+
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+
+    const monthName = date
+      .toLocaleDateString("en-US", {
+        month: "long",
+      })
+      .toUpperCase();
+
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        name: monthName,
+        days: [],
+      });
+    }
+
+    grouped.get(key)!.days.push({
+      challengeDay,
+      date,
+    });
+  }
+
+  return Array.from(grouped.entries()).map(([key, month]) => {
+    const firstDay = month.days[0].challengeDay;
+    const lastDay = month.days[month.days.length - 1].challengeDay;
+
+    return {
+      key,
+      name: month.name,
+      subtitle: `Days ${String(firstDay).padStart(2, "0")} — ${String(
+        lastDay
+      ).padStart(2, "0")}`,
+      days: month.days,
+    };
+  });
+}
+
 export default function JourneyPage() {
-  const currentDay = 1;
+  const [firstName, setFirstName] = useState("there");
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    const getUserAndProfile = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setIsLoadingUser(false);
+        return;
+      }
+
+      const savedName = user.user_metadata?.name;
+
+      if (savedName) {
+        setFirstName(savedName);
+      } else if (user.email) {
+        setFirstName(user.email.split("@")[0]);
+      }
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("challenge_start_date")
+        .eq("id", user.id)
+        .single();
+
+      if (error) {
+        console.error("Could not load profile:", error);
+      } else if (profile) {
+        setChallengeStartDate(profile.challenge_start_date);
+      }
+
+      setIsLoadingUser(false);
+    };
+
+    getUserAndProfile();
+  }, []);
+
+  const today = new Date();
+
+  let currentDay = 1;
+  let startDate: Date | null = null;
+
+  if (challengeStartDate) {
+    const [year, month, day] = challengeStartDate.split("-").map(Number);
+
+    startDate = new Date(year, month - 1, day);
+
+    const todayOnly = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+
+    const differenceInDays = Math.floor(
+      (todayOnly.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    currentDay = Math.min(Math.max(differenceInDays + 1, 1), 75);
+  }
+
+  const dayNumber = String(currentDay).padStart(2, "0");
+
+  // These will become database-driven once daily tracking is saved.
   const completedDays = 0;
   const streak = 0;
   const challengeProgress = Math.round((completedDays / 75) * 100);
 
+  const months = startDate ? buildChallengeMonths(startDate) : [];
+
+  const initial =
+    !isLoadingUser && firstName !== "there"
+      ? firstName.charAt(0).toUpperCase()
+      : "♡";
+
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
-
         {/* SIDEBAR */}
         <aside className="hidden w-[250px] flex-col border-r border-[#E1D3CE] bg-[#FBF8F6] px-7 py-8 md:flex">
           <div>
@@ -56,7 +170,6 @@ export default function JourneyPage() {
           </div>
 
           <nav className="mt-16 space-y-3">
-
             <Link
               href="/dashboard"
               className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
@@ -79,40 +192,50 @@ export default function JourneyPage() {
               </span>
             </Link>
 
-            <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
+            <Link
+              href="/dashboard/guide"
+              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
+            >
               <span className="font-serif text-lg">□</span>
 
               <span className="text-[9px] tracking-[0.25em]">
                 THE GUIDE
               </span>
-            </button>
+            </Link>
 
-            <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
+            <Link
+              href="/dashboard/resources"
+              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
+            >
               <span className="font-serif text-lg">⌁</span>
 
               <span className="text-[9px] tracking-[0.25em]">
                 RESOURCES
               </span>
-            </button>
+            </Link>
 
-            <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
+            <Link
+              href="/dashboard/progress"
+              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
+            >
               <span className="font-serif text-lg">◇</span>
 
               <span className="text-[9px] tracking-[0.25em]">
                 PROGRESS
               </span>
-            </button>
+            </Link>
           </nav>
 
+          {/* ACCOUNT */}
           <div className="mt-auto border-t border-[#E1D3CE] pt-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DDB5AE] font-serif">
-                L
+                {initial}
               </div>
 
               <div>
-                <p className="text-[9px] tracking-[0.18em]">
-                  LAV
+                <p className="text-[9px] tracking-[0.18em] uppercase">
+                  {isLoadingUser ? "..." : firstName}
                 </p>
 
                 <p className="mt-1 text-[8px] text-[#9A8780]">
@@ -125,7 +248,6 @@ export default function JourneyPage() {
 
         {/* MAIN CONTENT */}
         <section className="flex-1 px-6 py-8 md:px-10 lg:px-14">
-
           {/* HEADER */}
           <header className="flex items-center justify-between">
             <div>
@@ -148,7 +270,6 @@ export default function JourneyPage() {
 
           {/* HERO */}
           <section className="mt-12 grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-
             <div className="rounded-[2rem] bg-[#211C19] p-8 text-[#F7F1ED] md:p-10">
               <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
                 YOUR JOURNEY
@@ -194,7 +315,7 @@ export default function JourneyPage() {
                   </p>
 
                   <p className="font-serif text-4xl">
-                    01
+                    {dayNumber}
                   </p>
                 </div>
 
@@ -249,7 +370,7 @@ export default function JourneyPage() {
           <section className="mt-12 space-y-12">
             {months.map((month) => (
               <div
-                key={month.name}
+                key={month.key}
                 className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-9"
               >
                 <div className="flex items-end justify-between">
@@ -269,13 +390,15 @@ export default function JourneyPage() {
                 </div>
 
                 <div className="mt-8 grid grid-cols-4 gap-3 sm:grid-cols-7 lg:grid-cols-10">
-                  {month.days.map((day) => {
-                    const isCurrent = day === currentDay;
-                    const isComplete = day < currentDay;
+                  {month.days.map(({ challengeDay, date }) => {
+                    const isCurrent = challengeDay === currentDay;
+
+                    // Completed styling will become database-driven later.
+                    const isComplete = false;
 
                     return (
                       <div
-                        key={day}
+                        key={challengeDay}
                         className={`relative flex aspect-square min-h-[74px] flex-col items-center justify-center rounded-2xl border transition ${
                           isComplete
                             ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
@@ -285,7 +408,7 @@ export default function JourneyPage() {
                         }`}
                       >
                         <p className="font-serif text-xl">
-                          {String(day).padStart(2, "0")}
+                          {String(challengeDay).padStart(2, "0")}
                         </p>
 
                         <p
@@ -295,7 +418,7 @@ export default function JourneyPage() {
                               : "text-[#9A8780]"
                           }`}
                         >
-                          {getDateForDay(day)}
+                          {formatCalendarDate(date)}
                         </p>
 
                         {isComplete && (
@@ -334,7 +457,7 @@ export default function JourneyPage() {
             </div>
 
             <button className="mt-7 rounded-full bg-[#211C19] px-8 py-4 text-[7px] tracking-[0.3em] text-[#F7F1ED] transition hover:-translate-y-0.5 md:mt-0">
-              START CHECK-IN
+              {currentDay >= 7 ? "START CHECK-IN" : "UNLOCKS DAY 07"}
             </button>
           </section>
 
@@ -344,7 +467,6 @@ export default function JourneyPage() {
               imagine what 75 days of choosing yourself can do. ♡
             </p>
           </div>
-
         </section>
       </div>
     </main>

@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const commitments = [
   {
@@ -89,10 +93,42 @@ const trainingWeek = [
 ];
 
 export default function GuidePage() {
+  const [firstName, setFirstName] = useState("there");
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setIsLoadingUser(false);
+        return;
+      }
+
+      const savedName = user.user_metadata?.name;
+
+      if (savedName) {
+        setFirstName(savedName);
+      } else if (user.email) {
+        setFirstName(user.email.split("@")[0]);
+      }
+
+      setIsLoadingUser(false);
+    };
+
+    getUser();
+  }, []);
+
+  const initial =
+    !isLoadingUser && firstName !== "there"
+      ? firstName.charAt(0).toUpperCase()
+      : "♡";
+
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
-
         {/* SIDEBAR */}
         <aside className="hidden w-[250px] flex-col border-r border-[#E1D3CE] bg-[#FBF8F6] px-7 py-8 md:flex">
           <div>
@@ -150,24 +186,28 @@ export default function GuidePage() {
               </span>
             </Link>
 
-            <button className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]">
+            <Link
+              href="/dashboard/progress"
+              className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-[#806E68] transition hover:bg-[#F1E6E2]"
+            >
               <span className="font-serif text-lg">◇</span>
 
               <span className="text-[9px] tracking-[0.25em]">
                 PROGRESS
               </span>
-            </button>
+            </Link>
           </nav>
 
+          {/* ACCOUNT */}
           <div className="mt-auto border-t border-[#E1D3CE] pt-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#DDB5AE] font-serif">
-                L
+                {initial}
               </div>
 
               <div>
-                <p className="text-[9px] tracking-[0.18em]">
-                  LAV
+                <p className="text-[9px] tracking-[0.18em] uppercase">
+                  {isLoadingUser ? "..." : firstName}
                 </p>
 
                 <p className="mt-1 text-[8px] text-[#9A8780]">
@@ -180,7 +220,6 @@ export default function GuidePage() {
 
         {/* MAIN */}
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
-
           {/* TOP */}
           <header className="flex items-center justify-between">
             <div>
@@ -352,7 +391,6 @@ export default function GuidePage() {
 
           {/* HOW WE TRAIN + WEEK */}
           <section className="grid gap-8 border-t border-[#DED0CB] py-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
-
             <div>
               <p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">
                 HOW WE TRAIN
@@ -585,7 +623,7 @@ export default function GuidePage() {
 
             <div className="mx-auto mt-7 max-w-xl rounded-full border border-[#CBA9A2] px-6 py-3">
               <p className="text-[7px] tracking-[0.2em] text-[#8F655E]">
-                NO RESTARTING • NO PUNISHMENT • JUST RETURN
+                NO PUNISHMENT • NO PRESSURE • JUST RETURN
               </p>
             </div>
           </section>
@@ -637,7 +675,6 @@ export default function GuidePage() {
               BACK TO TODAY
             </Link>
           </section>
-
         </section>
       </div>
     </main>
