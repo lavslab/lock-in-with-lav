@@ -18,6 +18,16 @@ const wins = [
   "My clothes fit differently",
 ];
 
+type DailyProgressRow = {
+  challenge_day: number;
+  move: boolean;
+  get_outside: boolean;
+  hydrate: boolean;
+  read: boolean;
+  nourish: boolean;
+  document: boolean;
+};
+
 function formatShortDate(date: Date) {
   return date
     .toLocaleDateString("en-US", {
@@ -27,21 +37,69 @@ function formatShortDate(date: Date) {
     .toUpperCase();
 }
 
+function isDayComplete(row: DailyProgressRow) {
+  return (
+    row.move &&
+    row.get_outside &&
+    row.hydrate &&
+    row.read &&
+    row.nourish &&
+    row.document
+  );
+}
+
+function calculateStreak(
+  completedDayNumbers: number[],
+  currentDay: number
+) {
+  const completedSet = new Set(completedDayNumbers);
+
+  let dayToCheck = currentDay;
+
+  if (!completedSet.has(dayToCheck)) {
+    dayToCheck -= 1;
+  }
+
+  let streak = 0;
+
+  while (dayToCheck >= 1 && completedSet.has(dayToCheck)) {
+    streak += 1;
+    dayToCheck -= 1;
+  }
+
+  return streak;
+}
+
 export default function ProgressPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
-    null
-  );
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+
+  const [challengeStartDate, setChallengeStartDate] = useState<
+    string | null
+  >(null);
+
+  const [dailyProgress, setDailyProgress] = useState<
+    DailyProgressRow[]
+  >([]);
 
   useEffect(() => {
-    const getUserAndProfile = async () => {
+    const loadProgress = async () => {
+      setIsLoadingUser(true);
+      setIsLoadingProgress(true);
+
       const {
         data: { user },
+        error: userError,
       } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Could not load user:", userError);
+      }
 
       if (!user) {
         setIsLoadingUser(false);
+        setIsLoadingProgress(false);
         return;
       }
 
@@ -53,22 +111,41 @@ export default function ProgressPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
-      const { data: profile, error } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("challenge_start_date")
         .eq("id", user.id)
         .single();
 
-      if (error) {
-        console.error("Could not load profile:", error);
+      if (profileError) {
+        console.error("Could not load profile:", profileError);
       } else if (profile) {
         setChallengeStartDate(profile.challenge_start_date);
       }
 
+      const { data: progressRows, error: progressError } =
+        await supabase
+          .from("daily_progress")
+          .select(
+            "challenge_day, move, get_outside, hydrate, read, nourish, document"
+          )
+          .eq("user_id", user.id)
+          .order("challenge_day", { ascending: true });
+
+      if (progressError) {
+        console.error(
+          "Could not load daily progress:",
+          progressError
+        );
+      } else {
+        setDailyProgress(progressRows ?? []);
+      }
+
       setIsLoadingUser(false);
+      setIsLoadingProgress(false);
     };
 
-    getUserAndProfile();
+    loadProgress();
   }, []);
 
   const today = new Date();
@@ -78,31 +155,57 @@ export default function ProgressPage() {
   let endDate: Date | null = null;
 
   if (challengeStartDate) {
-    const [year, month, day] = challengeStartDate.split("-").map(Number);
+    const [year, month, day] = challengeStartDate
+      .split("-")
+      .map(Number);
 
     startDate = new Date(year, month - 1, day);
 
-    const todayOnly = new Date(
+    const startUtc = Date.UTC(year, month - 1, day);
+
+    const todayUtc = Date.UTC(
       today.getFullYear(),
       today.getMonth(),
       today.getDate()
     );
 
     const differenceInDays = Math.floor(
-      (todayOnly.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      (todayUtc - startUtc) / (1000 * 60 * 60 * 24)
     );
 
-    currentDay = Math.min(Math.max(differenceInDays + 1, 1), 75);
+    currentDay = Math.min(
+      Math.max(differenceInDays + 1, 1),
+      75
+    );
 
     endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + 74);
   }
 
   const dayNumber = String(currentDay).padStart(2, "0");
-  const challengePercentage = Math.round((currentDay / 75) * 100);
 
-  const startLabel = startDate ? formatShortDate(startDate) : "—";
-  const endLabel = endDate ? formatShortDate(endDate) : "—";
+  const completedDayNumbers = dailyProgress
+    .filter(isDayComplete)
+    .map((row) => row.challenge_day);
+
+  const completedDays = completedDayNumbers.length;
+
+  const currentStreak = calculateStreak(
+    completedDayNumbers,
+    currentDay
+  );
+
+  const challengePercentage = Math.round(
+    (completedDays / 75) * 100
+  );
+
+  const startLabel = startDate
+    ? formatShortDate(startDate)
+    : "—";
+
+  const endLabel = endDate
+    ? formatShortDate(endDate)
+    : "—";
 
   const initial =
     !isLoadingUser && firstName !== "there"
@@ -110,13 +213,13 @@ export default function ProgressPage() {
       : "♡";
 
   const progressMessage =
-    currentDay === 1
+    completedDays === 0
       ? "we're just getting started. ♡"
-      : currentDay < 26
+      : completedDays < 26
         ? "keep showing up. ♡"
-        : currentDay < 51
+        : completedDays < 51
           ? "look how far you've come. ♡"
-          : currentDay < 75
+          : completedDays < 75
             ? "you're in it now. keep going. ♡"
             : "75 days. you did that. ♡";
 
@@ -126,11 +229,15 @@ export default function ProgressPage() {
       label: "CURRENT DAY",
     },
     {
-      value: "0",
+      value: isLoadingProgress
+        ? "—"
+        : String(completedDays),
       label: "DAYS COMPLETE",
     },
     {
-      value: "0",
+      value: isLoadingProgress
+        ? "—"
+        : String(currentStreak),
       label: "CURRENT STREAK",
     },
     {
@@ -275,7 +382,9 @@ export default function ProgressPage() {
                   </span>
 
                   <span className="font-serif text-lg text-[#DDB5AE]">
-                    {challengePercentage}%
+                    {isLoadingProgress
+                      ? "—"
+                      : `${challengePercentage}%`}
                   </span>
                 </div>
 
@@ -283,7 +392,7 @@ export default function ProgressPage() {
                   <div
                     className="h-full rounded-full bg-[#DDB5AE] transition-all duration-500"
                     style={{
-                      width: `${(currentDay / 75) * 100}%`,
+                      width: `${challengePercentage}%`,
                     }}
                   />
                 </div>
@@ -421,12 +530,16 @@ export default function ProgressPage() {
                     </p>
 
                     <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                      {currentDay === 1 ? "keep going." : "right now."}
+                      {currentDay === 1
+                        ? "keep going."
+                        : "right now."}
                     </p>
                   </div>
 
                   <span className="text-[7px] text-[#927D76]">
-                    {currentDay === 1 ? "LOCKED" : "TODAY"}
+                    {currentDay === 1
+                      ? "LOCKED"
+                      : "TODAY"}
                   </span>
                 </div>
               </div>
@@ -569,7 +682,9 @@ export default function ProgressPage() {
                   </span>
 
                   <span className="rounded-full bg-[#EAD8D3] px-3 py-1.5 text-[6px] tracking-[0.18em] text-[#8F655E]">
-                    {currentDay >= 7 ? "READY" : "UPCOMING"}
+                    {currentDay >= 7
+                      ? "READY"
+                      : "UPCOMING"}
                   </span>
                 </div>
 
@@ -589,32 +704,33 @@ export default function ProgressPage() {
               </button>
 
               {/* LOCKED FUTURE CHECK-INS */}
-              {Array.from({ length: 10 }, (_, index) => index + 2).map(
-                (week) => (
-                  <div
-                    key={week}
-                    className="rounded-[1.5rem] border border-[#DED0CB] bg-[#F5EFEC] p-5 opacity-60"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-serif text-2xl text-[#BDA6A0]">
-                        {String(week).padStart(2, "0")}
-                      </span>
+              {Array.from(
+                { length: 10 },
+                (_, index) => index + 2
+              ).map((week) => (
+                <div
+                  key={week}
+                  className="rounded-[1.5rem] border border-[#DED0CB] bg-[#F5EFEC] p-5 opacity-60"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-serif text-2xl text-[#BDA6A0]">
+                      {String(week).padStart(2, "0")}
+                    </span>
 
-                      <span className="text-[10px] text-[#AA9690]">
-                        ♡
-                      </span>
-                    </div>
-
-                    <p className="mt-5 text-[7px] tracking-[0.22em] text-[#806E68]">
-                      WEEK {String(week).padStart(2, "0")}
-                    </p>
-
-                    <p className="mt-1 font-serif text-lg italic text-[#A7938D]">
-                      keep going.
-                    </p>
+                    <span className="text-[10px] text-[#AA9690]">
+                      ♡
+                    </span>
                   </div>
-                )
-              )}
+
+                  <p className="mt-5 text-[7px] tracking-[0.22em] text-[#806E68]">
+                    WEEK {String(week).padStart(2, "0")}
+                  </p>
+
+                  <p className="mt-1 font-serif text-lg italic text-[#A7938D]">
+                    keep going.
+                  </p>
+                </div>
+              ))}
             </div>
           </section>
 

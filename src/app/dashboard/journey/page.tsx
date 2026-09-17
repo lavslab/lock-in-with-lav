@@ -14,6 +14,16 @@ type ChallengeMonth = {
   }[];
 };
 
+type DailyProgressRow = {
+  challenge_day: number;
+  move: boolean;
+  get_outside: boolean;
+  hydrate: boolean;
+  read: boolean;
+  nourish: boolean;
+  document: boolean;
+};
+
 function formatCalendarDate(date: Date) {
   return date.toLocaleDateString("en-US", {
     month: "short",
@@ -35,6 +45,7 @@ function buildChallengeMonths(startDate: Date): ChallengeMonth[] {
 
   for (let challengeDay = 1; challengeDay <= 75; challengeDay++) {
     const date = new Date(startDate);
+
     date.setDate(startDate.getDate() + challengeDay - 1);
 
     const key = `${date.getFullYear()}-${date.getMonth()}`;
@@ -73,21 +84,70 @@ function buildChallengeMonths(startDate: Date): ChallengeMonth[] {
   });
 }
 
+function isDayComplete(row: DailyProgressRow) {
+  return (
+    row.move &&
+    row.get_outside &&
+    row.hydrate &&
+    row.read &&
+    row.nourish &&
+    row.document
+  );
+}
+
+function calculateStreak(
+  completedDayNumbers: number[],
+  currentDay: number
+) {
+  const completedSet = new Set(completedDayNumbers);
+
+  let dayToCheck = currentDay;
+
+  // If today isn't complete yet, calculate the streak ending yesterday.
+  if (!completedSet.has(dayToCheck)) {
+    dayToCheck -= 1;
+  }
+
+  let streak = 0;
+
+  while (dayToCheck >= 1 && completedSet.has(dayToCheck)) {
+    streak += 1;
+    dayToCheck -= 1;
+  }
+
+  return streak;
+}
+
 export default function JourneyPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
-    null
-  );
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+
+  const [challengeStartDate, setChallengeStartDate] = useState<
+    string | null
+  >(null);
+
+  const [dailyProgress, setDailyProgress] = useState<
+    DailyProgressRow[]
+  >([]);
 
   useEffect(() => {
-    const getUserAndProfile = async () => {
+    const loadJourney = async () => {
+      setIsLoadingUser(true);
+      setIsLoadingProgress(true);
+
       const {
         data: { user },
+        error: userError,
       } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Could not load user:", userError);
+      }
 
       if (!user) {
         setIsLoadingUser(false);
+        setIsLoadingProgress(false);
         return;
       }
 
@@ -99,22 +159,41 @@ export default function JourneyPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
-      const { data: profile, error } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("challenge_start_date")
         .eq("id", user.id)
         .single();
 
-      if (error) {
-        console.error("Could not load profile:", error);
+      if (profileError) {
+        console.error("Could not load profile:", profileError);
       } else if (profile) {
         setChallengeStartDate(profile.challenge_start_date);
       }
 
+      const { data: progressRows, error: progressError } =
+        await supabase
+          .from("daily_progress")
+          .select(
+            "challenge_day, move, get_outside, hydrate, read, nourish, document"
+          )
+          .eq("user_id", user.id)
+          .order("challenge_day", { ascending: true });
+
+      if (progressError) {
+        console.error(
+          "Could not load daily progress:",
+          progressError
+        );
+      } else {
+        setDailyProgress(progressRows ?? []);
+      }
+
       setIsLoadingUser(false);
+      setIsLoadingProgress(false);
     };
 
-    getUserAndProfile();
+    loadJourney();
   }, []);
 
   const today = new Date();
@@ -123,31 +202,50 @@ export default function JourneyPage() {
   let startDate: Date | null = null;
 
   if (challengeStartDate) {
-    const [year, month, day] = challengeStartDate.split("-").map(Number);
+    const [year, month, day] = challengeStartDate
+      .split("-")
+      .map(Number);
 
     startDate = new Date(year, month - 1, day);
 
-    const todayOnly = new Date(
+    const startUtc = Date.UTC(year, month - 1, day);
+
+    const todayUtc = Date.UTC(
       today.getFullYear(),
       today.getMonth(),
       today.getDate()
     );
 
     const differenceInDays = Math.floor(
-      (todayOnly.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
+      (todayUtc - startUtc) / (1000 * 60 * 60 * 24)
     );
 
-    currentDay = Math.min(Math.max(differenceInDays + 1, 1), 75);
+    currentDay = Math.min(
+      Math.max(differenceInDays + 1, 1),
+      75
+    );
   }
 
   const dayNumber = String(currentDay).padStart(2, "0");
 
-  // These will become database-driven once daily tracking is saved.
-  const completedDays = 0;
-  const streak = 0;
-  const challengeProgress = Math.round((completedDays / 75) * 100);
+  const completedDayNumbers = dailyProgress
+    .filter(isDayComplete)
+    .map((row) => row.challenge_day);
 
-  const months = startDate ? buildChallengeMonths(startDate) : [];
+  const completedDays = completedDayNumbers.length;
+
+  const streak = calculateStreak(
+    completedDayNumbers,
+    currentDay
+  );
+
+  const challengeProgress = Math.round(
+    (completedDays / 75) * 100
+  );
+
+  const months = startDate
+    ? buildChallengeMonths(startDate)
+    : [];
 
   const initial =
     !isLoadingUser && firstName !== "there"
@@ -297,7 +395,13 @@ export default function JourneyPage() {
 
               <div className="mt-4 flex justify-between text-[7px] tracking-[0.2em] text-[#BFAEAA]">
                 <span>DAY 01</span>
-                <span>{challengeProgress}% COMPLETE</span>
+
+                <span>
+                  {isLoadingProgress
+                    ? "LOADING..."
+                    : `${challengeProgress}% COMPLETE`}
+                </span>
+
                 <span>DAY 75</span>
               </div>
             </div>
@@ -325,7 +429,7 @@ export default function JourneyPage() {
                   </p>
 
                   <p className="font-serif text-4xl">
-                    {completedDays}
+                    {isLoadingProgress ? "—" : completedDays}
                   </p>
                 </div>
 
@@ -335,7 +439,7 @@ export default function JourneyPage() {
                   </p>
 
                   <p className="font-serif text-4xl">
-                    {streak}
+                    {isLoadingProgress ? "—" : streak}
                   </p>
                 </div>
               </div>
@@ -346,6 +450,7 @@ export default function JourneyPage() {
           <div className="mt-12 flex flex-wrap gap-6 border-b border-[#DED0CB] pb-6">
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-[#A77B73]" />
+
               <p className="text-[7px] tracking-[0.2em] text-[#806E68]">
                 COMPLETE
               </p>
@@ -353,6 +458,7 @@ export default function JourneyPage() {
 
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-[#DDB5AE]" />
+
               <p className="text-[7px] tracking-[0.2em] text-[#806E68]">
                 CURRENT
               </p>
@@ -360,6 +466,7 @@ export default function JourneyPage() {
 
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full border border-[#C9B7B1]" />
+
               <p className="text-[7px] tracking-[0.2em] text-[#806E68]">
                 UPCOMING
               </p>
@@ -390,49 +497,57 @@ export default function JourneyPage() {
                 </div>
 
                 <div className="mt-8 grid grid-cols-4 gap-3 sm:grid-cols-7 lg:grid-cols-10">
-                  {month.days.map(({ challengeDay, date }) => {
-                    const isCurrent = challengeDay === currentDay;
+                  {month.days.map(
+                    ({ challengeDay, date }) => {
+                      const isCurrent =
+                        challengeDay === currentDay;
 
-                    // Completed styling will become database-driven later.
-                    const isComplete = false;
+                      const isComplete =
+                        completedDayNumbers.includes(
+                          challengeDay
+                        );
 
-                    return (
-                      <div
-                        key={challengeDay}
-                        className={`relative flex aspect-square min-h-[74px] flex-col items-center justify-center rounded-2xl border transition ${
-                          isComplete
-                            ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
-                            : isCurrent
-                              ? "border-[#C79D95] bg-[#EAD8D3] text-[#211C19] shadow-sm"
-                              : "border-[#E1D3CE] bg-[#F8F3F0] text-[#806E68]"
-                        }`}
-                      >
-                        <p className="font-serif text-xl">
-                          {String(challengeDay).padStart(2, "0")}
-                        </p>
-
-                        <p
-                          className={`mt-1 text-[6px] tracking-[0.12em] ${
+                      return (
+                        <div
+                          key={challengeDay}
+                          className={`relative flex aspect-square min-h-[74px] flex-col items-center justify-center rounded-2xl border transition ${
                             isComplete
-                              ? "text-[#EEDDD8]"
-                              : "text-[#9A8780]"
+                              ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
+                              : isCurrent
+                                ? "border-[#C79D95] bg-[#EAD8D3] text-[#211C19] shadow-sm"
+                                : "border-[#E1D3CE] bg-[#F8F3F0] text-[#806E68]"
                           }`}
                         >
-                          {formatCalendarDate(date)}
-                        </p>
+                          <p className="font-serif text-xl">
+                            {String(challengeDay).padStart(
+                              2,
+                              "0"
+                            )}
+                          </p>
 
-                        {isComplete && (
-                          <span className="absolute right-2 top-2 text-[8px]">
-                            ✓
-                          </span>
-                        )}
+                          <p
+                            className={`mt-1 text-[6px] tracking-[0.12em] ${
+                              isComplete
+                                ? "text-[#EEDDD8]"
+                                : "text-[#9A8780]"
+                            }`}
+                          >
+                            {formatCalendarDate(date)}
+                          </p>
 
-                        {isCurrent && (
-                          <span className="absolute bottom-2 h-1.5 w-1.5 rounded-full bg-[#A77B73]" />
-                        )}
-                      </div>
-                    );
-                  })}
+                          {isComplete && (
+                            <span className="absolute right-2 top-2 text-[8px]">
+                              ✓
+                            </span>
+                          )}
+
+                          {isCurrent && !isComplete && (
+                            <span className="absolute bottom-2 h-1.5 w-1.5 rounded-full bg-[#A77B73]" />
+                          )}
+                        </div>
+                      );
+                    }
+                  )}
                 </div>
               </div>
             ))}
@@ -457,7 +572,9 @@ export default function JourneyPage() {
             </div>
 
             <button className="mt-7 rounded-full bg-[#211C19] px-8 py-4 text-[7px] tracking-[0.3em] text-[#F7F1ED] transition hover:-translate-y-0.5 md:mt-0">
-              {currentDay >= 7 ? "START CHECK-IN" : "UNLOCKS DAY 07"}
+              {currentDay >= 7
+                ? "START CHECK-IN"
+                : "UNLOCKS DAY 07"}
             </button>
           </section>
 
