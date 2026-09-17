@@ -9,81 +9,78 @@ const commitments = [
     number: "01",
     title: "WORKOUT #1",
     description: "45 min movement",
+    column: "move",
   },
   {
     number: "02",
     title: "WORKOUT #2",
     description: "Get outside",
+    column: "get_outside",
   },
   {
     number: "03",
     title: "HYDRATE",
     description: "Hit your water goal",
+    column: "hydrate",
   },
   {
     number: "04",
     title: "READ",
     description: "10 pages",
+    column: "read",
   },
   {
     number: "05",
     title: "NUTRITION",
     description: "Stay on plan",
+    column: "nourish",
   },
   {
     number: "06",
     title: "PROGRESS PHOTO",
     description: "Document the journey",
+    column: "document",
   },
-];
+] as const;
+
+type CommitmentColumn = (typeof commitments)[number]["column"];
+
+type DailyProgress = {
+  move: boolean;
+  get_outside: boolean;
+  hydrate: boolean;
+  read: boolean;
+  nourish: boolean;
+  document: boolean;
+};
+
+const emptyProgress: DailyProgress = {
+  move: false,
+  get_outside: false,
+  hydrate: false,
+  read: false,
+  nourish: false,
+  document: false,
+};
+
+function formatDateForDatabase(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
 
 export default function DashboardPage() {
-  const [completed, setCompleted] = useState<number[]>([]);
+  const [progress, setProgress] = useState<DailyProgress>(emptyProgress);
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
     null
   );
 
-  // Get logged-in user + their personal challenge start date
-  useEffect(() => {
-    const getUserAndProfile = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        setIsLoadingUser(false);
-        return;
-      }
-
-      const savedName = user.user_metadata?.name;
-
-      if (savedName) {
-        setFirstName(savedName);
-      } else if (user.email) {
-        setFirstName(user.email.split("@")[0]);
-      }
-
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("challenge_start_date")
-        .eq("id", user.id)
-        .single();
-
-      if (error) {
-        console.error("Could not load profile:", error);
-      } else if (profile) {
-        setChallengeStartDate(profile.challenge_start_date);
-      }
-
-      setIsLoadingUser(false);
-    };
-
-    getUserAndProfile();
-  }, []);
-
-  // Today's real date
   const today = new Date();
 
   const formattedDate = today
@@ -95,25 +92,21 @@ export default function DashboardPage() {
     })
     .toUpperCase();
 
-  // Calculate this user's personal challenge day
   let currentDay = 1;
 
   if (challengeStartDate) {
     const [year, month, day] = challengeStartDate.split("-").map(Number);
 
-    const startDate = new Date(year, month - 1, day);
+    const startUtc = Date.UTC(year, month - 1, day);
 
-    const todayOnly = new Date(
+    const todayUtc = Date.UTC(
       today.getFullYear(),
       today.getMonth(),
       today.getDate()
     );
 
-    const differenceInMilliseconds =
-      todayOnly.getTime() - startDate.getTime();
-
     const differenceInDays = Math.floor(
-      differenceInMilliseconds / (1000 * 60 * 60 * 24)
+      (todayUtc - startUtc) / (1000 * 60 * 60 * 24)
     );
 
     currentDay = Math.min(Math.max(differenceInDays + 1, 1), 75);
@@ -121,7 +114,6 @@ export default function DashboardPage() {
 
   const dayNumber = String(currentDay).padStart(2, "0");
 
-  // Dynamic greeting
   const currentHour = today.getHours();
 
   let greeting = "good morning";
@@ -132,25 +124,168 @@ export default function DashboardPage() {
     greeting = "good evening";
   }
 
-  // First initial for avatar
   const initial =
     !isLoadingUser && firstName !== "there"
       ? firstName.charAt(0).toUpperCase()
       : "♡";
 
-  const toggleCommitment = (index: number) => {
-    setCompleted((current) =>
-      current.includes(index)
-        ? current.filter((item) => item !== index)
-        : [...current, index]
+  useEffect(() => {
+    const loadDashboard = async () => {
+      setIsLoadingUser(true);
+      setIsLoadingProgress(true);
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Could not load user:", userError);
+      }
+
+      if (!user) {
+        setIsLoadingUser(false);
+        setIsLoadingProgress(false);
+        return;
+      }
+
+      setUserId(user.id);
+
+      const savedName = user.user_metadata?.name;
+
+      if (savedName) {
+        setFirstName(savedName);
+      } else if (user.email) {
+        setFirstName(user.email.split("@")[0]);
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("challenge_start_date")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Could not load profile:", profileError);
+        setIsLoadingUser(false);
+        setIsLoadingProgress(false);
+        return;
+      }
+
+      if (!profile?.challenge_start_date) {
+        setIsLoadingUser(false);
+        setIsLoadingProgress(false);
+        return;
+      }
+
+      setChallengeStartDate(profile.challenge_start_date);
+
+      const [year, month, day] = profile.challenge_start_date
+        .split("-")
+        .map(Number);
+
+      const startUtc = Date.UTC(year, month - 1, day);
+
+      const now = new Date();
+
+      const todayUtc = Date.UTC(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate()
+      );
+
+      const differenceInDays = Math.floor(
+        (todayUtc - startUtc) / (1000 * 60 * 60 * 24)
+      );
+
+      const calculatedDay = Math.min(
+        Math.max(differenceInDays + 1, 1),
+        75
+      );
+
+      const { data: savedProgress, error: progressError } = await supabase
+        .from("daily_progress")
+        .select(
+          "move, get_outside, hydrate, read, nourish, document"
+        )
+        .eq("user_id", user.id)
+        .eq("challenge_day", calculatedDay)
+        .maybeSingle();
+
+      if (progressError) {
+        console.error("Could not load daily progress:", progressError);
+      } else if (savedProgress) {
+        setProgress({
+          move: savedProgress.move,
+          get_outside: savedProgress.get_outside,
+          hydrate: savedProgress.hydrate,
+          read: savedProgress.read,
+          nourish: savedProgress.nourish,
+          document: savedProgress.document,
+        });
+      }
+
+      setIsLoadingUser(false);
+      setIsLoadingProgress(false);
+    };
+
+    loadDashboard();
+  }, []);
+
+  const toggleCommitment = async (
+    column: CommitmentColumn
+  ) => {
+    if (!userId || !challengeStartDate || isLoadingProgress) {
+      return;
+    }
+
+    const newValue = !progress[column];
+
+    const updatedProgress = {
+      ...progress,
+      [column]: newValue,
+    };
+
+    // Update the UI immediately.
+    setProgress(updatedProgress);
+
+    const progressDate = formatDateForDatabase(today);
+
+    const { error } = await supabase.from("daily_progress").upsert(
+      {
+        user_id: userId,
+        challenge_day: currentDay,
+        progress_date: progressDate,
+        move: updatedProgress.move,
+        get_outside: updatedProgress.get_outside,
+        hydrate: updatedProgress.hydrate,
+        read: updatedProgress.read,
+        nourish: updatedProgress.nourish,
+        document: updatedProgress.document,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id,challenge_day",
+      }
     );
+
+    if (error) {
+      console.error("Could not save daily progress:", error);
+
+      // Put the UI back if Supabase could not save it.
+      setProgress(progress);
+    }
   };
 
+  const completedCount = commitments.filter(
+    (item) => progress[item.column]
+  ).length;
+
   const percentage = Math.round(
-    (completed.length / commitments.length) * 100
+    (completedCount / commitments.length) * 100
   );
 
-  const dayComplete = completed.length === commitments.length;
+  const dayComplete = completedCount === commitments.length;
 
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
@@ -377,19 +512,25 @@ export default function DashboardPage() {
               </div>
 
               <p className="hidden font-serif text-xl italic text-[#A77B73] sm:block">
-                {completed.length}/{commitments.length} complete ♡
+                {isLoadingProgress
+                  ? "loading... ♡"
+                  : `${completedCount}/${commitments.length} complete ♡`}
               </p>
             </div>
 
             <div className="mt-8 grid gap-3 lg:grid-cols-2">
-              {commitments.map((item, index) => {
-                const isComplete = completed.includes(index);
+              {commitments.map((item) => {
+                const isComplete = progress[item.column];
 
                 return (
                   <div
                     key={item.number}
-                    onClick={() => toggleCommitment(index)}
-                    className={`group flex cursor-pointer items-center gap-5 rounded-2xl border p-5 transition duration-300 ${
+                    onClick={() => toggleCommitment(item.column)}
+                    className={`group flex items-center gap-5 rounded-2xl border p-5 transition duration-300 ${
+                      isLoadingProgress
+                        ? "cursor-wait opacity-70"
+                        : "cursor-pointer"
+                    } ${
                       isComplete
                         ? "border-[#CBA9A2] bg-[#EAD8D3]"
                         : "border-[#DED0CB] bg-[#FBF8F6] hover:-translate-y-0.5 hover:border-[#CBA9A2]"
@@ -423,6 +564,7 @@ export default function DashboardPage() {
 
                     <button
                       type="button"
+                      disabled={isLoadingProgress}
                       aria-label={`Mark ${item.title} ${
                         isComplete ? "incomplete" : "complete"
                       }`}
