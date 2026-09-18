@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import DashboardSidebar from "@/components/DashboardSidebar";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   type DailyProgressRow,
   calculateStreak,
@@ -83,7 +83,17 @@ function buildChallengeMonths(startDate: Date): ChallengeMonth[] {
   });
 }
 
+type WeeklyCheckinRow = {
+  week_number: number;
+  went_well: string | null;
+  felt_hard: string | null;
+  proud_of: string | null;
+  next_week_focus: string | null;
+};
+
 export default function JourneyPage() {
+  const supabase = useMemo(() => createClient(), []);
+
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
@@ -95,6 +105,17 @@ export default function JourneyPage() {
   const [dailyProgress, setDailyProgress] = useState<
     DailyProgressRow[]
   >([]);
+
+  const [userId, setUserId] = useState<string | null>(null);
+  const [weeklyCheckins, setWeeklyCheckins] = useState<WeeklyCheckinRow[]>([]);
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [isCheckinOpen, setIsCheckinOpen] = useState(false);
+  const [isSavingCheckin, setIsSavingCheckin] = useState(false);
+  const [checkinMessage, setCheckinMessage] = useState("");
+  const [wentWell, setWentWell] = useState("");
+  const [feltHard, setFeltHard] = useState("");
+  const [proudOf, setProudOf] = useState("");
+  const [nextWeekFocus, setNextWeekFocus] = useState("");
 
   useEffect(() => {
     const loadJourney = async () => {
@@ -115,6 +136,8 @@ export default function JourneyPage() {
         setIsLoadingProgress(false);
         return;
       }
+
+      setUserId(user.id);
 
       const savedName = user.user_metadata?.name;
 
@@ -154,12 +177,26 @@ export default function JourneyPage() {
         setDailyProgress(progressRows ?? []);
       }
 
+      const { data: checkinRows, error: checkinError } = await supabase
+        .from("weekly_checkins")
+        .select(
+          "week_number, went_well, felt_hard, proud_of, next_week_focus"
+        )
+        .eq("user_id", user.id)
+        .order("week_number", { ascending: true });
+
+      if (checkinError) {
+        console.error("Could not load weekly check-ins:", checkinError);
+      } else {
+        setWeeklyCheckins(checkinRows ?? []);
+      }
+
       setIsLoadingUser(false);
       setIsLoadingProgress(false);
     };
 
     loadJourney();
-  }, []);
+  }, [supabase]);
 
   let currentDay = 1;
   let startDate: Date | null = null;
@@ -192,6 +229,74 @@ export default function JourneyPage() {
     !isLoadingUser && firstName !== "there"
       ? firstName.charAt(0).toUpperCase()
       : "♡";
+
+  const unlockedWeeks = Math.min(Math.floor(currentDay / 7), 10);
+  const finalWeekUnlocked = currentDay >= 75;
+  const availableWeeks = Array.from(
+    { length: unlockedWeeks + (finalWeekUnlocked ? 1 : 0) },
+    (_, index) => index + 1
+  );
+
+  function openCheckin(weekNumber: number) {
+    const saved = weeklyCheckins.find(
+      (checkin) => checkin.week_number === weekNumber
+    );
+
+    setSelectedWeek(weekNumber);
+    setWentWell(saved?.went_well ?? "");
+    setFeltHard(saved?.felt_hard ?? "");
+    setProudOf(saved?.proud_of ?? "");
+    setNextWeekFocus(saved?.next_week_focus ?? "");
+    setCheckinMessage("");
+    setIsCheckinOpen(true);
+  }
+
+  async function saveCheckin() {
+    if (!userId || !selectedWeek) return;
+
+    setIsSavingCheckin(true);
+    setCheckinMessage("");
+
+    const payload = {
+      user_id: userId,
+      week_number: selectedWeek,
+      went_well: wentWell.trim() || null,
+      felt_hard: feltHard.trim() || null,
+      proud_of: proudOf.trim() || null,
+      next_week_focus: nextWeekFocus.trim() || null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from("weekly_checkins")
+      .upsert(payload, { onConflict: "user_id,week_number" })
+      .select(
+        "week_number, went_well, felt_hard, proud_of, next_week_focus"
+      )
+      .single();
+
+    if (error) {
+      console.error("Could not save weekly check-in:", error);
+      setCheckinMessage("We couldn't save your check-in. Please try again.");
+      setIsSavingCheckin(false);
+      return;
+    }
+
+    setWeeklyCheckins((current) => {
+      const withoutSavedWeek = current.filter(
+        (checkin) => checkin.week_number !== data.week_number
+      );
+
+      return [...withoutSavedWeek, data].sort(
+        (a, b) => a.week_number - b.week_number
+      );
+    });
+
+    setCheckinMessage("Saved. Keep going. ♡");
+    setIsSavingCheckin(false);
+  }
+
+  const selectedWeekIsFinal = selectedWeek === 11;
 
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
@@ -413,28 +518,194 @@ export default function JourneyPage() {
           </section>
 
           {/* WEEKLY CHECK-IN */}
-          <section className="mt-12 rounded-[2rem] bg-[#EAD8D3] px-8 py-10 md:flex md:items-center md:justify-between md:px-10">
-            <div>
-              <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
-                WEEKLY CHECK-IN
-              </p>
+          <section className="mt-12 rounded-[2rem] bg-[#EAD8D3] px-8 py-10 md:px-10">
+            <div className="md:flex md:items-center md:justify-between">
+              <div>
+                <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
+                  WEEKLY CHECK-IN
+                </p>
 
-              <h2 className="mt-4 font-serif text-3xl italic md:text-4xl">
-                Pause. Reflect. Keep going. ♡
-              </h2>
+                <h2 className="mt-4 font-serif text-3xl italic md:text-4xl">
+                  Pause. Reflect. Keep going. ♡
+                </h2>
 
-              <p className="mt-4 max-w-xl text-xs leading-6 text-[#806E68]">
-                At the end of each week, take a moment to celebrate
-                what went well and decide what you want to carry
-                into the next one.
-              </p>
+                <p className="mt-4 max-w-xl text-xs leading-6 text-[#806E68]">
+                  At the end of each week, take a moment to celebrate
+                  what went well and decide what you want to carry
+                  into the next one.
+                </p>
+              </div>
+
+              {availableWeeks.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openCheckin(
+                      finalWeekUnlocked
+                        ? 11
+                        : Math.max(1, unlockedWeeks)
+                    )
+                  }
+                  className="mt-7 rounded-full bg-[#211C19] px-8 py-4 text-[7px] tracking-[0.3em] text-[#F7F1ED] transition hover:-translate-y-0.5 md:mt-0"
+                >
+                  START CHECK-IN
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="mt-7 cursor-not-allowed rounded-full bg-[#211C19] px-8 py-4 text-[7px] tracking-[0.3em] text-[#F7F1ED] opacity-60 md:mt-0"
+                >
+                  UNLOCKS DAY 07
+                </button>
+              )}
             </div>
 
-            <button className="mt-7 rounded-full bg-[#211C19] px-8 py-4 text-[7px] tracking-[0.3em] text-[#F7F1ED] transition hover:-translate-y-0.5 md:mt-0">
-              {currentDay >= 7
-                ? "START CHECK-IN"
-                : "UNLOCKS DAY 07"}
-            </button>
+            {availableWeeks.length > 0 && (
+              <div className="mt-8 border-t border-[#D5BBB5] pt-7">
+                <p className="text-[7px] tracking-[0.3em] text-[#8F655E]">
+                  YOUR REFLECTIONS
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {availableWeeks.map((week) => {
+                    const hasSavedCheckin = weeklyCheckins.some(
+                      (checkin) => checkin.week_number === week
+                    );
+
+                    return (
+                      <button
+                        key={week}
+                        type="button"
+                        onClick={() => openCheckin(week)}
+                        className={`rounded-full border px-4 py-2 text-[7px] tracking-[0.18em] transition ${
+                          selectedWeek === week && isCheckinOpen
+                            ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
+                            : hasSavedCheckin
+                              ? "border-[#A77B73] bg-[#F7F1ED] text-[#8F655E]"
+                              : "border-[#CBA9A2] text-[#806E68] hover:bg-[#F7F1ED]"
+                        }`}
+                      >
+                        {week === 11 ? "FINAL" : `WEEK ${week}`}
+                        {hasSavedCheckin ? "  ✓" : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {isCheckinOpen && selectedWeek && (
+              <div className="mt-8 rounded-[1.75rem] bg-[#FBF8F6] p-6 md:p-8">
+                <div className="flex items-start justify-between gap-6">
+                  <div>
+                    <p className="text-[7px] tracking-[0.32em] text-[#9D6F67]">
+                      {selectedWeekIsFinal
+                        ? "FINAL REFLECTION"
+                        : `WEEK ${String(selectedWeek).padStart(2, "0")}`}
+                    </p>
+
+                    <h3 className="mt-3 font-serif text-3xl italic">
+                      {selectedWeekIsFinal
+                        ? "Look how far you came. ♡"
+                        : "Check in with yourself. ♡"}
+                    </h3>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsCheckinOpen(false)}
+                    className="text-xl text-[#8F655E] transition hover:opacity-60"
+                    aria-label="Close weekly check-in"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="mt-8 grid gap-6 md:grid-cols-2">
+                  <label className="block">
+                    <span className="text-[7px] tracking-[0.25em] text-[#806E68]">
+                      WHAT WENT WELL?
+                    </span>
+                    <textarea
+                      value={wentWell}
+                      onChange={(event) => setWentWell(event.target.value)}
+                      rows={5}
+                      placeholder="Celebrate the things that felt good..."
+                      className="mt-3 w-full resize-none rounded-2xl border border-[#DED0CB] bg-[#F7F1ED] px-5 py-4 font-serif text-lg leading-7 outline-none transition placeholder:text-[#B9A6A0] focus:border-[#A77B73]"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-[7px] tracking-[0.25em] text-[#806E68]">
+                      WHAT FELT HARD?
+                    </span>
+                    <textarea
+                      value={feltHard}
+                      onChange={(event) => setFeltHard(event.target.value)}
+                      rows={5}
+                      placeholder="Be honest about what challenged you..."
+                      className="mt-3 w-full resize-none rounded-2xl border border-[#DED0CB] bg-[#F7F1ED] px-5 py-4 font-serif text-lg leading-7 outline-none transition placeholder:text-[#B9A6A0] focus:border-[#A77B73]"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-[7px] tracking-[0.25em] text-[#806E68]">
+                      WHAT ARE YOU PROUD OF?
+                    </span>
+                    <textarea
+                      value={proudOf}
+                      onChange={(event) => setProudOf(event.target.value)}
+                      rows={5}
+                      placeholder="Give yourself credit..."
+                      className="mt-3 w-full resize-none rounded-2xl border border-[#DED0CB] bg-[#F7F1ED] px-5 py-4 font-serif text-lg leading-7 outline-none transition placeholder:text-[#B9A6A0] focus:border-[#A77B73]"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-[7px] tracking-[0.25em] text-[#806E68]">
+                      {selectedWeekIsFinal
+                        ? "WHAT ARE YOU TAKING WITH YOU?"
+                        : "WHAT ARE YOU TAKING INTO NEXT WEEK?"}
+                    </span>
+                    <textarea
+                      value={nextWeekFocus}
+                      onChange={(event) =>
+                        setNextWeekFocus(event.target.value)
+                      }
+                      rows={5}
+                      placeholder={
+                        selectedWeekIsFinal
+                          ? "What do you want to carry beyond Day 75?"
+                          : "Choose what you want to focus on next..."
+                      }
+                      className="mt-3 w-full resize-none rounded-2xl border border-[#DED0CB] bg-[#F7F1ED] px-5 py-4 font-serif text-lg leading-7 outline-none transition placeholder:text-[#B9A6A0] focus:border-[#A77B73]"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p
+                    className={`font-serif text-base italic ${
+                      checkinMessage.startsWith("Saved")
+                        ? "text-[#A77B73]"
+                        : "text-[#8F5148]"
+                    }`}
+                  >
+                    {checkinMessage}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={saveCheckin}
+                    disabled={isSavingCheckin}
+                    className="rounded-full bg-[#211C19] px-8 py-4 text-[7px] tracking-[0.3em] text-[#F7F1ED] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSavingCheckin ? "SAVING..." : "SAVE CHECK-IN →"}
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* BOTTOM QUOTE */}
