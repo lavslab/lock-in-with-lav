@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AuthPage() {
   const router = useRouter();
+  const supabase = createClient();
 
   const [mode, setMode] = useState<"login" | "signup">("signup");
   const [name, setName] = useState("");
@@ -16,6 +17,29 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  async function sendUserToNextStep(userId: string) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("challenge_start_date")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("Could not load profile:", profileError);
+      setError("We couldn't load your challenge profile. Please try again.");
+      return false;
+    }
+
+    if (profile?.challenge_start_date) {
+      router.push("/dashboard");
+    } else {
+      router.push("/onboarding");
+    }
+
+    router.refresh();
+    return true;
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -30,6 +54,7 @@ export default function AuthPage() {
           email,
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
             data: {
               name,
             },
@@ -41,8 +66,8 @@ export default function AuthPage() {
           return;
         }
 
-        if (data.session) {
-          router.push("/dashboard");
+        if (data.session && data.user) {
+          router.push("/onboarding");
           router.refresh();
           return;
         }
@@ -51,7 +76,7 @@ export default function AuthPage() {
           "Account created. Check your email to confirm your account. ♡"
         );
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -61,8 +86,12 @@ export default function AuthPage() {
           return;
         }
 
-        router.push("/dashboard");
-        router.refresh();
+        if (!data.user) {
+          setError("We couldn't load your account. Please try again.");
+          return;
+        }
+
+        await sendUserToNextStep(data.user.id);
       }
     } catch {
       setError("Something went wrong. Please try again.");
@@ -80,7 +109,6 @@ export default function AuthPage() {
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="grid min-h-screen lg:grid-cols-2">
-
         {/* LEFT */}
         <section className="relative hidden overflow-hidden bg-[#211C19] px-12 py-10 text-[#F7F1ED] lg:flex lg:flex-col">
           <Link href="/" className="inline-block w-fit">
@@ -126,7 +154,6 @@ export default function AuthPage() {
         {/* RIGHT */}
         <section className="flex min-h-screen items-center justify-center px-6 py-12 md:px-12">
           <div className="w-full max-w-md">
-
             {/* MOBILE LOGO */}
             <Link href="/" className="mb-14 inline-block lg:hidden">
               <p className="font-serif text-2xl tracking-[0.08em]">
@@ -195,7 +222,6 @@ export default function AuthPage() {
 
             {/* FORM */}
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-
               {mode === "signup" && (
                 <div>
                   <label
@@ -211,7 +237,7 @@ export default function AuthPage() {
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="Lav"
+                    placeholder="Your first name"
                     className="mt-2 w-full rounded-2xl border border-[#D8C7C1] bg-[#FBF8F6] px-5 py-4 font-serif text-lg outline-none transition placeholder:text-[#C1AFAA] focus:border-[#A77B73]"
                   />
                 </div>
