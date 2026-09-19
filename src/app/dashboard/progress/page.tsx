@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import {
   type DailyProgressRow,
@@ -13,6 +13,8 @@ import {
   getCurrentChallengeDay,
   parseChallengeDate,
 } from "@/lib/challenge";
+
+const supabase = createClient();
 
 const measurements = [
   ["WEIGHT", "—"],
@@ -38,12 +40,21 @@ function formatShortDate(date: Date) {
 }
 
 export default function ProgressPage() {
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
     null
   );
   const [dailyProgress, setDailyProgress] = useState<DailyProgressRow[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
+  const [photoPaths, setPhotoPaths] = useState<Record<number, string>>({});
+  const [editingPhotoDay, setEditingPhotoDay] = useState<number | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoTargetDay, setPhotoTargetDay] = useState(1);
+  const [selectedDiaryDay, setSelectedDiaryDay] = useState<number | null>(null);
 
   useEffect(() => {
     const getUserAndProfile = async () => {
@@ -54,6 +65,51 @@ export default function ProgressPage() {
       if (!user) {
         setIsLoadingUser(false);
         return;
+      }
+
+      // Reload saved progress photos whenever this page opens.
+      const { data: storedPhotos, error: listError } = await supabase.storage
+        .from("progress-photos")
+        .list(user.id, {
+          limit: 100,
+          sortBy: { column: "created_at", order: "desc" },
+        });
+
+      if (listError) {
+        console.error("Could not load progress photos:", listError);
+      } else if (storedPhotos) {
+        const latestPhotoByDay = new Map<number, string>();
+
+        for (const photo of storedPhotos) {
+          const match = photo.name.match(/^day-(\d{2})-/);
+          if (!match) continue;
+
+          const photoDay = Number(match[1]);
+
+          if (!latestPhotoByDay.has(photoDay)) {
+            latestPhotoByDay.set(photoDay, `${user.id}/${photo.name}`);
+          }
+        }
+
+        const loadedUrls: Record<number, string> = {};
+        const loadedPaths: Record<number, string> = {};
+
+        await Promise.all(
+          Array.from(latestPhotoByDay.entries()).map(async ([photoDay, path]) => {
+            const { data: signedData, error: signedError } =
+              await supabase.storage
+                .from("progress-photos")
+                .createSignedUrl(path, 60 * 60);
+
+            if (!signedError && signedData?.signedUrl) {
+              loadedUrls[photoDay] = signedData.signedUrl;
+              loadedPaths[photoDay] = path;
+            }
+          })
+        );
+
+        setPhotoUrls(loadedUrls);
+        setPhotoPaths(loadedPaths);
       }
 
       const savedName = user.user_metadata?.name;
@@ -96,6 +152,110 @@ export default function ProgressPage() {
     getUserAndProfile();
   }, []);
 
+  const openPhotoPicker = (day: number) => {
+    setPhotoTargetDay(day);
+    setPhotoError(null);
+    photoInputRef.current?.click();
+  };
+
+  const handlePhotoUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingPhoto(true);
+    setPhotoError(null);
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error("You need to be signed in to upload a progress photo.");
+      }
+
+      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const day = String(photoTargetDay).padStart(2, "0");
+      const filePath = `${user.id}/day-${day}-${Date.now()}.${extension}`;
+
+      // If this day already has a photo, remove it before uploading the replacement.
+      const oldPath = photoPaths[photoTargetDay];
+      if (oldPath) {
+        const { error: removeOldError } = await supabase.storage
+          .from("progress-photos")
+          .remove([oldPath]);
+
+        if (removeOldError) throw removeOldError;
+      }
+
+      const { error: uploadError } = await supabase.storage
+        .from("progress-photos")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from("progress-photos")
+        .createSignedUrl(filePath, 60 * 60);
+
+      if (signedError) throw signedError;
+
+      setPhotoUrls((previous) => ({
+        ...previous,
+        [photoTargetDay]: signedData.signedUrl,
+      }));
+      setPhotoPaths((previous) => ({
+        ...previous,
+        [photoTargetDay]: filePath,
+      }));
+      setEditingPhotoDay(null);
+    } catch (error) {
+      console.error("Could not upload progress photo:", error);
+      setPhotoError(
+        error instanceof Error ? error.message : "Could not upload photo. Please try again."
+      );
+    } finally {
+      setIsUploadingPhoto(false);
+      event.target.value = "";
+    }
+  };
+
+  const removeProgressPhoto = async (day: number) => {
+    const path = photoPaths[day];
+    if (!path) return;
+
+    setPhotoError(null);
+
+    const { error } = await supabase.storage
+      .from("progress-photos")
+      .remove([path]);
+
+    if (error) {
+      setPhotoError(error.message);
+      return;
+    }
+
+    setPhotoUrls((previous) => {
+      const next = { ...previous };
+      delete next[day];
+      return next;
+    });
+
+    setPhotoPaths((previous) => {
+      const next = { ...previous };
+      delete next[day];
+      return next;
+    });
+
+    setEditingPhotoDay(null);
+  };
+
   const today = new Date();
 
   let currentDay = 1;
@@ -116,6 +276,11 @@ export default function ProgressPage() {
 
   const startLabel = startDate ? formatShortDate(startDate) : "—";
   const endLabel = endDate ? formatShortDate(endDate) : "—";
+
+  const diaryDays = Object.keys(photoUrls)
+    .map(Number)
+    .filter((day) => Number.isFinite(day))
+    .sort((a, b) => a - b);
 
   const initial =
     !isLoadingUser && firstName !== "there"
@@ -275,17 +440,67 @@ export default function ProgressPage() {
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               {/* DAY 1 */}
               <div className="group overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
-                <div className="flex aspect-[4/5] items-center justify-center bg-[#EEE3DF]">
-                  <button className="flex flex-col items-center">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-2xl text-[#A77B73] transition group-hover:bg-[#EAD8D3]">
-                      +
-                    </span>
+                <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#EEE3DF]">
+                  {photoUrls[1] ? (
+                    <>
+                      <img
+                        src={photoUrls[1]}
+                        alt="Day 1 progress"
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setEditingPhotoDay(editingPhotoDay === 1 ? null : 1)}
+                        className="absolute right-4 top-4 z-10 rounded-full bg-[#211C19]/90 px-4 py-2 text-[6px] tracking-[0.2em] text-[#F7F1ED]"
+                      >
+                        EDIT PHOTO
+                      </button>
+                      {editingPhotoDay === 1 && (
+                        <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
+                          <button type="button" onClick={() => openPhotoPicker(1)}
+                            className="block w-full px-4 py-3 text-left text-[7px] tracking-[0.15em] hover:bg-[#EADCD7]">
+                            REPLACE PHOTO
+                          </button>
+                          <button type="button" onClick={() => removeProgressPhoto(1)}
+                            className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[7px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]">
+                            REMOVE PHOTO
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openPhotoPicker(1)}
+                      disabled={isUploadingPhoto}
+                      className="flex flex-col items-center disabled:opacity-50"
+                    >
+                      <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-2xl text-[#A77B73] transition group-hover:bg-[#EAD8D3]">
+                        +
+                      </span>
 
-                    <span className="mt-3 text-[7px] tracking-[0.2em] text-[#8F655E]">
-                      ADD PHOTO
-                    </span>
-                  </button>
+                      <span className="mt-3 text-[7px] tracking-[0.2em] text-[#8F655E]">
+                        {isUploadingPhoto && photoTargetDay === 1
+                          ? "UPLOADING..."
+                          : "ADD PHOTO"}
+                      </span>
+                    </button>
+                  )}
+
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
                 </div>
+
+                {photoError && photoTargetDay === 1 && (
+                  <p className="px-5 pt-3 text-[9px] text-[#9D6F67]">
+                    {photoError}
+                  </p>
+                )}
 
                 <div className="flex items-center justify-between p-5">
                   <div>
@@ -325,15 +540,51 @@ export default function ProgressPage() {
                         CURRENT
                       </span>
 
-                      <button className="flex flex-col items-center">
-                        <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#B48A82] font-serif text-2xl text-[#9D6F67] transition group-hover:bg-[#DFC7C1]">
-                          +
-                        </span>
+                      {photoUrls[currentDay] ? (
+                        <>
+                          <img
+                            src={photoUrls[currentDay]}
+                            alt={`Day ${currentDay} progress`}
+                            className="h-full w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setEditingPhotoDay(editingPhotoDay === currentDay ? null : currentDay)}
+                            className="absolute right-4 top-4 z-10 rounded-full bg-[#211C19]/90 px-4 py-2 text-[6px] tracking-[0.2em] text-[#F7F1ED]"
+                          >
+                            EDIT PHOTO
+                          </button>
+                          {editingPhotoDay === currentDay && (
+                            <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
+                              <button type="button" onClick={() => openPhotoPicker(currentDay)}
+                                className="block w-full px-4 py-3 text-left text-[7px] tracking-[0.15em] hover:bg-[#EADCD7]">
+                                REPLACE PHOTO
+                              </button>
+                              <button type="button" onClick={() => removeProgressPhoto(currentDay)}
+                                className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[7px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]">
+                                REMOVE PHOTO
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => openPhotoPicker(currentDay)}
+                          disabled={isUploadingPhoto}
+                          className="flex flex-col items-center disabled:opacity-50"
+                        >
+                          <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#B48A82] font-serif text-2xl text-[#9D6F67] transition group-hover:bg-[#DFC7C1]">
+                            +
+                          </span>
 
-                        <span className="mt-3 text-[7px] tracking-[0.2em] text-[#8F655E]">
-                          ADD PHOTO
-                        </span>
-                      </button>
+                          <span className="mt-3 text-[7px] tracking-[0.2em] text-[#8F655E]">
+                            {isUploadingPhoto && photoTargetDay === currentDay
+                              ? "UPLOADING..."
+                              : "ADD PHOTO"}
+                          </span>
+                        </button>
+                      )}
                     </>
                   ) : (
                     <div className="text-center">
@@ -399,6 +650,136 @@ export default function ProgressPage() {
               </div>
             </div>
           </section>
+
+          {/* PROGRESS DIARY */}
+          <section className="border-t border-[#DED0CB] py-12">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+              <div>
+                <p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">
+                  YOUR PROGRESS DIARY
+                </p>
+                <h2 className="mt-3 font-serif text-4xl md:text-5xl">
+                  Every day you
+                  <span className="italic text-[#A77B73]"> showed up. ♡</span>
+                </h2>
+              </div>
+
+              <p className="text-[7px] tracking-[0.18em] text-[#927D76]">
+                {diaryDays.length} {diaryDays.length === 1 ? "PHOTO" : "PHOTOS"} SAVED
+              </p>
+            </div>
+
+            {diaryDays.length > 0 ? (
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                {diaryDays.map((day) => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setSelectedDiaryDay(day)}
+                    className="group overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] text-left transition hover:-translate-y-0.5 hover:border-[#CBA9A2]"
+                  >
+                    <div className="relative aspect-[4/5] overflow-hidden bg-[#EEE3DF]">
+                      <img
+                        src={photoUrls[day]}
+                        alt={`Day ${day} progress`}
+                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+                      />
+                      {day === currentDay && (
+                        <span className="absolute left-3 top-3 rounded-full bg-[#211C19] px-3 py-1.5 text-[5px] tracking-[0.18em] text-[#F7F1ED]">
+                          CURRENT
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between px-4 py-4">
+                      <div>
+                        <p className="text-[6px] tracking-[0.22em] text-[#806E68]">
+                          DAY {String(day).padStart(2, "0")}
+                        </p>
+                        <p className="mt-1 font-serif text-base italic text-[#A77B73]">
+                          {day === 1
+                            ? "the beginning."
+                            : day === 75
+                              ? "the finish."
+                              : "kept showing up."}
+                        </p>
+                      </div>
+                      <span className="text-[#A77B73]">♡</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-8 rounded-[1.75rem] border border-dashed border-[#D8C7C1] bg-[#FBF8F6] px-6 py-12 text-center">
+                <p className="font-serif text-2xl italic text-[#A77B73]">
+                  your story starts with the first photo. ♡
+                </p>
+              </div>
+            )}
+          </section>
+
+          {/* DIARY PHOTO VIEWER */}
+          {selectedDiaryDay !== null && photoUrls[selectedDiaryDay] && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/75 p-5 backdrop-blur-sm"
+              onClick={() => setSelectedDiaryDay(null)}
+            >
+              <div
+                className="w-full max-w-lg overflow-hidden rounded-[2rem] bg-[#F7F1ED] shadow-2xl"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="relative max-h-[70vh] overflow-hidden bg-[#EEE3DF]">
+                  <img
+                    src={photoUrls[selectedDiaryDay]}
+                    alt={`Day ${selectedDiaryDay} progress`}
+                    className="max-h-[70vh] w-full object-contain"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDiaryDay(null)}
+                    className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19]/90 text-sm text-[#F7F1ED]"
+                    aria-label="Close photo"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 p-6">
+                  <div>
+                    <p className="text-[7px] tracking-[0.25em] text-[#806E68]">
+                      PROGRESS PHOTO
+                    </p>
+                    <p className="mt-1 font-serif text-2xl italic text-[#A77B73]">
+                      Day {String(selectedDiaryDay).padStart(2, "0")} ♡
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedDiaryDay(null);
+                        openPhotoPicker(selectedDiaryDay);
+                      }}
+                      className="rounded-full border border-[#CBA9A2] px-4 py-2.5 text-[6px] tracking-[0.18em] text-[#8F655E]"
+                    >
+                      REPLACE
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await removeProgressPhoto(selectedDiaryDay);
+                        setSelectedDiaryDay(null);
+                      }}
+                      className="rounded-full bg-[#211C19] px-4 py-2.5 text-[6px] tracking-[0.18em] text-[#F7F1ED]"
+                    >
+                      REMOVE
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* MEASUREMENTS + WINS */}
           <section className="grid gap-5 border-t border-[#DED0CB] py-12 lg:grid-cols-2">
