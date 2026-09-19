@@ -16,13 +16,6 @@ import {
 
 const supabase = createClient();
 
-const measurements = [
-  ["WEIGHT", "—"],
-  ["WAIST", "—"],
-  ["HIPS", "—"],
-  ["THIGHS", "—"],
-];
-
 const wins = [
   "I feel stronger",
   "My energy is better",
@@ -55,6 +48,13 @@ export default function ProgressPage() {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoTargetDay, setPhotoTargetDay] = useState(1);
   const [selectedDiaryDay, setSelectedDiaryDay] = useState<number | null>(null);
+  const [measurementRow, setMeasurementRow] = useState<{
+    weight: number | null; waist: number | null; hips: number | null; chest: number | null; thigh: number | null; arm: number | null; challenge_day: number | null;
+  } | null>(null);
+  const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false);
+  const [isSavingMeasurements, setIsSavingMeasurements] = useState(false);
+  const [measurementError, setMeasurementError] = useState<string | null>(null);
+  const [measurementForm, setMeasurementForm] = useState({ weight: "", waist: "", hips: "", chest: "", thigh: "", arm: "" });
 
   useEffect(() => {
     const getUserAndProfile = async () => {
@@ -146,6 +146,20 @@ export default function ProgressPage() {
         setDailyProgress((progressRows ?? []) as DailyProgressRow[]);
       }
 
+      const { data: latestMeasurement, error: measurementLoadError } = await supabase
+        .from("measurements")
+        .select("weight, waist, hips, chest, thigh, arm, challenge_day")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (measurementLoadError) {
+        console.error("Could not load measurements:", measurementLoadError);
+      } else if (latestMeasurement) {
+        setMeasurementRow(latestMeasurement);
+      }
+
       setIsLoadingUser(false);
     };
 
@@ -226,6 +240,60 @@ export default function ProgressPage() {
     }
   };
 
+  const openMeasurementModal = () => {
+    setMeasurementError(null);
+    setMeasurementForm({
+      weight: measurementRow?.weight?.toString() ?? "",
+      waist: measurementRow?.waist?.toString() ?? "",
+      hips: measurementRow?.hips?.toString() ?? "",
+      chest: measurementRow?.chest?.toString() ?? "",
+      thigh: measurementRow?.thigh?.toString() ?? "",
+      arm: measurementRow?.arm?.toString() ?? "",
+    });
+    setIsMeasurementModalOpen(true);
+  };
+
+  const saveMeasurements = async () => {
+    setIsSavingMeasurements(true);
+    setMeasurementError(null);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("You need to be signed in to save measurements.");
+
+      const toNumber = (value: string) => value.trim() === "" ? null : Number(value);
+      const payload = {
+        user_id: user.id,
+        challenge_day: currentDay,
+        weight: toNumber(measurementForm.weight),
+        waist: toNumber(measurementForm.waist),
+        hips: toNumber(measurementForm.hips),
+        chest: toNumber(measurementForm.chest),
+        thigh: toNumber(measurementForm.thigh),
+        arm: toNumber(measurementForm.arm),
+      };
+
+      const values = [payload.weight, payload.waist, payload.hips, payload.chest, payload.thigh, payload.arm];
+      if (values.some((value) => value !== null && (!Number.isFinite(value) || value < 0))) {
+        throw new Error("Please enter valid positive numbers.");
+      }
+
+      const { data, error } = await supabase
+        .from("measurements")
+        .insert(payload)
+        .select("weight, waist, hips, chest, thigh, arm, challenge_day")
+        .single();
+      if (error) throw error;
+
+      setMeasurementRow(data);
+      setIsMeasurementModalOpen(false);
+    } catch (error) {
+      console.error("Could not save measurements:", error);
+      setMeasurementError(error instanceof Error ? error.message : "Could not save measurements. Please try again.");
+    } finally {
+      setIsSavingMeasurements(false);
+    }
+  };
+
   const removeProgressPhoto = async (day: number) => {
     const path = photoPaths[day];
     if (!path) return;
@@ -297,6 +365,15 @@ export default function ProgressPage() {
           : currentDay < 75
             ? "you're in it now. keep going. ♡"
             : "75 days. you did that. ♡";
+
+  const measurementDisplay = [
+    ["WEIGHT", measurementRow?.weight != null ? `${measurementRow.weight} lb` : "—"],
+    ["WAIST", measurementRow?.waist != null ? `${measurementRow.waist} in` : "—"],
+    ["HIPS", measurementRow?.hips != null ? `${measurementRow.hips} in` : "—"],
+    ["CHEST", measurementRow?.chest != null ? `${measurementRow.chest} in` : "—"],
+    ["THIGH", measurementRow?.thigh != null ? `${measurementRow.thigh} in` : "—"],
+    ["ARM", measurementRow?.arm != null ? `${measurementRow.arm} in` : "—"],
+  ];
 
   const stats = [
     {
@@ -781,6 +858,44 @@ export default function ProgressPage() {
             </div>
           )}
 
+          {isMeasurementModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm" onClick={() => setIsMeasurementModalOpen(false)}>
+              <div className="w-full max-w-xl rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8" onClick={(event) => event.stopPropagation()}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[7px] tracking-[0.35em] text-[#9D6F67]">MEASUREMENTS</p>
+                    <h2 className="mt-2 font-serif text-3xl">Update your numbers. ♡</h2>
+                    <p className="mt-2 text-[8px] tracking-[0.15em] text-[#927D76]">DAY {String(currentDay).padStart(2, "0")}</p>
+                  </div>
+                  <button type="button" onClick={() => setIsMeasurementModalOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]">×</button>
+                </div>
+
+                <div className="mt-7 grid grid-cols-2 gap-3">
+                  {[
+                    ["weight", "WEIGHT", "lb"], ["waist", "WAIST", "in"], ["hips", "HIPS", "in"],
+                    ["chest", "CHEST", "in"], ["thigh", "THIGH", "in"], ["arm", "ARM", "in"],
+                  ].map(([field, label, unit]) => (
+                    <label key={field} className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4">
+                      <span className="text-[6px] tracking-[0.2em] text-[#806E68]">{label} ({unit})</span>
+                      <input
+                        type="number" min="0" step="0.1" inputMode="decimal"
+                        value={measurementForm[field as keyof typeof measurementForm]}
+                        onChange={(event) => setMeasurementForm((previous) => ({ ...previous, [field]: event.target.value }))}
+                        className="mt-2 w-full bg-transparent font-serif text-2xl text-[#A77B73] outline-none"
+                        placeholder="—"
+                      />
+                    </label>
+                  ))}
+                </div>
+
+                {measurementError && <p className="mt-4 text-[9px] text-[#9D6F67]">{measurementError}</p>}
+                <button type="button" onClick={saveMeasurements} disabled={isSavingMeasurements} className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[7px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50">
+                  {isSavingMeasurements ? "SAVING..." : "SAVE MEASUREMENTS"}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* MEASUREMENTS + WINS */}
           <section className="grid gap-5 border-t border-[#DED0CB] py-12 lg:grid-cols-2">
             {/* MEASUREMENTS */}
@@ -796,13 +911,13 @@ export default function ProgressPage() {
                   </h2>
                 </div>
 
-                <button className="rounded-full border border-[#CBA9A2] px-4 py-2 text-[6px] tracking-[0.2em] text-[#8F655E]">
+                <button type="button" onClick={openMeasurementModal} className="rounded-full border border-[#CBA9A2] px-4 py-2 text-[6px] tracking-[0.2em] text-[#8F655E]">
                   + UPDATE
                 </button>
               </div>
 
               <div className="mt-7">
-                {measurements.map(([label, value]) => (
+                {measurementDisplay.map(([label, value]) => (
                   <div
                     key={label}
                     className="flex items-center justify-between border-t border-[#E1D3CE] py-4"
