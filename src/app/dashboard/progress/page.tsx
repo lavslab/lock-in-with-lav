@@ -55,6 +55,7 @@ export default function ProgressPage() {
   const [isSavingMeasurements, setIsSavingMeasurements] = useState(false);
   const [measurementError, setMeasurementError] = useState<string | null>(null);
   const [measurementForm, setMeasurementForm] = useState({ weight: "", waist: "", hips: "", chest: "", thigh: "", arm: "" });
+  const [completedWins, setCompletedWins] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const getUserAndProfile = async () => {
@@ -144,6 +145,21 @@ export default function ProgressPage() {
         console.error("Could not load daily progress:", progressError);
       } else {
         setDailyProgress((progressRows ?? []) as DailyProgressRow[]);
+      }
+
+      const { data: savedWins, error: winsLoadError } = await supabase
+        .from("little_wins")
+        .select("win_key, is_completed")
+        .eq("user_id", user.id);
+
+      if (winsLoadError) {
+        console.error("Could not load little wins:", winsLoadError);
+      } else {
+        const loadedWins: Record<string, boolean> = {};
+        for (const row of savedWins ?? []) {
+          loadedWins[row.win_key] = row.is_completed;
+        }
+        setCompletedWins(loadedWins);
       }
 
       const { data: latestMeasurement, error: measurementLoadError } = await supabase
@@ -291,6 +307,31 @@ export default function ProgressPage() {
       setMeasurementError(error instanceof Error ? error.message : "Could not save measurements. Please try again.");
     } finally {
       setIsSavingMeasurements(false);
+    }
+  };
+
+  const toggleWin = async (win: string) => {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return;
+
+    const isCompleted = !completedWins[win];
+    setCompletedWins((previous) => ({ ...previous, [win]: isCompleted }));
+
+    const { error } = await supabase.from("little_wins").upsert(
+      {
+        user_id: user.id,
+        win_key: win,
+        label: win,
+        is_completed: isCompleted,
+        challenge_day: currentDay,
+        completed_at: isCompleted ? new Date().toISOString() : null,
+      },
+      { onConflict: "user_id,win_key,challenge_day" }
+    );
+
+    if (error) {
+      console.error("Could not save little win:", error);
+      setCompletedWins((previous) => ({ ...previous, [win]: !isCompleted }));
     }
   };
 
@@ -952,10 +993,16 @@ export default function ProgressPage() {
                 {wins.map((win) => (
                   <button
                     key={win}
-                    className="flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] bg-[#F1E2DE]/50 px-5 py-4 text-left transition hover:bg-[#F1E2DE]"
+                    type="button"
+                    onClick={() => toggleWin(win)}
+                    className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition hover:bg-[#F1E2DE] ${
+                      completedWins[win] ? "bg-[#F1E2DE]" : "bg-[#F1E2DE]/50"
+                    }`}
                   >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] text-[#9D6F67]">
-                      ♡
+                    <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] text-[#9D6F67] ${
+                      completedWins[win] ? "bg-[#211C19] text-[#F7F1ED]" : ""
+                    }`}>
+                      {completedWins[win] ? "✓" : "♡"}
                     </span>
 
                     <span className="font-serif text-lg italic">
