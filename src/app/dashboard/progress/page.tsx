@@ -56,6 +56,11 @@ export default function ProgressPage() {
   const [measurementError, setMeasurementError] = useState<string | null>(null);
   const [measurementForm, setMeasurementForm] = useState({ weight: "", waist: "", hips: "", chest: "", thigh: "", arm: "" });
   const [completedWins, setCompletedWins] = useState<Record<string, boolean>>({});
+  const [weeklyCheckins, setWeeklyCheckins] = useState<Record<number, { went_well: string; felt_hard: string; proud_of: string; next_week_focus: string }>>({});
+  const [checkinWeek, setCheckinWeek] = useState<number | null>(null);
+  const [checkinForm, setCheckinForm] = useState({ went_well: "", felt_hard: "", proud_of: "", next_week_focus: "" });
+  const [isSavingCheckin, setIsSavingCheckin] = useState(false);
+  const [checkinError, setCheckinError] = useState<string | null>(null);
 
   useEffect(() => {
     const getUserAndProfile = async () => {
@@ -68,27 +73,22 @@ export default function ProgressPage() {
         return;
       }
 
-      // Reload saved progress photos whenever this page opens.
-      const { data: storedPhotos, error: listError } = await supabase.storage
-        .from("progress-photos")
-        .list(user.id, {
-          limit: 100,
-          sortBy: { column: "created_at", order: "desc" },
-        });
+      // Load saved progress-photo records from the database, then create signed URLs
+      // for the matching private Storage objects.
+      const { data: storedPhotos, error: photosLoadError } = await supabase
+        .from("progress_photos")
+        .select("challenge_day, storage_path")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false });
 
-      if (listError) {
-        console.error("Could not load progress photos:", listError);
-      } else if (storedPhotos) {
+      if (photosLoadError) {
+        console.error("Could not load progress photo records:", photosLoadError);
+      } else {
         const latestPhotoByDay = new Map<number, string>();
 
-        for (const photo of storedPhotos) {
-          const match = photo.name.match(/^day-(\d{2})-/);
-          if (!match) continue;
-
-          const photoDay = Number(match[1]);
-
-          if (!latestPhotoByDay.has(photoDay)) {
-            latestPhotoByDay.set(photoDay, `${user.id}/${photo.name}`);
+        for (const photo of storedPhotos ?? []) {
+          if (!latestPhotoByDay.has(photo.challenge_day)) {
+            latestPhotoByDay.set(photo.challenge_day, photo.storage_path);
           }
         }
 
@@ -160,6 +160,19 @@ export default function ProgressPage() {
           loadedWins[row.win_key] = row.is_completed;
         }
         setCompletedWins(loadedWins);
+      }
+
+      const { data: savedCheckins, error: checkinsLoadError } = await supabase
+        .from("weekly_checkins")
+        .select("week_number, went_well, felt_hard, proud_of, next_week_focus")
+        .eq("user_id", user.id);
+
+      if (checkinsLoadError) {
+        console.error("Could not load weekly check-ins:", checkinsLoadError);
+      } else {
+        const loadedCheckins: Record<number, { went_well: string; felt_hard: string; proud_of: string; next_week_focus: string }> = {};
+        for (const row of savedCheckins ?? []) loadedCheckins[row.week_number] = row;
+        setWeeklyCheckins(loadedCheckins);
       }
 
       const { data: latestMeasurement, error: measurementLoadError } = await supabase
@@ -235,6 +248,26 @@ export default function ProgressPage() {
         .createSignedUrl(filePath, 60 * 60);
 
       if (signedError) throw signedError;
+
+      const { error: photoRecordError } = await supabase
+        .from("progress_photos")
+        .upsert(
+          {
+            user_id: user.id,
+            challenge_day: photoTargetDay,
+            storage_path: filePath,
+            photo_type: "progress",
+            caption: null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,challenge_day,photo_type" }
+        );
+
+      if (photoRecordError) {
+        // Avoid leaving an orphaned Storage object if the database save fails.
+        await supabase.storage.from("progress-photos").remove([filePath]);
+        throw photoRecordError;
+      }
 
       setPhotoUrls((previous) => ({
         ...previous,
@@ -335,6 +368,31 @@ export default function ProgressPage() {
     }
   };
 
+  const openWeeklyCheckin = (week: number) => {
+    const saved = weeklyCheckins[week];
+    setCheckinError(null);
+    setCheckinForm(saved ?? { went_well: "", felt_hard: "", proud_of: "", next_week_focus: "" });
+    setCheckinWeek(week);
+  };
+
+  const saveWeeklyCheckin = async () => {
+    if (checkinWeek === null) return;
+    setIsSavingCheckin(true);
+    setCheckinError(null);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) throw new Error("You need to be signed in to save a check-in.");
+      const payload = { user_id: user.id, week_number: checkinWeek, ...checkinForm, updated_at: new Date().toISOString() };
+      const { data, error } = await supabase.from("weekly_checkins").upsert(payload, { onConflict: "user_id,week_number" }).select("week_number, went_well, felt_hard, proud_of, next_week_focus").single();
+      if (error) throw error;
+      setWeeklyCheckins((previous) => ({ ...previous, [checkinWeek]: data }));
+      setCheckinWeek(null);
+    } catch (error) {
+      console.error("Could not save weekly check-in:", error);
+      setCheckinError(error instanceof Error ? error.message : "Could not save check-in. Please try again.");
+    } finally { setIsSavingCheckin(false); }
+  };
+
   const removeProgressPhoto = async (day: number) => {
     const path = photoPaths[day];
     if (!path) return;
@@ -347,6 +405,25 @@ export default function ProgressPage() {
 
     if (error) {
       setPhotoError(error.message);
+      return;
+    }
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      setPhotoError("Could not verify your account while removing the photo.");
+      return;
+    }
+
+    const { error: recordDeleteError } = await supabase
+      .from("progress_photos")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("challenge_day", day)
+      .eq("photo_type", "progress");
+
+    if (recordDeleteError) {
+      console.error("Could not remove progress photo record:", recordDeleteError);
+      setPhotoError(recordDeleteError.message);
       return;
     }
 
@@ -430,7 +507,7 @@ export default function ProgressPage() {
       label: "CURRENT STREAK",
     },
     {
-      value: "0",
+      value: String(Object.keys(weeklyCheckins).length),
       label: "CHECK-INS",
     },
   ];
@@ -1021,81 +1098,37 @@ export default function ProgressPage() {
           {/* WEEKLY CHECK-INS */}
           <section className="border-t border-[#DED0CB] py-12">
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-              <div>
-                <p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">
-                  WEEKLY CHECK-INS
-                </p>
-
-                <h2 className="mt-3 font-serif text-4xl">
-                  Check in with
-                  <span className="italic text-[#A77B73]">
-                    {" "}yourself. ♡
-                  </span>
-                </h2>
-              </div>
-
-              <p className="text-[7px] tracking-[0.18em] text-[#927D76]">
-                0 OF 11 COMPLETE
-              </p>
+              <div><p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">WEEKLY CHECK-INS</p><h2 className="mt-3 font-serif text-4xl">Check in with <span className="italic text-[#A77B73]">yourself. ♡</span></h2></div>
+              <p className="text-[7px] tracking-[0.18em] text-[#927D76]">{Object.keys(weeklyCheckins).length} OF 11 COMPLETE</p>
             </div>
-
             <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {/* WEEK 1 */}
-              <button className="group rounded-[1.5rem] border border-[#CBA9A2] bg-[#FBF8F6] p-5 text-left transition hover:bg-[#F3EAE6]">
-                <div className="flex items-center justify-between">
-                  <span className="font-serif text-2xl text-[#A77B73]">
-                    01
-                  </span>
-
-                  <span className="rounded-full bg-[#EAD8D3] px-3 py-1.5 text-[6px] tracking-[0.18em] text-[#8F655E]">
-                    {currentDay >= 7 ? "READY" : "UPCOMING"}
-                  </span>
-                </div>
-
-                <p className="mt-5 text-[7px] tracking-[0.22em]">
-                  WEEK ONE
-                </p>
-
-                <p className="mt-1 font-serif text-xl italic text-[#A77B73]">
-                  how are we feeling?
-                </p>
-
-                <div className="mt-5 border-t border-[#E1D3CE] pt-4">
-                  <span className="text-[6px] tracking-[0.2em] text-[#9D6F67]">
-                    DAY 07 →
-                  </span>
-                </div>
-              </button>
-
-              {/* LOCKED FUTURE CHECK-INS */}
-              {Array.from({ length: 10 }, (_, index) => index + 2).map(
-                (week) => (
-                  <div
-                    key={week}
-                    className="rounded-[1.5rem] border border-[#DED0CB] bg-[#F5EFEC] p-5 opacity-60"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-serif text-2xl text-[#BDA6A0]">
-                        {String(week).padStart(2, "0")}
-                      </span>
-
-                      <span className="text-[10px] text-[#AA9690]">
-                        ♡
-                      </span>
-                    </div>
-
-                    <p className="mt-5 text-[7px] tracking-[0.22em] text-[#806E68]">
-                      WEEK {String(week).padStart(2, "0")}
-                    </p>
-
-                    <p className="mt-1 font-serif text-lg italic text-[#A7938D]">
-                      keep going.
-                    </p>
-                  </div>
-                )
-              )}
+              {Array.from({ length: 11 }, (_, index) => index + 1).map((week) => {
+                const unlockDay = (week - 1) * 7 + 1;
+                const unlocked = currentDay >= unlockDay;
+                const complete = Boolean(weeklyCheckins[week]);
+                return unlocked ? (
+                  <button key={week} type="button" onClick={() => openWeeklyCheckin(week)} className="group rounded-[1.5rem] border border-[#CBA9A2] bg-[#FBF8F6] p-5 text-left transition hover:bg-[#F3EAE6]">
+                    <div className="flex items-center justify-between"><span className="font-serif text-2xl text-[#A77B73]">{String(week).padStart(2,"0")}</span><span className="rounded-full bg-[#EAD8D3] px-3 py-1.5 text-[6px] tracking-[0.18em] text-[#8F655E]">{complete ? "COMPLETE" : "READY"}</span></div>
+                    <p className="mt-5 text-[7px] tracking-[0.22em]">WEEK {String(week).padStart(2,"0")}</p><p className="mt-1 font-serif text-xl italic text-[#A77B73]">{complete ? "checked in. ♡" : "how are we feeling?"}</p>
+                    <div className="mt-5 border-t border-[#E1D3CE] pt-4"><span className="text-[6px] tracking-[0.2em] text-[#9D6F67]">DAY {String(unlockDay).padStart(2,"0")} →</span></div>
+                  </button>
+                ) : (
+                  <div key={week} className="rounded-[1.5rem] border border-[#DED0CB] bg-[#F5EFEC] p-5 opacity-60"><div className="flex items-center justify-between"><span className="font-serif text-2xl text-[#BDA6A0]">{String(week).padStart(2,"0")}</span><span className="text-[10px] text-[#AA9690]">♡</span></div><p className="mt-5 text-[7px] tracking-[0.22em] text-[#806E68]">WEEK {String(week).padStart(2,"0")}</p><p className="mt-1 font-serif text-lg italic text-[#A7938D]">keep going.</p></div>
+                );
+              })}
             </div>
           </section>
+
+          {checkinWeek !== null && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm" onClick={() => setCheckinWeek(null)}>
+              <div className="w-full max-w-xl rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8" onClick={(event) => event.stopPropagation()}>
+                <div className="flex items-start justify-between"><div><p className="text-[7px] tracking-[0.35em] text-[#9D6F67]">WEEK {String(checkinWeek).padStart(2,"0")} CHECK-IN</p><h2 className="mt-2 font-serif text-3xl">Check in with yourself. ♡</h2></div><button type="button" onClick={() => setCheckinWeek(null)} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]">×</button></div>
+                <div className="mt-7 space-y-3">{[["went_well","What went well?"],["felt_hard","What felt hard?"],["proud_of","What are you proud of?"],["next_week_focus","What do you want to focus on next week?"]].map(([field,label]) => <label key={field} className="block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"><span className="text-[7px] tracking-[0.16em] text-[#806E68]">{label}</span><textarea rows={2} value={checkinForm[field as keyof typeof checkinForm]} onChange={(event) => setCheckinForm((previous) => ({...previous,[field]:event.target.value}))} className="mt-2 w-full resize-none bg-transparent font-serif text-lg italic text-[#A77B73] outline-none" placeholder="write it here..." /></label>)}</div>
+                {checkinError && <p className="mt-4 text-[9px] text-[#9D6F67]">{checkinError}</p>}
+                <button type="button" onClick={saveWeeklyCheckin} disabled={isSavingCheckin} className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[7px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50">{isSavingCheckin ? "SAVING..." : "SAVE CHECK-IN"}</button>
+              </div>
+            </div>
+          )}
 
           {/* PROGRESS REMINDER */}
           <section className="rounded-[2rem] bg-[#211C19] px-8 py-10 text-center text-[#F7F1ED] md:px-12">
