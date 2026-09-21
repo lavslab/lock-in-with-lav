@@ -8,81 +8,69 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 const exercises = [
   {
     number: "01",
-    name: "Goblet Squat",
-    prescription: "3 SETS × 10–12 REPS",
-    rest: "60 SEC REST",
-    cue: "Keep the weight close to your chest, brace your core, and sit down between your hips.",
-    modification: "Use bodyweight or squat to a chair.",
-    home: "Goblet Squat — 3 sets × 10–12 reps",
-    gym: "Leg Press — 3 sets × 10–12 reps",
+    name: "Bodyweight Squat",
+    prescription: "3 SETS × 12 REPS",
+    rest: "45 SEC REST",
+    cue: "Brace your core, sit down between your hips, and keep your knees tracking in the same direction as your toes.",
+    modification: "Squat to a chair or reduce your range of motion.",
   },
   {
     number: "02",
-    name: "Dumbbell Romanian Deadlift",
-    prescription: "3 SETS × 10–12 REPS",
-    rest: "60 SEC REST",
-    cue: "Push your hips back with soft knees and keep the dumbbells close to your legs.",
-    modification: "Use lighter weights and shorten your range of motion.",
-    home: "Dumbbell Romanian Deadlift — 3 sets × 10–12 reps",
-    gym: "Smith Machine Romanian Deadlift — 3 sets × 10–12 reps",
+    name: "Incline Push-Up",
+    prescription: "3 SETS × 8–10 REPS",
+    rest: "45 SEC REST",
+    cue: "Keep your body in one straight line and lower your chest toward the surface with your elbows angled slightly back.",
+    modification: "Use a higher surface, such as a counter or sturdy table.",
   },
   {
     number: "03",
-    name: "Reverse Lunge",
-    prescription: "3 SETS × 8–10 / SIDE",
-    rest: "60 SEC REST",
-    cue: "Step back with control and keep your front foot planted as you lower.",
-    modification: "Hold onto a stable surface or perform stationary split squats.",
-    home: "Dumbbell Reverse Lunge — 3 sets × 8–10 / side",
-    gym: "Smith Machine Reverse Lunge — 3 sets × 8–10 / side",
+    name: "Alternating Reverse Lunge",
+    prescription: "3 SETS × 8 / SIDE",
+    rest: "45 SEC REST",
+    cue: "Step back softly, lower with control, and drive through your front foot to return to standing.",
+    modification: "Hold a wall or chair for balance, or use a smaller range of motion.",
   },
   {
     number: "04",
     name: "Glute Bridge",
-    prescription: "3 SETS × 12–15 REPS",
+    prescription: "3 SETS × 15 REPS",
     rest: "45 SEC REST",
-    cue: "Drive through your heels and squeeze your glutes at the top without overextending your back.",
-    modification: "Use bodyweight and reduce the range if needed.",
-    home: "Dumbbell Glute Bridge — 3 sets × 12–15 reps",
-    gym: "Hip Thrust Machine — 3 sets × 12–15 reps",
+    cue: "Press through your heels, keep your ribs down, and squeeze your glutes at the top without arching your lower back.",
+    modification: "Reduce your range of motion or pause briefly between reps.",
   },
   {
     number: "05",
-    name: "Dumbbell Sumo Squat",
-    prescription: "3 SETS × 10–12 REPS",
-    rest: "60 SEC REST",
-    cue: "Take a comfortable wide stance, track your knees with your toes, and stay tall through your chest.",
-    modification: "Perform the movement without weight.",
-    home: "Dumbbell Sumo Squat — 3 sets × 10–12 reps",
-    gym: "Hack Squat or Leg Press — 3 sets × 10–12 reps",
+    name: "Bird Dog",
+    prescription: "3 SETS × 8 / SIDE",
+    rest: "30 SEC REST",
+    cue: "Brace your core and reach the opposite arm and leg away from you while keeping your hips square to the floor.",
+    modification: "Move only your arm or only your leg until you feel stable.",
   },
   {
     number: "06",
-    name: "Standing Calf Raise",
-    prescription: "3 SETS × 15 REPS",
+    name: "Low-Impact Mountain Climber",
+    prescription: "3 SETS × 30 SEC",
     rest: "45 SEC REST",
-    cue: "Rise slowly onto the balls of your feet, pause at the top, and lower with control.",
-    modification: "Hold a wall or chair for balance.",
-    home: "Standing Calf Raise — 3 sets × 15 reps",
-    gym: "Calf Raise Machine — 3 sets × 15 reps",
+    cue: "Keep your hands under your shoulders and step one knee forward at a time while keeping your core engaged.",
+    modification: "Perform the movement with your hands elevated on a sturdy surface.",
   },
 ];
 
 const warmup = [
-  "Bodyweight squats — 10 reps",
-  "Hip hinges — 10 reps",
-  "Alternating reverse lunges — 6 / side",
-  "Glute bridges — 10 reps",
+  "March in place — 60 sec",
+  "Arm circles — 10 each direction",
+  "Bodyweight good mornings — 10 reps",
+  "Alternating step-back lunges — 6 / side",
 ];
 
 const cooldown = [
-  "Quad stretch — 30 sec / side",
-  "Hamstring stretch — 30 sec / side",
+  "Standing quad stretch — 30 sec / side",
+  "Chest + shoulder stretch — 30 sec / side",
   "Figure-four stretch — 30 sec / side",
   "Slow breathing — 60 sec",
 ];
 
-export default function LowerBodyFoundationPage() {
+export default function FullBodyResetPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
@@ -148,21 +136,21 @@ export default function LowerBodyFoundationPage() {
             <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
               <div>
                 <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
-                  LOWER BODY • HOME OR GYM • BEGINNER
+                  FULL BODY • HOME OR GYM • BEGINNER
                 </p>
 
                 <h1 className="mt-5 font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
-                  Lower Body Foundation
+                  Full Body Reset
                 </h1>
 
                 <p className="mt-3 font-serif text-2xl italic text-[#DDB5AE] md:text-3xl">
-                  build the base. ♡
+                  move everything. ♡
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {[
-                  ["35", "MIN"],
+                  ["25", "MIN"],
                   ["06", "EXERCISES"],
                   ["03", "SETS"],
                 ].map(([value, label]) => (
@@ -186,7 +174,7 @@ export default function LowerBodyFoundationPage() {
                 EQUIPMENT
               </p>
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                Dumbbells / bands or gym equipment.
+                No equipment needed.
               </p>
             </div>
 
@@ -195,7 +183,7 @@ export default function LowerBodyFoundationPage() {
                 FOCUS
               </p>
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                Legs + glutes.
+                Full body.
               </p>
             </div>
 
@@ -204,7 +192,7 @@ export default function LowerBodyFoundationPage() {
                 INTENTION
               </p>
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                Control first.
+                Move with control.
               </p>
             </div>
           </section>
@@ -220,8 +208,8 @@ export default function LowerBodyFoundationPage() {
                   <span className="italic text-[#9D6F67]">with intention.</span>
                 </h2>
                 <p className="mt-4 max-w-md text-sm leading-6 text-[#806E68]">
-                  Take a few minutes to prepare your hips, knees, and lower
-                  body before adding weight.
+                  Take a few minutes to raise your heart rate and prepare your
+                  whole body to move.
                 </p>
               </div>
 
@@ -248,16 +236,16 @@ export default function LowerBodyFoundationPage() {
               </p>
               <h2 className="mt-3 font-serif text-3xl md:text-4xl">
                 Six movements.{" "}
-                <span className="italic text-[#A77B73]">quality reps. ♡</span>
+                <span className="italic text-[#A77B73]">move everything. ♡</span>
               </h2>
             </div>
 
             <div className="mt-6 rounded-[1.5rem] border border-[#D6C3BD] bg-[#EAD8D3]/55 p-5 md:p-6">
               <p className="text-[10px] tracking-[0.22em] text-[#8F655E]">
-                TRAINING AT HOME OR THE GYM?
+                HOME OR GYM — YOUR CHOICE.
               </p>
               <p className="mt-2 text-sm leading-6 text-[#6F5F59]">
-                Choose the version that matches where you&apos;re training today. Both options target the same movement pattern and workout goal.
+                This workout is intentionally equipment-free, so you can do the exact same session at home or at the gym.
               </p>
             </div>
 
@@ -287,17 +275,6 @@ export default function LowerBodyFoundationPage() {
                         <span className="rounded-full border border-[#D6C3BD] px-4 py-2 text-[10px] tracking-[0.12em] text-[#806E68]">
                           {exercise.rest}
                         </span>
-                      </div>
-
-                      <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                        <div className="rounded-xl border border-[#E1D3CE] bg-[#F7F1ED] p-3">
-                          <p className="text-[9px] tracking-[0.2em] text-[#9D6F67]">HOME</p>
-                          <p className="mt-1 text-sm leading-5 text-[#5F504B]">{exercise.home}</p>
-                        </div>
-                        <div className="rounded-xl border border-[#E1D3CE] bg-[#F7F1ED] p-3">
-                          <p className="text-[9px] tracking-[0.2em] text-[#9D6F67]">GYM</p>
-                          <p className="mt-1 text-sm leading-5 text-[#5F504B]">{exercise.gym}</p>
-                        </div>
                       </div>
                     </div>
 

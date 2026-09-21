@@ -8,81 +8,91 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 const exercises = [
   {
     number: "01",
-    name: "Goblet Squat",
+    name: "Lat Pulldown",
     prescription: "3 SETS × 10–12 REPS",
     rest: "60 SEC REST",
-    cue: "Keep the weight close to your chest, brace your core, and sit down between your hips.",
-    modification: "Use bodyweight or squat to a chair.",
-    home: "Goblet Squat — 3 sets × 10–12 reps",
-    gym: "Leg Press — 3 sets × 10–12 reps",
+    cue: "Keep your chest tall and pull your elbows down toward your ribs without swinging or leaning far back.",
+    modification: "Use a lighter weight and focus on a smooth, controlled pull.",
+    home: "Dumbbell Pullover — 3 sets × 10–12 reps",
+    gym: "Lat Pulldown — 3 sets × 10–12 reps",
   },
   {
     number: "02",
-    name: "Dumbbell Romanian Deadlift",
+    name: "Seated Cable Row",
     prescription: "3 SETS × 10–12 REPS",
     rest: "60 SEC REST",
-    cue: "Push your hips back with soft knees and keep the dumbbells close to your legs.",
-    modification: "Use lighter weights and shorten your range of motion.",
-    home: "Dumbbell Romanian Deadlift — 3 sets × 10–12 reps",
-    gym: "Smith Machine Romanian Deadlift — 3 sets × 10–12 reps",
+    cue: "Brace your core, keep your shoulders down, and pull the handle toward your torso while squeezing your shoulder blades together.",
+    modification: "Reduce the weight and shorten the range slightly if needed.",
+    home: "Dumbbell Bent-Over Row — 3 sets × 10–12 reps",
+    gym: "Seated Cable Row — 3 sets × 10–12 reps",
   },
   {
     number: "03",
-    name: "Reverse Lunge",
-    prescription: "3 SETS × 8–10 / SIDE",
+    name: "Dumbbell Shoulder Press",
+    prescription: "3 SETS × 8–10 REPS",
     rest: "60 SEC REST",
-    cue: "Step back with control and keep your front foot planted as you lower.",
-    modification: "Hold onto a stable surface or perform stationary split squats.",
-    home: "Dumbbell Reverse Lunge — 3 sets × 8–10 / side",
-    gym: "Smith Machine Reverse Lunge — 3 sets × 8–10 / side",
+    cue: "Keep your ribs stacked over your hips and press the dumbbells overhead without arching your lower back.",
+    modification: "Use lighter dumbbells or perform one arm at a time.",
+    home: "Dumbbell Shoulder Press — 3 sets × 8–10 reps",
+    gym: "Dumbbell Shoulder Press — 3 sets × 8–10 reps",
   },
   {
     number: "04",
-    name: "Glute Bridge",
-    prescription: "3 SETS × 12–15 REPS",
-    rest: "45 SEC REST",
-    cue: "Drive through your heels and squeeze your glutes at the top without overextending your back.",
-    modification: "Use bodyweight and reduce the range if needed.",
-    home: "Dumbbell Glute Bridge — 3 sets × 12–15 reps",
-    gym: "Hip Thrust Machine — 3 sets × 12–15 reps",
+    name: "Chest Press Machine",
+    prescription: "3 SETS × 10–12 REPS",
+    rest: "60 SEC REST",
+    cue: "Set the seat so the handles line up around mid-chest, keep your shoulders supported, and press without locking your elbows.",
+    modification: "Lower the resistance and stop just before your elbows travel too far behind your body.",
+    home: "Dumbbell Floor Press — 3 sets × 10–12 reps",
+    gym: "Chest Press Machine — 3 sets × 10–12 reps",
   },
   {
     number: "05",
-    name: "Dumbbell Sumo Squat",
-    prescription: "3 SETS × 10–12 REPS",
-    rest: "60 SEC REST",
-    cue: "Take a comfortable wide stance, track your knees with your toes, and stay tall through your chest.",
-    modification: "Perform the movement without weight.",
-    home: "Dumbbell Sumo Squat — 3 sets × 10–12 reps",
-    gym: "Hack Squat or Leg Press — 3 sets × 10–12 reps",
+    name: "Dumbbell Lateral Raise",
+    prescription: "3 SETS × 12–15 REPS",
+    rest: "45 SEC REST",
+    cue: "Keep a soft bend in your elbows and raise the dumbbells with control to about shoulder height.",
+    modification: "Use lighter dumbbells or alternate one arm at a time.",
+    home: "Dumbbell Lateral Raise — 3 sets × 12–15 reps",
+    gym: "Dumbbell Lateral Raise — 3 sets × 12–15 reps",
   },
   {
     number: "06",
-    name: "Standing Calf Raise",
-    prescription: "3 SETS × 15 REPS",
+    name: "Cable Triceps Pressdown",
+    prescription: "3 SETS × 10–12 REPS",
     rest: "45 SEC REST",
-    cue: "Rise slowly onto the balls of your feet, pause at the top, and lower with control.",
-    modification: "Hold a wall or chair for balance.",
-    home: "Standing Calf Raise — 3 sets × 15 reps",
-    gym: "Calf Raise Machine — 3 sets × 15 reps",
+    cue: "Keep your elbows close to your sides and straighten your arms without letting your shoulders roll forward.",
+    modification: "Use a lighter weight and reduce the range if your elbows feel uncomfortable.",
+    home: "Overhead Dumbbell Triceps Extension — 3 sets × 10–12 reps",
+    gym: "Cable Triceps Pressdown — 3 sets × 10–12 reps",
+  },
+  {
+    number: "07",
+    name: "Dumbbell Biceps Curl",
+    prescription: "3 SETS × 10–12 REPS",
+    rest: "45 SEC REST",
+    cue: "Keep your elbows near your sides and curl without swinging your torso or letting your shoulders take over.",
+    modification: "Use lighter dumbbells or alternate arms.",
+    home: "Dumbbell Biceps Curl — 3 sets × 10–12 reps",
+    gym: "Dumbbell Biceps Curl — 3 sets × 10–12 reps",
   },
 ];
 
 const warmup = [
-  "Bodyweight squats — 10 reps",
-  "Hip hinges — 10 reps",
-  "Alternating reverse lunges — 6 / side",
-  "Glute bridges — 10 reps",
+  "Easy cardio — 2 min",
+  "Arm circles — 10 each direction",
+  "Band pull-aparts — 12 reps",
+  "Light cable or machine rows — 10 reps",
 ];
 
 const cooldown = [
-  "Quad stretch — 30 sec / side",
-  "Hamstring stretch — 30 sec / side",
-  "Figure-four stretch — 30 sec / side",
+  "Chest stretch — 30 sec / side",
+  "Cross-body shoulder stretch — 30 sec / side",
+  "Overhead triceps stretch — 30 sec / side",
   "Slow breathing — 60 sec",
 ];
 
-export default function LowerBodyFoundationPage() {
+export default function UpperBodyBuildPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
@@ -148,22 +158,22 @@ export default function LowerBodyFoundationPage() {
             <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
               <div>
                 <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
-                  LOWER BODY • HOME OR GYM • BEGINNER
+                  UPPER BODY • HOME OR GYM • INTERMEDIATE
                 </p>
 
                 <h1 className="mt-5 font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
-                  Lower Body Foundation
+                  Upper Body Build
                 </h1>
 
                 <p className="mt-3 font-serif text-2xl italic text-[#DDB5AE] md:text-3xl">
-                  build the base. ♡
+                  strong looks good on you. ♡
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {[
-                  ["35", "MIN"],
-                  ["06", "EXERCISES"],
+                  ["45", "MIN"],
+                  ["07", "EXERCISES"],
                   ["03", "SETS"],
                 ].map(([value, label]) => (
                   <div
@@ -195,7 +205,7 @@ export default function LowerBodyFoundationPage() {
                 FOCUS
               </p>
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                Legs + glutes.
+                Back + shoulders + arms.
               </p>
             </div>
 
@@ -204,7 +214,7 @@ export default function LowerBodyFoundationPage() {
                 INTENTION
               </p>
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                Control first.
+                Strong + steady.
               </p>
             </div>
           </section>
@@ -220,8 +230,8 @@ export default function LowerBodyFoundationPage() {
                   <span className="italic text-[#9D6F67]">with intention.</span>
                 </h2>
                 <p className="mt-4 max-w-md text-sm leading-6 text-[#806E68]">
-                  Take a few minutes to prepare your hips, knees, and lower
-                  body before adding weight.
+                  Warm up your shoulders, upper back, and arms before moving
+                  into your working sets.
                 </p>
               </div>
 
@@ -247,8 +257,8 @@ export default function LowerBodyFoundationPage() {
                 THE WORKOUT
               </p>
               <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                Six movements.{" "}
-                <span className="italic text-[#A77B73]">quality reps. ♡</span>
+                Seven movements.{" "}
+                <span className="italic text-[#A77B73]">strong looks good on you. ♡</span>
               </h2>
             </div>
 

@@ -8,81 +8,91 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 const exercises = [
   {
     number: "01",
-    name: "Goblet Squat",
-    prescription: "3 SETS × 10–12 REPS",
-    rest: "60 SEC REST",
-    cue: "Keep the weight close to your chest, brace your core, and sit down between your hips.",
-    modification: "Use bodyweight or squat to a chair.",
-    home: "Goblet Squat — 3 sets × 10–12 reps",
-    gym: "Leg Press — 3 sets × 10–12 reps",
+    name: "Steady Cardio",
+    prescription: "1 ROUND × 5 MIN",
+    rest: "30 SEC RESET",
+    cue: "Move at a pace that raises your heart rate while still letting you stay in control of your breathing.",
+    modification: "Slow the pace or shorten the interval to 3 minutes.",
+    home: "Brisk march, walking pad, stairs, or outdoor walk — 5 min",
+    gym: "Treadmill, bike, elliptical, or stair climber — 5 min",
   },
   {
     number: "02",
-    name: "Dumbbell Romanian Deadlift",
-    prescription: "3 SETS × 10–12 REPS",
-    rest: "60 SEC REST",
-    cue: "Push your hips back with soft knees and keep the dumbbells close to your legs.",
-    modification: "Use lighter weights and shorten your range of motion.",
-    home: "Dumbbell Romanian Deadlift — 3 sets × 10–12 reps",
-    gym: "Smith Machine Romanian Deadlift — 3 sets × 10–12 reps",
+    name: "Squat to Reach",
+    prescription: "3 SETS × 40 SEC",
+    rest: "20 SEC REST",
+    cue: "Sit into a comfortable squat, stand tall, and reach overhead without rushing the movement.",
+    modification: "Use a shallower squat or squat to a chair.",
+    home: "Bodyweight Squat to Reach — 40 sec",
+    gym: "Bodyweight Squat to Reach — 40 sec",
   },
   {
     number: "03",
-    name: "Reverse Lunge",
-    prescription: "3 SETS × 8–10 / SIDE",
-    rest: "60 SEC REST",
-    cue: "Step back with control and keep your front foot planted as you lower.",
-    modification: "Hold onto a stable surface or perform stationary split squats.",
-    home: "Dumbbell Reverse Lunge — 3 sets × 8–10 / side",
-    gym: "Smith Machine Reverse Lunge — 3 sets × 8–10 / side",
+    name: "Low-Impact Cardio Push",
+    prescription: "3 SETS × 45 SEC",
+    rest: "30 SEC REST",
+    cue: "Keep a steady rhythm and stay light on your feet while maintaining good posture.",
+    modification: "Reduce the pace and keep one foot on the floor at all times.",
+    home: "Fast March or Step Jacks — 45 sec",
+    gym: "Incline Treadmill Walk or Bike Push — 45 sec",
   },
   {
     number: "04",
-    name: "Glute Bridge",
-    prescription: "3 SETS × 12–15 REPS",
-    rest: "45 SEC REST",
-    cue: "Drive through your heels and squeeze your glutes at the top without overextending your back.",
-    modification: "Use bodyweight and reduce the range if needed.",
-    home: "Dumbbell Glute Bridge — 3 sets × 12–15 reps",
-    gym: "Hip Thrust Machine — 3 sets × 12–15 reps",
+    name: "Alternating Reverse Lunge",
+    prescription: "3 SETS × 8 / SIDE",
+    rest: "30 SEC REST",
+    cue: "Step back with control, keep your front foot planted, and drive through it to return to standing.",
+    modification: "Hold a stable surface or use a smaller range of motion.",
+    home: "Bodyweight Reverse Lunge — 3 sets × 8 / side",
+    gym: "Bodyweight or Light Dumbbell Reverse Lunge — 3 sets × 8 / side",
   },
   {
     number: "05",
-    name: "Dumbbell Sumo Squat",
-    prescription: "3 SETS × 10–12 REPS",
-    rest: "60 SEC REST",
-    cue: "Take a comfortable wide stance, track your knees with your toes, and stay tall through your chest.",
-    modification: "Perform the movement without weight.",
-    home: "Dumbbell Sumo Squat — 3 sets × 10–12 reps",
-    gym: "Hack Squat or Leg Press — 3 sets × 10–12 reps",
+    name: "Cardio Interval",
+    prescription: "4 ROUNDS × 30 SEC",
+    rest: "30 SEC EASY",
+    cue: "Increase your effort for the work interval, then deliberately bring the pace down during recovery.",
+    modification: "Keep both intervals at a moderate pace instead of pushing intensity.",
+    home: "Walking Pad, Stairs, Fast March, or Outdoor Pace Pick-Up",
+    gym: "Treadmill, Bike, Rower, Elliptical, or Stair Climber",
   },
   {
     number: "06",
-    name: "Standing Calf Raise",
-    prescription: "3 SETS × 15 REPS",
-    rest: "45 SEC REST",
-    cue: "Rise slowly onto the balls of your feet, pause at the top, and lower with control.",
-    modification: "Hold a wall or chair for balance.",
-    home: "Standing Calf Raise — 3 sets × 15 reps",
-    gym: "Calf Raise Machine — 3 sets × 15 reps",
+    name: "Standing Knee Drive",
+    prescription: "3 SETS × 30 SEC",
+    rest: "30 SEC REST",
+    cue: "Brace your core and drive one knee up at a time while staying tall through your torso.",
+    modification: "Slow the tempo and hold a wall or rail for balance.",
+    home: "Alternating Standing Knee Drives — 30 sec",
+    gym: "Alternating Standing Knee Drives — 30 sec",
+  },
+  {
+    number: "07",
+    name: "Final Cardio Finish",
+    prescription: "1 ROUND × 3 MIN",
+    rest: "COOLDOWN NEXT",
+    cue: "Finish at a challenging but controlled pace, then gradually slow down during the final 30 seconds.",
+    modification: "Keep the entire interval at a comfortable steady pace.",
+    home: "Brisk Walk, Walking Pad, Stairs, or Fast March — 3 min",
+    gym: "Treadmill, Bike, Elliptical, Rower, or Stair Climber — 3 min",
   },
 ];
 
 const warmup = [
+  "Easy march or walk — 60 sec",
+  "Arm swings — 30 sec",
   "Bodyweight squats — 10 reps",
-  "Hip hinges — 10 reps",
-  "Alternating reverse lunges — 6 / side",
-  "Glute bridges — 10 reps",
+  "Alternating step-backs — 6 / side",
 ];
 
 const cooldown = [
-  "Quad stretch — 30 sec / side",
-  "Hamstring stretch — 30 sec / side",
-  "Figure-four stretch — 30 sec / side",
+  "Easy walk — 2 min",
+  "Standing quad stretch — 30 sec / side",
+  "Calf stretch — 30 sec / side",
   "Slow breathing — 60 sec",
 ];
 
-export default function LowerBodyFoundationPage() {
+export default function CardioLockInPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
@@ -148,22 +158,22 @@ export default function LowerBodyFoundationPage() {
             <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
               <div>
                 <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
-                  LOWER BODY • HOME OR GYM • BEGINNER
+                  CARDIO • HOME OR GYM • INTERMEDIATE
                 </p>
 
                 <h1 className="mt-5 font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
-                  Lower Body Foundation
+                  Cardio Lock In
                 </h1>
 
                 <p className="mt-3 font-serif text-2xl italic text-[#DDB5AE] md:text-3xl">
-                  build the base. ♡
+                  heart up. head clear. ♡
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {[
-                  ["35", "MIN"],
-                  ["06", "EXERCISES"],
+                  ["30", "MIN"],
+                  ["07", "INTERVALS"],
                   ["03", "SETS"],
                 ].map(([value, label]) => (
                   <div
@@ -186,7 +196,7 @@ export default function LowerBodyFoundationPage() {
                 EQUIPMENT
               </p>
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                Dumbbells / bands or gym equipment.
+                No equipment / cardio machine.
               </p>
             </div>
 
@@ -195,7 +205,7 @@ export default function LowerBodyFoundationPage() {
                 FOCUS
               </p>
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                Legs + glutes.
+                Cardio + conditioning.
               </p>
             </div>
 
@@ -204,7 +214,7 @@ export default function LowerBodyFoundationPage() {
                 INTENTION
               </p>
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                Control first.
+                Pace + consistency.
               </p>
             </div>
           </section>
@@ -220,8 +230,8 @@ export default function LowerBodyFoundationPage() {
                   <span className="italic text-[#9D6F67]">with intention.</span>
                 </h2>
                 <p className="mt-4 max-w-md text-sm leading-6 text-[#806E68]">
-                  Take a few minutes to prepare your hips, knees, and lower
-                  body before adding weight.
+                  Start easy, raise your heart rate gradually, and prepare your
+                  body for the intervals ahead.
                 </p>
               </div>
 
@@ -247,8 +257,8 @@ export default function LowerBodyFoundationPage() {
                 THE WORKOUT
               </p>
               <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                Six movements.{" "}
-                <span className="italic text-[#A77B73]">quality reps. ♡</span>
+                Seven intervals.{" "}
+                <span className="italic text-[#A77B73]">heart up. head clear. ♡</span>
               </h2>
             </div>
 

@@ -8,81 +8,91 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 const exercises = [
   {
     number: "01",
-    name: "Goblet Squat",
-    prescription: "3 SETS × 10–12 REPS",
-    rest: "60 SEC REST",
-    cue: "Keep the weight close to your chest, brace your core, and sit down between your hips.",
-    modification: "Use bodyweight or squat to a chair.",
-    home: "Goblet Squat — 3 sets × 10–12 reps",
-    gym: "Leg Press — 3 sets × 10–12 reps",
+    name: "Dumbbell Hip Thrust",
+    prescription: "4 SETS × 10–12 REPS",
+    rest: "75 SEC REST",
+    cue: "Keep your chin tucked, ribs down, and drive through your heels. Finish by squeezing your glutes without arching your lower back.",
+    modification: "Use bodyweight or perform a glute bridge from the floor.",
+    home: "Dumbbell Hip Thrust — 4 sets × 10–12 reps",
+    gym: "Smith Machine Hip Thrust — 4 sets × 10–12 reps",
   },
   {
     number: "02",
     name: "Dumbbell Romanian Deadlift",
     prescription: "3 SETS × 10–12 REPS",
     rest: "60 SEC REST",
-    cue: "Push your hips back with soft knees and keep the dumbbells close to your legs.",
-    modification: "Use lighter weights and shorten your range of motion.",
+    cue: "Push your hips back with soft knees and keep the dumbbells close to your legs. Stop when you feel a strong hamstring stretch.",
+    modification: "Use lighter dumbbells or shorten your range of motion.",
     home: "Dumbbell Romanian Deadlift — 3 sets × 10–12 reps",
-    gym: "Smith Machine Romanian Deadlift — 3 sets × 10–12 reps",
+    gym: "Barbell or Smith Machine RDL — 3 sets × 10–12 reps",
   },
   {
     number: "03",
-    name: "Reverse Lunge",
+    name: "Bulgarian Split Squat",
     prescription: "3 SETS × 8–10 / SIDE",
     rest: "60 SEC REST",
-    cue: "Step back with control and keep your front foot planted as you lower.",
-    modification: "Hold onto a stable surface or perform stationary split squats.",
-    home: "Dumbbell Reverse Lunge — 3 sets × 8–10 / side",
-    gym: "Smith Machine Reverse Lunge — 3 sets × 8–10 / side",
+    cue: "Take a long stance and lean slightly forward while keeping your front foot planted. Drive through the front heel to stand.",
+    modification: "Keep your back foot on the floor and perform a stationary split squat.",
+    home: "Dumbbell Bulgarian Split Squat — 3 sets × 8–10 / side",
+    gym: "Smith Machine Bulgarian Split Squat — 3 sets × 8–10 / side",
   },
   {
     number: "04",
-    name: "Glute Bridge",
-    prescription: "3 SETS × 12–15 REPS",
+    name: "Banded Lateral Walk",
+    prescription: "3 SETS × 12 / SIDE",
     rest: "45 SEC REST",
-    cue: "Drive through your heels and squeeze your glutes at the top without overextending your back.",
-    modification: "Use bodyweight and reduce the range if needed.",
-    home: "Dumbbell Glute Bridge — 3 sets × 12–15 reps",
-    gym: "Hip Thrust Machine — 3 sets × 12–15 reps",
+    cue: "Keep tension on the band, stay slightly bent through your knees, and take controlled steps without rocking side to side.",
+    modification: "Use a lighter band or perform fewer steps each direction.",
+    home: "Banded Lateral Walk — 3 sets × 12 / side",
+    gym: "Hip Abduction Machine — 3 sets × 12–15 reps",
   },
   {
     number: "05",
     name: "Dumbbell Sumo Squat",
     prescription: "3 SETS × 10–12 REPS",
     rest: "60 SEC REST",
-    cue: "Take a comfortable wide stance, track your knees with your toes, and stay tall through your chest.",
-    modification: "Perform the movement without weight.",
+    cue: "Use a comfortable wide stance, keep your chest tall, and drive the floor away as you stand and squeeze your glutes.",
+    modification: "Use one lighter dumbbell or perform the movement with bodyweight.",
     home: "Dumbbell Sumo Squat — 3 sets × 10–12 reps",
-    gym: "Hack Squat or Leg Press — 3 sets × 10–12 reps",
+    gym: "Leg Press — 3 sets × 10–12 reps",
   },
   {
     number: "06",
-    name: "Standing Calf Raise",
-    prescription: "3 SETS × 15 REPS",
+    name: "Banded Glute Kickback",
+    prescription: "3 SETS × 12–15 / SIDE",
     rest: "45 SEC REST",
-    cue: "Rise slowly onto the balls of your feet, pause at the top, and lower with control.",
-    modification: "Hold a wall or chair for balance.",
-    home: "Standing Calf Raise — 3 sets × 15 reps",
-    gym: "Calf Raise Machine — 3 sets × 15 reps",
+    cue: "Brace your core and extend your leg behind you without twisting your hips or arching your lower back.",
+    modification: "Remove the band and perform controlled bodyweight kickbacks.",
+    home: "Banded Glute Kickback — 3 sets × 12–15 / side",
+    gym: "Cable Glute Kickback — 3 sets × 12–15 / side",
+  },
+  {
+    number: "07",
+    name: "Frog Pump",
+    prescription: "2 SETS × 20 REPS",
+    rest: "30 SEC REST",
+    cue: "Press the soles of your feet together, keep your ribs down, and squeeze your glutes hard at the top of every rep.",
+    modification: "Reduce the reps and pause briefly between repetitions as needed.",
+    home: "Frog Pump — 2 sets × 20 reps",
+    gym: "Hip Thrust Machine Burnout — 2 sets × 15–20 reps",
   },
 ];
 
 const warmup = [
-  "Bodyweight squats — 10 reps",
+  "Bodyweight glute bridges — 12 reps",
   "Hip hinges — 10 reps",
-  "Alternating reverse lunges — 6 / side",
-  "Glute bridges — 10 reps",
+  "Fire hydrants — 8 / side",
+  "Banded lateral steps — 8 / side",
 ];
 
 const cooldown = [
-  "Quad stretch — 30 sec / side",
-  "Hamstring stretch — 30 sec / side",
   "Figure-four stretch — 30 sec / side",
+  "Half-kneeling hip flexor stretch — 30 sec / side",
+  "Hamstring stretch — 30 sec / side",
   "Slow breathing — 60 sec",
 ];
 
-export default function LowerBodyFoundationPage() {
+export default function GluteBuilderPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
@@ -148,22 +158,22 @@ export default function LowerBodyFoundationPage() {
             <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
               <div>
                 <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
-                  LOWER BODY • HOME OR GYM • BEGINNER
+                  GLUTES • HOME OR GYM • INTERMEDIATE
                 </p>
 
                 <h1 className="mt-5 font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
-                  Lower Body Foundation
+                  Glute Builder
                 </h1>
 
                 <p className="mt-3 font-serif text-2xl italic text-[#DDB5AE] md:text-3xl">
-                  build the base. ♡
+                  slow reps. strong finish. ♡
                 </p>
               </div>
 
               <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 {[
-                  ["35", "MIN"],
-                  ["06", "EXERCISES"],
+                  ["40", "MIN"],
+                  ["07", "EXERCISES"],
                   ["03", "SETS"],
                 ].map(([value, label]) => (
                   <div
@@ -195,7 +205,7 @@ export default function LowerBodyFoundationPage() {
                 FOCUS
               </p>
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                Legs + glutes.
+                Glutes + hamstrings.
               </p>
             </div>
 
@@ -204,7 +214,7 @@ export default function LowerBodyFoundationPage() {
                 INTENTION
               </p>
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                Control first.
+                Feel every rep.
               </p>
             </div>
           </section>
@@ -220,8 +230,8 @@ export default function LowerBodyFoundationPage() {
                   <span className="italic text-[#9D6F67]">with intention.</span>
                 </h2>
                 <p className="mt-4 max-w-md text-sm leading-6 text-[#806E68]">
-                  Take a few minutes to prepare your hips, knees, and lower
-                  body before adding weight.
+                  Wake up your glutes and prepare your hips before adding
+                  resistance.
                 </p>
               </div>
 
@@ -247,8 +257,8 @@ export default function LowerBodyFoundationPage() {
                 THE WORKOUT
               </p>
               <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                Six movements.{" "}
-                <span className="italic text-[#A77B73]">quality reps. ♡</span>
+                Seven movements.{" "}
+                <span className="italic text-[#A77B73]">slow reps. strong finish. ♡</span>
               </h2>
             </div>
 

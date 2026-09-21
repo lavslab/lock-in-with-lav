@@ -10,7 +10,7 @@ const workouts = [
     id: "lower-body-foundation",
     title: "Lower Body Foundation",
     subtitle: "build the base.",
-    location: "Home",
+    locations: ["Home", "Gym"],
     level: "Beginner",
     type: "Lower Body",
     time: "35 MIN",
@@ -21,7 +21,7 @@ const workouts = [
     id: "glute-builder",
     title: "Glute Builder",
     subtitle: "slow reps. strong finish.",
-    location: "Home",
+    locations: ["Home", "Gym"],
     level: "Intermediate",
     type: "Glutes",
     time: "40 MIN",
@@ -32,7 +32,7 @@ const workouts = [
     id: "full-body-reset",
     title: "Full Body Reset",
     subtitle: "move everything.",
-    location: "No Equipment",
+    locations: ["Home", "Gym", "No Equipment"],
     level: "Beginner",
     type: "Full Body",
     time: "25 MIN",
@@ -43,7 +43,7 @@ const workouts = [
     id: "upper-body-build",
     title: "Upper Body Build",
     subtitle: "strong looks good on you.",
-    location: "Gym",
+    locations: ["Home", "Gym"],
     level: "Intermediate",
     type: "Upper Body",
     time: "45 MIN",
@@ -54,7 +54,7 @@ const workouts = [
     id: "core-control",
     title: "Core Control",
     subtitle: "strength from the centre.",
-    location: "Home",
+    locations: ["Home", "Gym"],
     level: "Beginner",
     type: "Core",
     time: "20 MIN",
@@ -65,7 +65,7 @@ const workouts = [
     id: "cardio-lock-in",
     title: "Cardio Lock In",
     subtitle: "heart up. head clear.",
-    location: "No Equipment",
+    locations: ["Home", "Gym", "No Equipment"],
     level: "Intermediate",
     type: "Cardio",
     time: "30 MIN",
@@ -126,7 +126,7 @@ export default function WorkoutsPage() {
   const filteredWorkouts = useMemo(() => {
     return workouts.filter((workout) => {
       const locationMatch =
-        location === "All" || workout.location === location;
+        location === "All" || workout.locations.includes(location);
       const levelMatch = level === "All" || workout.level === level;
       const typeMatch = type === "All" || workout.type === type;
 
@@ -296,7 +296,9 @@ export default function WorkoutsPage() {
 
                       <p className="mt-7 text-[8px] tracking-[0.25em] text-[#806E68]">
                         {workout.type.toUpperCase()} •{" "}
-                        {workout.location.toUpperCase()}
+                        {workout.locations.includes("No Equipment")
+                          ? "HOME + GYM • NO EQUIPMENT"
+                          : "HOME + GYM"}
                       </p>
 
                       <h3 className="mt-3 font-serif text-3xl leading-tight">
