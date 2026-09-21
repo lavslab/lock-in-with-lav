@@ -56,6 +56,10 @@ export default function ProgressPage() {
   const [measurementError, setMeasurementError] = useState<string | null>(null);
   const [measurementForm, setMeasurementForm] = useState({ weight: "", waist: "", hips: "", chest: "", thigh: "", arm: "" });
   const [completedWins, setCompletedWins] = useState<Record<string, boolean>>({});
+  const [isCustomWinModalOpen, setIsCustomWinModalOpen] = useState(false);
+  const [customWin, setCustomWin] = useState("");
+  const [isSavingCustomWin, setIsSavingCustomWin] = useState(false);
+  const [customWinError, setCustomWinError] = useState<string | null>(null);
   const [weeklyCheckins, setWeeklyCheckins] = useState<Record<number, { went_well: string; felt_hard: string; proud_of: string; next_week_focus: string }>>({});
   const [checkinWeek, setCheckinWeek] = useState<number | null>(null);
   const [checkinForm, setCheckinForm] = useState({ went_well: "", felt_hard: "", proud_of: "", next_week_focus: "" });
@@ -149,7 +153,7 @@ export default function ProgressPage() {
 
       const { data: savedWins, error: winsLoadError } = await supabase
         .from("little_wins")
-        .select("win_key, is_completed")
+        .select("win_key, label, is_completed")
         .eq("user_id", user.id);
 
       if (winsLoadError) {
@@ -368,6 +372,51 @@ export default function ProgressPage() {
     }
   };
 
+  const saveCustomWin = async () => {
+    const label = customWin.trim();
+    if (!label) {
+      setCustomWinError("Write your win first. ♡");
+      return;
+    }
+
+    setIsSavingCustomWin(true);
+    setCustomWinError(null);
+
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        throw new Error("You need to be signed in to add a win.");
+      }
+
+      const winKey = `custom:${label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+
+      const { error } = await supabase.from("little_wins").upsert(
+        {
+          user_id: user.id,
+          win_key: winKey,
+          label,
+          is_completed: true,
+          challenge_day: currentDay,
+          completed_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,win_key,challenge_day" }
+      );
+
+      if (error) throw error;
+
+      setCompletedWins((previous) => ({ ...previous, [winKey]: true }));
+      setCustomWin("");
+      setIsCustomWinModalOpen(false);
+    } catch (error) {
+      console.error("Could not save custom win:", error);
+      setCustomWinError(
+        error instanceof Error ? error.message : "Could not save your win. Please try again."
+      );
+    } finally {
+      setIsSavingCustomWin(false);
+    }
+  };
+
   const openWeeklyCheckin = (week: number) => {
     const saved = weeklyCheckins[week];
     setCheckinError(null);
@@ -483,6 +532,18 @@ export default function ProgressPage() {
           : currentDay < 75
             ? "you're in it now. keep going. ♡"
             : "75 days. you did that. ♡";
+
+  const customWins = Object.keys(completedWins)
+    .filter((key) => key.startsWith("custom:"))
+    .map((key) => ({
+      key,
+      label: key
+        .replace(/^custom:/, "")
+        .split("-")
+        .filter(Boolean)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" "),
+    }));
 
   const measurementDisplay = [
     ["WEIGHT", measurementRow?.weight != null ? `${measurementRow.weight} lb` : "—"],
@@ -1089,11 +1150,102 @@ export default function ProgressPage() {
                 ))}
               </div>
 
-              <button className="mt-5 text-[7px] tracking-[0.2em] text-[#8F655E]">
+              {customWins.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {customWins.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleWin(key)}
+                      className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition hover:bg-[#F1E2DE] ${
+                        completedWins[key] ? "bg-[#F1E2DE]" : "bg-[#F1E2DE]/50"
+                      }`}
+                    >
+                      <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] text-[#9D6F67] ${
+                        completedWins[key] ? "bg-[#211C19] text-[#F7F1ED]" : ""
+                      }`}>
+                        {completedWins[key] ? "✓" : "♡"}
+                      </span>
+                      <span className="font-serif text-lg italic">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomWin("");
+                  setCustomWinError(null);
+                  setIsCustomWinModalOpen(true);
+                }}
+                className="mt-5 text-[7px] tracking-[0.2em] text-[#8F655E]"
+              >
                 + ADD YOUR OWN
               </button>
             </div>
           </section>
+
+          {isCustomWinModalOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
+              onClick={() => setIsCustomWinModalOpen(false)}
+            >
+              <div
+                className="w-full max-w-lg rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[7px] tracking-[0.35em] text-[#9D6F67]">LITTLE WINS</p>
+                    <h2 className="mt-2 font-serif text-3xl">Add your own. ♡</h2>
+                    <p className="mt-2 font-serif text-base italic text-[#A77B73]">
+                      What are you noticing about yourself?
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCustomWinModalOpen(false)}
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <label className="mt-7 block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4">
+                  <span className="text-[7px] tracking-[0.18em] text-[#806E68]">MY WIN</span>
+                  <input
+                    type="text"
+                    value={customWin}
+                    onChange={(event) => {
+                      setCustomWin(event.target.value);
+                      setCustomWinError(null);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !isSavingCustomWin) saveCustomWin();
+                    }}
+                    autoFocus
+                    maxLength={80}
+                    className="mt-3 w-full bg-transparent font-serif text-xl italic text-[#A77B73] outline-none"
+                    placeholder="I..."
+                  />
+                </label>
+
+                {customWinError && (
+                  <p className="mt-4 text-[9px] text-[#9D6F67]">{customWinError}</p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={saveCustomWin}
+                  disabled={isSavingCustomWin || !customWin.trim()}
+                  className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[7px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
+                >
+                  {isSavingCustomWin ? "SAVING..." : "SAVE MY WIN"}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* WEEKLY CHECK-INS */}
           <section className="border-t border-[#DED0CB] py-12">
