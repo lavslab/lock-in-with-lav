@@ -599,7 +599,7 @@ export default function ProgressPage() {
 
             <Link
               href="/dashboard"
-              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[7px] tracking-[0.25em] transition hover:bg-[#EAD8D3] md:hidden"
+              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[8px] tracking-[0.25em] transition hover:bg-[#EAD8D3] md:hidden"
             >
               TODAY
             </Link>
@@ -609,7 +609,7 @@ export default function ProgressPage() {
           <section className="mt-10 rounded-[2rem] bg-[#211C19] px-8 py-9 text-[#F7F1ED] md:px-10 md:py-10">
             <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
               <div>
-                <p className="text-[7px] tracking-[0.4em] text-[#DDB5AE]">
+                <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
                   YOUR PROGRESS
                 </p>
 
@@ -627,7 +627,7 @@ export default function ProgressPage() {
 
               <div className="w-full max-w-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-[7px] tracking-[0.2em] text-[#BFAEAA]">
+                  <span className="text-[8px] tracking-[0.2em] text-[#BFAEAA]">
                     CHALLENGE PROGRESS
                   </span>
 
@@ -672,10 +672,10 @@ export default function ProgressPage() {
           </section>
 
           {/* PROGRESS PHOTOS */}
-          <section className="border-t border-[#DED0CB] py-12">
+          <section className="border-t border-[#DED0CB] py-10">
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
-                <p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">
+                <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
                   PROGRESS PHOTOS
                 </p>
 
@@ -687,7 +687,7 @@ export default function ProgressPage() {
                 </h2>
               </div>
 
-              <div className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#9D6F67]">
+              <div className="flex items-center gap-2 text-[8px] tracking-[0.18em] text-[#9D6F67]">
                 <span>♡</span>
                 <span>PRIVATE TO YOU</span>
               </div>
@@ -714,11 +714,11 @@ export default function ProgressPage() {
                       {editingPhotoDay === 1 && (
                         <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
                           <button type="button" onClick={() => openPhotoPicker(1)}
-                            className="block w-full px-4 py-3 text-left text-[7px] tracking-[0.15em] hover:bg-[#EADCD7]">
+                            className="block w-full px-4 py-3 text-left text-[8px] tracking-[0.15em] hover:bg-[#EADCD7]">
                             REPLACE PHOTO
                           </button>
                           <button type="button" onClick={() => removeProgressPhoto(1)}
-                            className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[7px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]">
+                            className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[8px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]">
                             REMOVE PHOTO
                           </button>
                         </div>
@@ -735,7 +735,7 @@ export default function ProgressPage() {
                         +
                       </span>
 
-                      <span className="mt-3 text-[7px] tracking-[0.2em] text-[#8F655E]">
+                      <span className="mt-3 text-[8px] tracking-[0.2em] text-[#8F655E]">
                         {isUploadingPhoto && photoTargetDay === 1
                           ? "UPLOADING..."
                           : "ADD PHOTO"}
@@ -760,7 +760,7 @@ export default function ProgressPage() {
 
                 <div className="flex items-center justify-between p-5">
                   <div>
-                    <p className="text-[7px] tracking-[0.25em]">
+                    <p className="text-[8px] tracking-[0.25em]">
                       DAY 01
                     </p>
 
@@ -769,7 +769,7 @@ export default function ProgressPage() {
                     </p>
                   </div>
 
-                  <span className="text-[7px] text-[#927D76]">
+                  <span className="text-[8px] text-[#927D76]">
                     {startLabel}
                   </span>
                 </div>
@@ -813,11 +813,11 @@ export default function ProgressPage() {
                           {editingPhotoDay === currentDay && (
                             <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
                               <button type="button" onClick={() => openPhotoPicker(currentDay)}
-                                className="block w-full px-4 py-3 text-left text-[7px] tracking-[0.15em] hover:bg-[#EADCD7]">
+                                className="block w-full px-4 py-3 text-left text-[8px] tracking-[0.15em] hover:bg-[#EADCD7]">
                                 REPLACE PHOTO
                               </button>
                               <button type="button" onClick={() => removeProgressPhoto(currentDay)}
-                                className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[7px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]">
+                                className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[8px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]">
                                 REMOVE PHOTO
                               </button>
                             </div>
@@ -834,7 +834,7 @@ export default function ProgressPage() {
                             +
                           </span>
 
-                          <span className="mt-3 text-[7px] tracking-[0.2em] text-[#8F655E]">
+                          <span className="mt-3 text-[8px] tracking-[0.2em] text-[#8F655E]">
                             {isUploadingPhoto && photoTargetDay === currentDay
                               ? "UPLOADING..."
                               : "ADD PHOTO"}
@@ -848,7 +848,7 @@ export default function ProgressPage() {
                         ♡
                       </span>
 
-                      <p className="mt-3 text-[7px] tracking-[0.2em] text-[#A7938D]">
+                      <p className="mt-3 text-[8px] tracking-[0.2em] text-[#A7938D]">
                         KEEP SHOWING UP
                       </p>
                     </div>
@@ -857,7 +857,7 @@ export default function ProgressPage() {
 
                 <div className="flex items-center justify-between p-5">
                   <div>
-                    <p className="text-[7px] tracking-[0.25em]">
+                    <p className="text-[8px] tracking-[0.25em]">
                       {currentDay === 1
                         ? "YOUR NEXT PHOTO"
                         : `DAY ${dayNumber}`}
@@ -868,7 +868,7 @@ export default function ProgressPage() {
                     </p>
                   </div>
 
-                  <span className="text-[7px] text-[#927D76]">
+                  <span className="text-[8px] text-[#927D76]">
                     {currentDay === 1 ? "LOCKED" : "TODAY"}
                   </span>
                 </div>
@@ -882,7 +882,7 @@ export default function ProgressPage() {
                       ♡
                     </span>
 
-                    <p className="mt-3 text-[7px] tracking-[0.2em] text-[#A7938D]">
+                    <p className="mt-3 text-[8px] tracking-[0.2em] text-[#A7938D]">
                       SEE YOU ON DAY 75
                     </p>
                   </div>
@@ -890,7 +890,7 @@ export default function ProgressPage() {
 
                 <div className="flex items-center justify-between p-5">
                   <div>
-                    <p className="text-[7px] tracking-[0.25em]">
+                    <p className="text-[8px] tracking-[0.25em]">
                       DAY 75
                     </p>
 
@@ -899,7 +899,7 @@ export default function ProgressPage() {
                     </p>
                   </div>
 
-                  <span className="text-[7px] text-[#927D76]">
+                  <span className="text-[8px] text-[#927D76]">
                     {endLabel}
                   </span>
                 </div>
@@ -908,10 +908,10 @@ export default function ProgressPage() {
           </section>
 
           {/* PROGRESS DIARY */}
-          <section className="border-t border-[#DED0CB] py-12">
+          <section className="border-t border-[#DED0CB] py-10">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
-                <p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">
+                <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
                   YOUR PROGRESS DIARY
                 </p>
                 <h2 className="mt-3 font-serif text-4xl md:text-5xl">
@@ -920,7 +920,7 @@ export default function ProgressPage() {
                 </h2>
               </div>
 
-              <p className="text-[7px] tracking-[0.18em] text-[#927D76]">
+              <p className="text-[8px] tracking-[0.18em] text-[#927D76]">
                 {diaryDays.length} {diaryDays.length === 1 ? "PHOTO" : "PHOTOS"} SAVED
               </p>
             </div>
@@ -966,7 +966,7 @@ export default function ProgressPage() {
                 ))}
               </div>
             ) : (
-              <div className="mt-8 rounded-[1.75rem] border border-dashed border-[#D8C7C1] bg-[#FBF8F6] px-6 py-12 text-center">
+              <div className="mt-8 rounded-[1.75rem] border border-dashed border-[#D8C7C1] bg-[#FBF8F6] px-6 py-10 text-center">
                 <p className="font-serif text-2xl italic text-[#A77B73]">
                   your story starts with the first photo. ♡
                 </p>
@@ -1002,7 +1002,7 @@ export default function ProgressPage() {
 
                 <div className="flex items-center justify-between gap-4 p-6">
                   <div>
-                    <p className="text-[7px] tracking-[0.25em] text-[#806E68]">
+                    <p className="text-[8px] tracking-[0.25em] text-[#806E68]">
                       PROGRESS PHOTO
                     </p>
                     <p className="mt-1 font-serif text-2xl italic text-[#A77B73]">
@@ -1042,7 +1042,7 @@ export default function ProgressPage() {
               <div className="w-full max-w-xl rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8" onClick={(event) => event.stopPropagation()}>
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-[7px] tracking-[0.35em] text-[#9D6F67]">MEASUREMENTS</p>
+                    <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">MEASUREMENTS</p>
                     <h2 className="mt-2 font-serif text-3xl">Update your numbers. ♡</h2>
                     <p className="mt-2 text-[8px] tracking-[0.15em] text-[#927D76]">DAY {String(currentDay).padStart(2, "0")}</p>
                   </div>
@@ -1068,7 +1068,7 @@ export default function ProgressPage() {
                 </div>
 
                 {measurementError && <p className="mt-4 text-[9px] text-[#9D6F67]">{measurementError}</p>}
-                <button type="button" onClick={saveMeasurements} disabled={isSavingMeasurements} className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[7px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50">
+                <button type="button" onClick={saveMeasurements} disabled={isSavingMeasurements} className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[8px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50">
                   {isSavingMeasurements ? "SAVING..." : "SAVE MEASUREMENTS"}
                 </button>
               </div>
@@ -1076,12 +1076,12 @@ export default function ProgressPage() {
           )}
 
           {/* MEASUREMENTS + WINS */}
-          <section className="grid gap-5 border-t border-[#DED0CB] py-12 lg:grid-cols-2">
+          <section className="grid gap-5 border-t border-[#DED0CB] py-10 lg:grid-cols-2">
             {/* MEASUREMENTS */}
             <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-8">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-[7px] tracking-[0.35em] text-[#9D6F67]">
+                  <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
                     MEASUREMENTS
                   </p>
 
@@ -1101,7 +1101,7 @@ export default function ProgressPage() {
                     key={label}
                     className="flex items-center justify-between border-t border-[#E1D3CE] py-4"
                   >
-                    <span className="text-[7px] tracking-[0.2em] text-[#806E68]">
+                    <span className="text-[8px] tracking-[0.2em] text-[#806E68]">
                       {label}
                     </span>
 
@@ -1119,7 +1119,7 @@ export default function ProgressPage() {
 
             {/* WINS */}
             <div className="rounded-[2rem] bg-[#EAD8D3] p-7 md:p-8">
-              <p className="text-[7px] tracking-[0.35em] text-[#8F655E]">
+              <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
                 LITTLE WINS
               </p>
 
@@ -1179,7 +1179,7 @@ export default function ProgressPage() {
                   setCustomWinError(null);
                   setIsCustomWinModalOpen(true);
                 }}
-                className="mt-5 text-[7px] tracking-[0.2em] text-[#8F655E]"
+                className="mt-5 text-[8px] tracking-[0.2em] text-[#8F655E] transition hover:text-[#211C19]"
               >
                 + ADD YOUR OWN
               </button>
@@ -1197,7 +1197,7 @@ export default function ProgressPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-[7px] tracking-[0.35em] text-[#9D6F67]">LITTLE WINS</p>
+                    <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">LITTLE WINS</p>
                     <h2 className="mt-2 font-serif text-3xl">Add your own. ♡</h2>
                     <p className="mt-2 font-serif text-base italic text-[#A77B73]">
                       What are you noticing about yourself?
@@ -1213,7 +1213,7 @@ export default function ProgressPage() {
                 </div>
 
                 <label className="mt-7 block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4">
-                  <span className="text-[7px] tracking-[0.18em] text-[#806E68]">MY WIN</span>
+                  <span className="text-[8px] tracking-[0.18em] text-[#806E68]">MY WIN</span>
                   <input
                     type="text"
                     value={customWin}
@@ -1239,7 +1239,7 @@ export default function ProgressPage() {
                   type="button"
                   onClick={saveCustomWin}
                   disabled={isSavingCustomWin || !customWin.trim()}
-                  className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[7px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
+                  className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[8px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
                 >
                   {isSavingCustomWin ? "SAVING..." : "SAVE MY WIN"}
                 </button>
@@ -1248,10 +1248,10 @@ export default function ProgressPage() {
           )}
 
           {/* WEEKLY CHECK-INS */}
-          <section className="border-t border-[#DED0CB] py-12">
+          <section className="border-t border-[#DED0CB] py-10">
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-              <div><p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">WEEKLY CHECK-INS</p><h2 className="mt-3 font-serif text-4xl">Check in with <span className="italic text-[#A77B73]">yourself. ♡</span></h2></div>
-              <p className="text-[7px] tracking-[0.18em] text-[#927D76]">{Object.keys(weeklyCheckins).length} OF 11 COMPLETE</p>
+              <div><p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">WEEKLY CHECK-INS</p><h2 className="mt-3 font-serif text-4xl">Check in with <span className="italic text-[#A77B73]">yourself. ♡</span></h2></div>
+              <p className="text-[8px] tracking-[0.18em] text-[#927D76]">{Object.keys(weeklyCheckins).length} OF 11 COMPLETE</p>
             </div>
             <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 11 }, (_, index) => index + 1).map((week) => {
@@ -1261,11 +1261,11 @@ export default function ProgressPage() {
                 return unlocked ? (
                   <button key={week} type="button" onClick={() => openWeeklyCheckin(week)} className="group rounded-[1.5rem] border border-[#CBA9A2] bg-[#FBF8F6] p-5 text-left transition hover:bg-[#F3EAE6]">
                     <div className="flex items-center justify-between"><span className="font-serif text-2xl text-[#A77B73]">{String(week).padStart(2,"0")}</span><span className="rounded-full bg-[#EAD8D3] px-3 py-1.5 text-[6px] tracking-[0.18em] text-[#8F655E]">{complete ? "COMPLETE" : "READY"}</span></div>
-                    <p className="mt-5 text-[7px] tracking-[0.22em]">WEEK {String(week).padStart(2,"0")}</p><p className="mt-1 font-serif text-xl italic text-[#A77B73]">{complete ? "checked in. ♡" : "how are we feeling?"}</p>
+                    <p className="mt-5 text-[8px] tracking-[0.22em]">WEEK {String(week).padStart(2,"0")}</p><p className="mt-1 font-serif text-xl italic text-[#A77B73]">{complete ? "checked in. ♡" : "how are we feeling?"}</p>
                     <div className="mt-5 border-t border-[#E1D3CE] pt-4"><span className="text-[6px] tracking-[0.2em] text-[#9D6F67]">DAY {String(unlockDay).padStart(2,"0")} →</span></div>
                   </button>
                 ) : (
-                  <div key={week} className="rounded-[1.5rem] border border-[#DED0CB] bg-[#F5EFEC] p-5 opacity-60"><div className="flex items-center justify-between"><span className="font-serif text-2xl text-[#BDA6A0]">{String(week).padStart(2,"0")}</span><span className="text-[10px] text-[#AA9690]">♡</span></div><p className="mt-5 text-[7px] tracking-[0.22em] text-[#806E68]">WEEK {String(week).padStart(2,"0")}</p><p className="mt-1 font-serif text-lg italic text-[#A7938D]">keep going.</p></div>
+                  <div key={week} className="rounded-[1.5rem] border border-[#DED0CB] bg-[#F5EFEC] p-5 opacity-60"><div className="flex items-center justify-between"><span className="font-serif text-2xl text-[#BDA6A0]">{String(week).padStart(2,"0")}</span><span className="text-[10px] text-[#AA9690]">♡</span></div><p className="mt-5 text-[8px] tracking-[0.22em] text-[#806E68]">WEEK {String(week).padStart(2,"0")}</p><p className="mt-1 font-serif text-lg italic text-[#A7938D]">keep going.</p></div>
                 );
               })}
             </div>
@@ -1274,17 +1274,17 @@ export default function ProgressPage() {
           {checkinWeek !== null && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm" onClick={() => setCheckinWeek(null)}>
               <div className="w-full max-w-xl rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8" onClick={(event) => event.stopPropagation()}>
-                <div className="flex items-start justify-between"><div><p className="text-[7px] tracking-[0.35em] text-[#9D6F67]">WEEK {String(checkinWeek).padStart(2,"0")} CHECK-IN</p><h2 className="mt-2 font-serif text-3xl">Check in with yourself. ♡</h2></div><button type="button" onClick={() => setCheckinWeek(null)} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]">×</button></div>
-                <div className="mt-7 space-y-3">{[["went_well","What went well?"],["felt_hard","What felt hard?"],["proud_of","What are you proud of?"],["next_week_focus","What do you want to focus on next week?"]].map(([field,label]) => <label key={field} className="block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"><span className="text-[7px] tracking-[0.16em] text-[#806E68]">{label}</span><textarea rows={2} value={checkinForm[field as keyof typeof checkinForm]} onChange={(event) => setCheckinForm((previous) => ({...previous,[field]:event.target.value}))} className="mt-2 w-full resize-none bg-transparent font-serif text-lg italic text-[#A77B73] outline-none" placeholder="write it here..." /></label>)}</div>
+                <div className="flex items-start justify-between"><div><p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">WEEK {String(checkinWeek).padStart(2,"0")} CHECK-IN</p><h2 className="mt-2 font-serif text-3xl">Check in with yourself. ♡</h2></div><button type="button" onClick={() => setCheckinWeek(null)} className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]">×</button></div>
+                <div className="mt-7 space-y-3">{[["went_well","What went well?"],["felt_hard","What felt hard?"],["proud_of","What are you proud of?"],["next_week_focus","What do you want to focus on next week?"]].map(([field,label]) => <label key={field} className="block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"><span className="text-[8px] tracking-[0.16em] text-[#806E68]">{label}</span><textarea rows={2} value={checkinForm[field as keyof typeof checkinForm]} onChange={(event) => setCheckinForm((previous) => ({...previous,[field]:event.target.value}))} className="mt-2 w-full resize-none bg-transparent font-serif text-lg italic text-[#A77B73] outline-none" placeholder="write it here..." /></label>)}</div>
                 {checkinError && <p className="mt-4 text-[9px] text-[#9D6F67]">{checkinError}</p>}
-                <button type="button" onClick={saveWeeklyCheckin} disabled={isSavingCheckin} className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[7px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50">{isSavingCheckin ? "SAVING..." : "SAVE CHECK-IN"}</button>
+                <button type="button" onClick={saveWeeklyCheckin} disabled={isSavingCheckin} className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[8px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50">{isSavingCheckin ? "SAVING..." : "SAVE CHECK-IN"}</button>
               </div>
             </div>
           )}
 
           {/* PROGRESS REMINDER */}
           <section className="rounded-[2rem] bg-[#211C19] px-8 py-10 text-center text-[#F7F1ED] md:px-12">
-            <p className="text-[7px] tracking-[0.4em] text-[#DDB5AE]">
+            <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
               REMEMBER
             </p>
 
@@ -1320,7 +1320,7 @@ export default function ProgressPage() {
 
             <Link
               href="/dashboard"
-              className="mt-7 inline-block rounded-full bg-[#211C19] px-9 py-3.5 text-[7px] tracking-[0.28em] text-[#F7F1ED] transition hover:-translate-y-0.5"
+              className="mt-7 inline-block rounded-full bg-[#211C19] px-9 py-3.5 text-[8px] tracking-[0.28em] text-[#F7F1ED] transition hover:-translate-y-0.5"
             >
               BACK TO TODAY
             </Link>
