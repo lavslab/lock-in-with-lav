@@ -178,7 +178,7 @@ export default function ResourcesPage() {
                     <h3 className="mt-2 font-serif text-2xl italic text-[#A77B73] md:text-3xl">
                       {resource.subtitle}
                     </h3>
-                    <p className="mt-4 text-[8px] tracking-[0.13em] text-[#8C7770]">
+                    <p className="mt-4 text-[13px] leading-6 tracking-[0.08em] text-[#8C7770]">
                       {resource.items.toUpperCase()}
                     </p>
                   </div>
