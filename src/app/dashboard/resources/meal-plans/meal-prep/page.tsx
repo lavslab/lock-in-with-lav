@@ -9,38 +9,26 @@ const prepSteps = [
   {
     number: "01",
     title: "PICK YOUR MEALS",
-    subtitle: "do not prep everything.",
-    text: "Choose the meals you realistically want for the next few days. Repeating two breakfasts, two lunches and a few dinners is completely fine.",
+    subtitle: "keep the week realistic.",
+    text: "Choose the meals you actually want for the next few days. Repeating favourites is completely fine.",
   },
   {
     number: "02",
-    title: "PREP YOUR PROTEIN",
-    subtitle: "start with the anchor.",
-    text: "Cook one or two versatile proteins such as chicken or ground turkey. Keep salmon and shrimp for quick fresh meals if you prefer.",
+    title: "COOK THE BASICS",
+    subtitle: "protein + fuel first.",
+    text: "Prep one or two proteins plus an easy carbohydrate such as rice, potatoes or sweet potatoes.",
   },
   {
     number: "03",
-    title: "PREP YOUR FUEL",
-    subtitle: "make carbs grab-and-go.",
-    text: "Cook a batch of rice, roast potatoes or sweet potatoes, or portion another carbohydrate you use often during the week.",
+    title: "PREP PRODUCE + SNACKS",
+    subtitle: "make grabbing food easy. ♡",
+    text: "Wash and chop produce, portion fruit, and prep any snack boxes, yogurt toppings or smoothie ingredients.",
   },
   {
     number: "04",
-    title: "WASH + CHOP",
-    subtitle: "future you will be grateful. ♡",
-    text: "Wash and chop sturdy vegetables, prep salad toppings and portion fruit so building a meal takes less effort later.",
-  },
-  {
-    number: "05",
-    title: "BUILD THE EASY STUFF",
-    subtitle: "remove tiny decisions.",
-    text: "Portion snack boxes, smoothie ingredients or yogurt toppings. Keep sauces and toppings separate until you are ready to eat.",
-  },
-  {
-    number: "06",
-    title: "STORE + LABEL",
-    subtitle: "know what needs eating first.",
-    text: "Use clean containers, refrigerate promptly and label prepared foods with what they are and when you made them.",
+    title: "STORE + GO",
+    subtitle: "future you is ready.",
+    text: "Store your components so you can mix and match them into meals throughout the week.",
   },
 ];
 
@@ -87,28 +75,6 @@ const prepBlocks = [
   },
 ];
 
-const schedule = [
-  {
-    time: "0–10 MIN",
-    task: "SET UP",
-    text: "Preheat the oven, start water or rice, pull out containers and chop the ingredients that take longest.",
-  },
-  {
-    time: "10–30 MIN",
-    task: "COOK",
-    text: "Get proteins and sheet-pan vegetables cooking while your rice, potatoes or other sides finish.",
-  },
-  {
-    time: "30–45 MIN",
-    task: "ASSEMBLE",
-    text: "Portion snacks, wash fruit and divide cooked components once they have cooled enough to handle safely.",
-  },
-  {
-    time: "45–60 MIN",
-    task: "RESET",
-    text: "Store everything, label containers, wipe down the kitchen and put tomorrow's easiest meal where you can see it.",
-  },
-];
 
 export default function MealPrepPage() {
   const [firstName, setFirstName] = useState("there");
@@ -193,26 +159,6 @@ export default function MealPrepPage() {
             </div>
           </section>
 
-          <section className="py-10">
-            <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-              <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
-                THE GOAL
-              </p>
-
-              <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                Prep components,{" "}
-                <span className="italic text-[#A77B73]">not your whole life.</span>
-              </h2>
-
-              <p className="mt-4 max-w-4xl text-sm leading-6 text-[#806E68]">
-                Meal prep does not have to mean seven identical containers.
-                Preparing a few proteins, vegetables, carbohydrate sources and
-                grab-and-go options gives you building blocks you can mix,
-                match and turn into the recipes in your library.
-              </p>
-            </div>
-          </section>
-
           <section className="pb-12">
             <div className="mb-7">
               <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
@@ -220,7 +166,7 @@ export default function MealPrepPage() {
               </p>
 
               <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                Six steps.{" "}
+                Four steps.{" "}
                 <span className="italic text-[#A77B73]">keep it simple. ♡</span>
               </h2>
             </div>
@@ -250,43 +196,6 @@ export default function MealPrepPage() {
                     {step.text}
                   </p>
                 </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-[2rem] bg-[#EAD8D3] px-7 py-8 md:px-9">
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <div>
-                <p className="text-[8px] tracking-[0.32em] text-[#8F655E]">
-                  THE 60-MINUTE RESET
-                </p>
-                <h2 className="mt-3 font-serif text-3xl">
-                  One hour can change{" "}
-                  <span className="italic text-[#9D6F67]">your whole week.</span>
-                </h2>
-              </div>
-
-              <p className="font-serif text-lg italic text-[#8F655E]">
-                done is better than perfect. ♡
-              </p>
-            </div>
-
-            <div className="mt-7 grid gap-3 lg:grid-cols-4">
-              {schedule.map((block) => (
-                <div
-                  key={block.time}
-                  className="rounded-2xl border border-[#D0B5AF] bg-[#F7F1ED]/55 p-5"
-                >
-                  <p className="text-[7px] tracking-[0.2em] text-[#8F655E]">
-                    {block.time}
-                  </p>
-                  <p className="mt-3 text-[8px] tracking-[0.2em]">
-                    {block.task}
-                  </p>
-                  <p className="mt-3 text-xs leading-5 text-[#6F5F59]">
-                    {block.text}
-                  </p>
-                </div>
               ))}
             </div>
           </section>
@@ -334,57 +243,12 @@ export default function MealPrepPage() {
             </div>
           </section>
 
-          <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-            <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
-              FOOD SAFETY MATTERS
+          <section className="border-t border-[#DED0CB] py-7">
+            <p className="max-w-4xl text-xs leading-5 text-[#8C7770]">
+              Food safety note: refrigerate perishable foods promptly, follow
+              storage guidance for what you cooked, and freeze portions you
+              will not use soon. ♡
             </p>
-
-            <h2 className="mt-3 font-serif text-3xl">
-              Prep it.{" "}
-              <span className="italic text-[#A77B73]">store it safely.</span>
-            </h2>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl bg-[#F7F1ED] p-5">
-                <p className="text-[8px] tracking-[0.2em]">COOL + REFRIGERATE</p>
-                <p className="mt-3 text-xs leading-5 text-[#806E68]">
-                  Refrigerate perishable cooked foods promptly rather than
-                  leaving them sitting at room temperature. Use shallow
-                  containers when helpful so food cools efficiently.
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-[#F7F1ED] p-5">
-                <p className="text-[8px] tracking-[0.2em]">WHEN IN DOUBT</p>
-                <p className="mt-3 text-xs leading-5 text-[#806E68]">
-                  Follow the storage guidance for the specific food you cooked.
-                  Freeze portions you will not use soon, and discard food if
-                  you are unsure whether it has been stored safely.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <section className="py-10">
-            <div className="rounded-[2rem] bg-[#211C19] px-7 py-8 text-[#F7F1ED] md:px-9">
-              <p className="text-[8px] tracking-[0.32em] text-[#DDB5AE]">
-                THE REAL-LIFE VERSION
-              </p>
-
-              <h2 className="mt-3 font-serif text-3xl">
-                No Sunday prep?
-                <span className="block italic text-[#DDB5AE]">
-                  you can still make this work. ♡
-                </span>
-              </h2>
-
-              <p className="mt-4 max-w-3xl text-sm leading-6 text-[#D5C8C3]">
-                Cook double at dinner and save a portion for lunch. Use frozen
-                vegetables. Buy pre-cut produce when it helps. Keep Greek
-                yogurt, cottage cheese, eggs and easy proteins around. Meal prep
-                is simply doing something now that makes eating later easier.
-              </p>
-            </div>
           </section>
 
           <section className="pb-14 text-center">

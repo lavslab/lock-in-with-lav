@@ -105,23 +105,6 @@ const grocerySections = [
   },
 ];
 
-const planTips = [
-  {
-    plan: "BALANCED WEEK",
-    tag: "START HERE",
-    text: "Shop the core list, then choose the produce and carb options used in the recipes you plan to repeat. You do not need every ingredient in the library.",
-  },
-  {
-    plan: "TRAINING WEEK",
-    tag: "TRAIN",
-    text: "Keep extra rice, potatoes, sweet potatoes, pasta, tortillas and fruit available so harder training days are easy to fuel.",
-  },
-  {
-    plan: "LIGHTER WEEK",
-    tag: "LIGHT",
-    text: "Prioritize plenty of produce and your preferred proteins. Keep carbohydrate staples on hand too — lighter does not mean carb-free.",
-  },
-];
 
 export default function GroceryListPage() {
   const [firstName, setFirstName] = useState("there");
@@ -231,14 +214,9 @@ export default function GroceryListPage() {
                   <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
                     BEFORE YOU SHOP
                   </p>
-                  <h2 className="mt-3 font-serif text-3xl">
-                    This is a <span className="italic text-[#A77B73]">master list.</span>
-                  </h2>
-                  <p className="mt-3 max-w-3xl text-sm leading-6 text-[#806E68]">
-                    You do not need to buy every item every week. Pick your meal
-                    plan, decide which recipes you are actually making, check
-                    what is already in your kitchen, then use this list to fill
-                    the gaps.
+                  <p className="mt-3 max-w-3xl font-serif text-xl italic text-[#A77B73] md:text-2xl">
+                    Pick your recipes, check what you already have, then check
+                    off what you need. ♡
                   </p>
                 </div>
 
@@ -324,75 +302,6 @@ export default function GroceryListPage() {
                   </div>
                 </article>
               ))}
-            </div>
-          </section>
-
-          <section className="rounded-[2rem] bg-[#EAD8D3] px-7 py-8 md:px-9">
-            <p className="text-[8px] tracking-[0.32em] text-[#8F655E]">
-              SHOP FOR YOUR PLAN
-            </p>
-            <h2 className="mt-3 font-serif text-3xl">
-              Same foundation.{" "}
-              <span className="italic text-[#9D6F67]">different emphasis.</span>
-            </h2>
-
-            <div className="mt-7 grid gap-3 lg:grid-cols-3">
-              {planTips.map((tip) => (
-                <div
-                  key={tip.plan}
-                  className="rounded-2xl border border-[#D0B5AF] bg-[#F7F1ED]/55 p-5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-[8px] tracking-[0.18em]">{tip.plan}</p>
-                    <span className="rounded-full border border-[#CBA9A2] px-2.5 py-1 text-[6px] tracking-[0.16em] text-[#8F655E]">
-                      {tip.tag}
-                    </span>
-                  </div>
-                  <p className="mt-4 text-xs leading-5 text-[#6F5F59]">
-                    {tip.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="py-10">
-            <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-              <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
-                SAVE MONEY + WASTE LESS
-              </p>
-
-              <div className="mt-5 grid gap-4 md:grid-cols-3">
-                <div>
-                  <p className="font-serif text-xl italic text-[#A77B73]">
-                    repeat ingredients.
-                  </p>
-                  <p className="mt-2 text-xs leading-5 text-[#806E68]">
-                    Choose recipes that share proteins, vegetables and sides so
-                    one grocery trip works across several meals.
-                  </p>
-                </div>
-
-                <div>
-                  <p className="font-serif text-xl italic text-[#A77B73]">
-                    use what you have.
-                  </p>
-                  <p className="mt-2 text-xs leading-5 text-[#806E68]">
-                    Frozen produce, leftover rice and pantry staples absolutely
-                    count. The plan does not need to look perfect.
-                  </p>
-                </div>
-
-                <div>
-                  <p className="font-serif text-xl italic text-[#A77B73]">
-                    buy for your week.
-                  </p>
-                  <p className="mt-2 text-xs leading-5 text-[#806E68]">
-                    Shopping for seven dinners you will not cook is not prep.
-                    Choose the meals that realistically fit your schedule.
-                  </p>
-                </div>
-              </div>
             </div>
           </section>
 

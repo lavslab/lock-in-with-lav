@@ -43,14 +43,14 @@ const extras = [
     title: "GROCERY LIST",
     subtitle: "shop once. make the week easier.",
     description:
-      "A simple shopping guide organized by proteins, produce, carbs, dairy + pantry staples.",
+      "Your interactive shopping list.",
     href: "/dashboard/resources/meal-plans/grocery-list",
   },
   {
     title: "MEAL PREP GUIDE",
     subtitle: "prep a little. stress less.",
     description:
-      "A practical prep flow for proteins, carbs, vegetables + grab-and-go options.",
+      "A simple guide to prep the week.",
     href: "/dashboard/resources/meal-plans/meal-prep",
   },
 ];
@@ -157,78 +157,6 @@ export default function MealPlansPage() {
               </p>
             </div>
 
-            <div className="mt-8 rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-              <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
-                <div>
-                  <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
-                    WHICH PLAN SHOULD I CHOOSE?
-                  </p>
-                  <h3 className="mt-3 font-serif text-2xl md:text-3xl">
-                    How are you <span className="italic text-[#A77B73]">training this week?</span>
-                  </h3>
-                </div>
-
-                <p className="font-serif text-base italic text-[#A77B73]">
-                  not sure? start balanced. ♡
-                </p>
-              </div>
-
-              <div className="mt-6 grid gap-3 lg:grid-cols-3">
-                <Link
-                  href="/dashboard/resources/meal-plans/balanced-week"
-                  className="group rounded-2xl border border-[#D9C8C2] bg-[#F7F1ED] p-5 transition hover:-translate-y-0.5 hover:border-[#CBA9A2]"
-                >
-                  <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                    KEEPING IT BALANCED
-                  </p>
-                  <p className="mt-3 font-serif text-xl italic text-[#A77B73]">
-                    Balanced Week →
-                  </p>
-                  <p className="mt-3 text-xs leading-5 text-[#806E68]">
-                    Everyday training, mixed activity, or you simply want the easiest place to start.
-                  </p>
-                </Link>
-
-                <Link
-                  href="/dashboard/resources/meal-plans/training-week"
-                  className="group rounded-2xl border border-[#D9C8C2] bg-[#F7F1ED] p-5 transition hover:-translate-y-0.5 hover:border-[#CBA9A2]"
-                >
-                  <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                    TRAINING HARD / LIFTING REGULARLY
-                  </p>
-                  <p className="mt-3 font-serif text-xl italic text-[#A77B73]">
-                    Training Week →
-                  </p>
-                  <p className="mt-3 text-xs leading-5 text-[#806E68]">
-                    Several strength sessions or harder training days where extra fuel can be useful.
-                  </p>
-                </Link>
-
-                <Link
-                  href="/dashboard/resources/meal-plans/lighter-week"
-                  className="group rounded-2xl border border-[#D9C8C2] bg-[#F7F1ED] p-5 transition hover:-translate-y-0.5 hover:border-[#CBA9A2]"
-                >
-                  <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                    RECOVERY / LIGHTER ACTIVITY
-                  </p>
-                  <p className="mt-3 font-serif text-xl italic text-[#A77B73]">
-                    Lighter Week →
-                  </p>
-                  <p className="mt-3 text-xs leading-5 text-[#806E68]">
-                    A recovery week, fewer demanding sessions, or days when lighter meals fit better.
-                  </p>
-                </Link>
-              </div>
-
-              <div className="mt-6 rounded-2xl bg-[#EAD8D3] px-5 py-4">
-                <p className="text-sm leading-6 text-[#6F5F59]">
-                  <span className="font-medium text-[#5B4640]">Not sure?</span>{" "}
-                  Start with Balanced Week. You can switch plans anytime. The goal
-                  is not to follow a perfect menu — it is to make eating well easier.
-                </p>
-              </div>
-            </div>
-
             <div className="mt-8 grid gap-4 xl:grid-cols-3">
               {plans.map((plan) => (
                 <Link
@@ -280,53 +208,6 @@ export default function MealPlansPage() {
             </div>
           </section>
 
-          <section className="rounded-[2rem] bg-[#EAD8D3] px-7 py-8 md:px-9 md:py-9">
-            <div className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
-              <div>
-                <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
-                  HOW IT WORKS
-                </p>
-
-                <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                  Protein stays.
-                  <span className="block italic text-[#9D6F67]">
-                    the rest can flex. ♡
-                  </span>
-                </h2>
-
-                <p className="mt-4 max-w-xl text-sm leading-6 text-[#6F5F59]">
-                  These plans are built around protein-forward meals, fruits,
-                  vegetables and practical portions. Harder training days can
-                  include more carbohydrate for fuel, while lighter days can
-                  lean on lower-carb meals if that feels good for you.
-                </p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-3">
-                {[
-                  ["01", "PICK A PLAN", "Choose the week that matches your schedule."],
-                  ["02", "FOLLOW OR SWAP", "Use the linked recipes or swap similar meals."],
-                  ["03", "KEEP IT REAL", "Adjust portions for your own needs + hunger."],
-                ].map(([number, title, description]) => (
-                  <div
-                    key={number}
-                    className="rounded-2xl border border-[#D0B5AF] bg-[#F7F1ED]/55 p-5"
-                  >
-                    <p className="font-serif text-2xl text-[#9D6F67]">
-                      {number}
-                    </p>
-                    <p className="mt-4 text-[8px] tracking-[0.2em]">
-                      {title}
-                    </p>
-                    <p className="mt-3 text-xs leading-5 text-[#6F5F59]">
-                      {description}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
           <section className="py-12">
             <div>
               <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
@@ -368,7 +249,7 @@ export default function MealPlansPage() {
             </div>
           </section>
 
-          <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] px-7 py-7 md:px-9">
+          <section className="border-t border-[#DED0CB] py-7">
             <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
               A QUICK NOTE
             </p>
