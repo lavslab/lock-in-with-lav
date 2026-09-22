@@ -47,11 +47,11 @@ export default function DashboardSidebar({
   return (
     <aside className="hidden w-[250px] flex-col border-r border-[#E1D3CE] bg-[#FBF8F6] px-7 py-8 md:flex">
       <div>
-        <p className="font-serif text-2xl tracking-[0.08em]">
+        <p className="font-serif text-3xl tracking-[0.08em]">
           LOCK IN
         </p>
 
-        <p className="mt-1 text-[8px] tracking-[0.5em]">
+        <p className="mt-1 text-[10px] tracking-[0.45em]">
           WITH LAV
         </p>
       </div>
@@ -70,11 +70,11 @@ export default function DashboardSidebar({
                   : "text-[#806E68] hover:bg-[#F1E6E2]"
               }`}
             >
-              <span className="font-serif text-lg">
+              <span className="font-serif text-xl">
                 {item.icon}
               </span>
 
-              <span className="text-[9px] tracking-[0.25em]">
+              <span className="text-[11px] tracking-[0.22em]">
                 {item.label}
               </span>
             </Link>
@@ -89,11 +89,11 @@ export default function DashboardSidebar({
           </div>
 
           <div>
-            <p className="text-[9px] tracking-[0.18em] uppercase">
+            <p className="text-[11px] tracking-[0.16em] uppercase">
               {isLoadingUser ? "..." : firstName}
             </p>
 
-            <p className="mt-1 text-[8px] text-[#9A8780]">
+            <p className="mt-1 text-[10px] text-[#9A8780]">
               MY ACCOUNT
             </p>
           </div>

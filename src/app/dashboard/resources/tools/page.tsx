@@ -8,35 +8,35 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 const tools = [
   {
     number: "01",
-    title: "PROTEIN GUIDE",
-    subtitle: "hit your protein. ♡",
-    description: "Set a daily target and make hitting it feel simpler.",
+    title: "MACRO CALCULATOR",
+    subtitle: "fuel your goals. ♡",
+    description: "Estimate calories, protein, carbs and fats for your goal.",
     tag: "NUTRITION",
-    href: "/dashboard/resources/tools/protein-guide",
+    href: "/dashboard/resources/tools/macro-calculator",
   },
   {
     number: "02",
-    title: "WATER GUIDE",
-    subtitle: "drink your water.",
-    description: "Estimate a hydration target and keep it easy to track.",
-    tag: "HYDRATE",
-    href: "/dashboard/resources/tools/water-guide",
+    title: "EXERCISE SWAP",
+    subtitle: "switch it up.",
+    description: "Find alternatives that train the same muscles and movement.",
+    tag: "TRAIN",
+    href: "/dashboard/resources/tools/exercise-swap",
   },
   {
     number: "03",
-    title: "WEEKLY PLANNER",
-    subtitle: "plan the week.",
-    description: "Map out training, meals, recovery and your priorities.",
-    tag: "PLAN",
-    href: "/dashboard/resources/tools/weekly-planner",
+    title: "MEAL BUILDER",
+    subtitle: "build your plate.",
+    description: "Put together a balanced meal around your nutrition goals.",
+    tag: "EAT",
+    href: "/dashboard/resources/tools/meal-builder",
   },
   {
     number: "04",
-    title: "HABIT + PROGRESS",
-    subtitle: "keep showing up.",
-    description: "Simple templates for habits, consistency and progress.",
-    tag: "TRACK",
-    href: "/dashboard/resources/tools/habit-progress",
+    title: "TEMPLATES",
+    subtitle: "plan it. track it.",
+    description: "Simple templates for planning, habits, meals and progress.",
+    tag: "PLAN",
+    href: "/dashboard/resources/tools/templates",
   },
 ];
 
@@ -118,7 +118,7 @@ export default function ToolsPage() {
               </div>
 
               <p className="text-[9px] tracking-[0.18em] text-[#BFAEAA]">
-                PROTEIN • WATER • PLAN • TRACK
+                CALCULATE • SWAP • BUILD • PLAN
               </p>
             </div>
           </section>

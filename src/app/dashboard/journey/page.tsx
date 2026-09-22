@@ -313,7 +313,7 @@ export default function JourneyPage() {
           {/* HEADER */}
           <header className="flex items-center justify-between">
             <div>
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+              <p className="text-[10px] tracking-[0.30em] text-[#9D6F67]">
                 YOUR 75 DAYS
               </p>
 
@@ -324,7 +324,7 @@ export default function JourneyPage() {
 
             <Link
               href="/dashboard"
-              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[7px] tracking-[0.25em] transition hover:bg-[#EAD8D3] md:hidden"
+              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[10px] tracking-[0.20em] transition hover:bg-[#EAD8D3] md:hidden"
             >
               TODAY
             </Link>
@@ -333,7 +333,7 @@ export default function JourneyPage() {
           {/* HERO */}
           <section className="mt-12 grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
             <div className="rounded-[2rem] bg-[#211C19] p-8 text-[#F7F1ED] md:p-10">
-              <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
+              <p className="text-[10px] tracking-[0.32em] text-[#DDB5AE]">
                 YOUR JOURNEY
               </p>
 
@@ -344,7 +344,7 @@ export default function JourneyPage() {
                 </span>
               </h1>
 
-              <p className="mt-7 max-w-xl text-xs leading-6 text-[#C9BBB6]">
+              <p className="mt-7 max-w-xl text-[15px] leading-7 text-[#C9BBB6]">
                 Every completed day is proof that you showed up.
                 Keep building the routine, discipline and confidence
                 you came here for.
@@ -357,7 +357,7 @@ export default function JourneyPage() {
                 />
               </div>
 
-              <div className="mt-4 flex justify-between text-[7px] tracking-[0.2em] text-[#BFAEAA]">
+              <div className="mt-4 flex justify-between text-[10px] tracking-[0.16em] text-[#BFAEAA]">
                 <span>DAY 01</span>
 
                 <span>
@@ -372,13 +372,13 @@ export default function JourneyPage() {
 
             {/* STATS */}
             <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-8">
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+              <p className="text-[10px] tracking-[0.30em] text-[#9D6F67]">
                 YOUR PROGRESS
               </p>
 
               <div className="mt-8 space-y-6">
                 <div className="flex items-end justify-between border-b border-[#E1D3CE] pb-6">
-                  <p className="text-[8px] tracking-[0.2em] text-[#8C7770]">
+                  <p className="text-[11px] tracking-[0.16em] text-[#8C7770]">
                     CURRENT DAY
                   </p>
 
@@ -388,7 +388,7 @@ export default function JourneyPage() {
                 </div>
 
                 <div className="flex items-end justify-between border-b border-[#E1D3CE] pb-6">
-                  <p className="text-[8px] tracking-[0.2em] text-[#8C7770]">
+                  <p className="text-[11px] tracking-[0.16em] text-[#8C7770]">
                     DAYS COMPLETE
                   </p>
 
@@ -398,7 +398,7 @@ export default function JourneyPage() {
                 </div>
 
                 <div className="flex items-end justify-between">
-                  <p className="text-[8px] tracking-[0.2em] text-[#8C7770]">
+                  <p className="text-[11px] tracking-[0.16em] text-[#8C7770]">
                     CURRENT STREAK
                   </p>
 
@@ -415,7 +415,7 @@ export default function JourneyPage() {
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-[#A77B73]" />
 
-              <p className="text-[7px] tracking-[0.2em] text-[#806E68]">
+              <p className="text-[10px] tracking-[0.16em] text-[#806E68]">
                 COMPLETE
               </p>
             </div>
@@ -423,7 +423,7 @@ export default function JourneyPage() {
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full bg-[#DDB5AE]" />
 
-              <p className="text-[7px] tracking-[0.2em] text-[#806E68]">
+              <p className="text-[10px] tracking-[0.16em] text-[#806E68]">
                 CURRENT
               </p>
             </div>
@@ -431,7 +431,7 @@ export default function JourneyPage() {
             <div className="flex items-center gap-2">
               <div className="h-3 w-3 rounded-full border border-[#C9B7B1]" />
 
-              <p className="text-[7px] tracking-[0.2em] text-[#806E68]">
+              <p className="text-[10px] tracking-[0.16em] text-[#806E68]">
                 UPCOMING
               </p>
             </div>
@@ -446,7 +446,7 @@ export default function JourneyPage() {
               >
                 <div className="flex items-end justify-between">
                   <div>
-                    <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+                    <p className="text-[10px] tracking-[0.30em] text-[#9D6F67]">
                       {month.subtitle}
                     </p>
 
@@ -490,7 +490,7 @@ export default function JourneyPage() {
                           </p>
 
                           <p
-                            className={`mt-1 text-[6px] tracking-[0.12em] ${
+                            className={`mt-1 text-[9px] tracking-[0.10em] ${
                               isComplete
                                 ? "text-[#EEDDD8]"
                                 : "text-[#9A8780]"
@@ -521,7 +521,7 @@ export default function JourneyPage() {
           <section className="mt-12 rounded-[2rem] bg-[#EAD8D3] px-8 py-10 md:px-10">
             <div className="md:flex md:items-center md:justify-between">
               <div>
-                <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
+                <p className="text-[10px] tracking-[0.30em] text-[#8F655E]">
                   WEEKLY CHECK-IN
                 </p>
 
@@ -529,7 +529,7 @@ export default function JourneyPage() {
                   Pause. Reflect. Keep going. ♡
                 </h2>
 
-                <p className="mt-4 max-w-xl text-xs leading-6 text-[#806E68]">
+                <p className="mt-4 max-w-xl text-[15px] leading-7 text-[#806E68]">
                   At the end of each week, take a moment to celebrate
                   what went well and decide what you want to carry
                   into the next one.
@@ -546,7 +546,7 @@ export default function JourneyPage() {
                         : Math.max(1, unlockedWeeks)
                     )
                   }
-                  className="mt-7 rounded-full bg-[#211C19] px-8 py-4 text-[7px] tracking-[0.3em] text-[#F7F1ED] transition hover:-translate-y-0.5 md:mt-0"
+                  className="mt-7 rounded-full bg-[#211C19] px-8 py-4 text-[10px] tracking-[0.22em] text-[#F7F1ED] transition hover:-translate-y-0.5 md:mt-0"
                 >
                   START CHECK-IN
                 </button>
@@ -554,7 +554,7 @@ export default function JourneyPage() {
                 <button
                   type="button"
                   disabled
-                  className="mt-7 cursor-not-allowed rounded-full bg-[#211C19] px-8 py-4 text-[7px] tracking-[0.3em] text-[#F7F1ED] opacity-60 md:mt-0"
+                  className="mt-7 cursor-not-allowed rounded-full bg-[#211C19] px-8 py-4 text-[10px] tracking-[0.22em] text-[#F7F1ED] opacity-60 md:mt-0"
                 >
                   UNLOCKS DAY 07
                 </button>
@@ -563,7 +563,7 @@ export default function JourneyPage() {
 
             {availableWeeks.length > 0 && (
               <div className="mt-8 border-t border-[#D5BBB5] pt-7">
-                <p className="text-[7px] tracking-[0.3em] text-[#8F655E]">
+                <p className="text-[10px] tracking-[0.22em] text-[#8F655E]">
                   YOUR REFLECTIONS
                 </p>
 
@@ -578,7 +578,7 @@ export default function JourneyPage() {
                         key={week}
                         type="button"
                         onClick={() => openCheckin(week)}
-                        className={`rounded-full border px-4 py-2 text-[7px] tracking-[0.18em] transition ${
+                        className={`rounded-full border px-4 py-2 text-[10px] tracking-[0.15em] transition ${
                           selectedWeek === week && isCheckinOpen
                             ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
                             : hasSavedCheckin
@@ -599,7 +599,7 @@ export default function JourneyPage() {
               <div className="mt-8 rounded-[1.75rem] bg-[#FBF8F6] p-6 md:p-8">
                 <div className="flex items-start justify-between gap-6">
                   <div>
-                    <p className="text-[7px] tracking-[0.32em] text-[#9D6F67]">
+                    <p className="text-[10px] tracking-[0.24em] text-[#9D6F67]">
                       {selectedWeekIsFinal
                         ? "FINAL REFLECTION"
                         : `WEEK ${String(selectedWeek).padStart(2, "0")}`}
@@ -624,7 +624,7 @@ export default function JourneyPage() {
 
                 <div className="mt-8 grid gap-6 md:grid-cols-2">
                   <label className="block">
-                    <span className="text-[7px] tracking-[0.25em] text-[#806E68]">
+                    <span className="text-[10px] tracking-[0.20em] text-[#806E68]">
                       WHAT WENT WELL?
                     </span>
                     <textarea
@@ -637,7 +637,7 @@ export default function JourneyPage() {
                   </label>
 
                   <label className="block">
-                    <span className="text-[7px] tracking-[0.25em] text-[#806E68]">
+                    <span className="text-[10px] tracking-[0.20em] text-[#806E68]">
                       WHAT FELT HARD?
                     </span>
                     <textarea
@@ -650,7 +650,7 @@ export default function JourneyPage() {
                   </label>
 
                   <label className="block">
-                    <span className="text-[7px] tracking-[0.25em] text-[#806E68]">
+                    <span className="text-[10px] tracking-[0.20em] text-[#806E68]">
                       WHAT ARE YOU PROUD OF?
                     </span>
                     <textarea
@@ -663,7 +663,7 @@ export default function JourneyPage() {
                   </label>
 
                   <label className="block">
-                    <span className="text-[7px] tracking-[0.25em] text-[#806E68]">
+                    <span className="text-[10px] tracking-[0.20em] text-[#806E68]">
                       {selectedWeekIsFinal
                         ? "WHAT ARE YOU TAKING WITH YOU?"
                         : "WHAT ARE YOU TAKING INTO NEXT WEEK?"}
@@ -699,7 +699,7 @@ export default function JourneyPage() {
                     type="button"
                     onClick={saveCheckin}
                     disabled={isSavingCheckin}
-                    className="rounded-full bg-[#211C19] px-8 py-4 text-[7px] tracking-[0.3em] text-[#F7F1ED] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-full bg-[#211C19] px-8 py-4 text-[10px] tracking-[0.22em] text-[#F7F1ED] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSavingCheckin ? "SAVING..." : "SAVE CHECK-IN →"}
                   </button>
