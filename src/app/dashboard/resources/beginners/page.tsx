@@ -57,24 +57,24 @@ export default function BeginnersPage() {
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
           <header className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-[9px] tracking-[0.35em] text-[#9D6F67]">LOCK IN WITH LAV</p>
+              <p className="text-[11px] tracking-[0.28em] text-[#9D6F67]">LOCK IN WITH LAV</p>
               <p className="mt-2 font-serif text-xl italic text-[#A77B73]">start exactly where you are. ♡</p>
             </div>
-            <Link href="/dashboard/resources" className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[9px] tracking-[0.22em] transition hover:bg-[#EAD8D3]">← RESOURCES</Link>
+            <Link href="/dashboard/resources" className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[11px] tracking-[0.18em] transition hover:bg-[#EAD8D3]">← RESOURCES</Link>
           </header>
 
           <section className="mt-10 rounded-[2rem] bg-[#211C19] px-8 py-10 text-[#F7F1ED] md:px-10 md:py-12">
-            <p className="text-[9px] tracking-[0.4em] text-[#DDB5AE]">BEGINNER&apos;S CORNER</p>
+            <p className="text-[11px] tracking-[0.32em] text-[#DDB5AE]">BEGINNER&apos;S CORNER</p>
             <h1 className="mt-5 max-w-4xl font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
               Learn the basics.
               <span className="block italic text-[#DDB5AE]">then build from there. ♡</span>
             </h1>
-            <p className="mt-6 max-w-2xl text-sm leading-6 text-[#CFC1BC]">A quick reference for movement patterns, modifications and the training terms you&apos;ll see throughout Lock In with Lav.</p>
+            <p className="mt-6 max-w-2xl text-[16px] leading-7 text-[#CFC1BC]">A quick reference for movement patterns, modifications and the training terms you&apos;ll see throughout Lock In with Lav.</p>
           </section>
 
           <section className="py-10">
             <div className="mb-7">
-              <p className="text-[9px] tracking-[0.35em] text-[#9D6F67]">EXERCISE BASICS</p>
+              <p className="text-[11px] tracking-[0.28em] text-[#9D6F67]">EXERCISE BASICS</p>
               <h2 className="mt-3 font-serif text-3xl md:text-4xl">Six patterns to <span className="italic text-[#A77B73]">know. ♡</span></h2>
             </div>
             <div className="grid gap-4 lg:grid-cols-2">
@@ -83,9 +83,9 @@ export default function BeginnersPage() {
                   <div className="flex gap-5">
                     <span className="font-serif text-3xl text-[#D2B0A9]">{item.number}</span>
                     <div>
-                      <p className="text-[9px] tracking-[0.22em]">{item.title}</p>
+                      <p className="text-[11px] tracking-[0.18em]">{item.title}</p>
                       <p className="mt-2 font-serif text-xl italic text-[#A77B73]">{item.cue}</p>
-                      <p className="mt-3 text-[15px] leading-6 text-[#6F5F59]">{item.text}</p>
+                      <p className="mt-3 text-[16px] leading-7 text-[#6F5F59]">{item.text}</p>
                     </div>
                   </div>
                 </article>
@@ -95,14 +95,14 @@ export default function BeginnersPage() {
 
           <section className="border-t border-[#DED0CB] py-10">
             <div className="mb-7">
-              <p className="text-[9px] tracking-[0.35em] text-[#9D6F67]">MODIFICATIONS</p>
+              <p className="text-[11px] tracking-[0.28em] text-[#9D6F67]">MODIFICATIONS</p>
               <h2 className="mt-3 font-serif text-3xl md:text-4xl">Make the movement <span className="italic text-[#A77B73]">work for you.</span></h2>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {modifications.map((item) => (
                 <article key={item.title} className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6">
-                  <p className="text-[9px] tracking-[0.2em] text-[#8F655E]">{item.title}</p>
-                  <p className="mt-3 text-[15px] leading-6 text-[#6F5F59]">{item.text}</p>
+                  <p className="text-[11px] tracking-[0.17em] text-[#8F655E]">{item.title}</p>
+                  <p className="mt-3 text-[16px] leading-7 text-[#6F5F59]">{item.text}</p>
                 </article>
               ))}
             </div>
@@ -110,28 +110,28 @@ export default function BeginnersPage() {
 
           <section className="border-t border-[#DED0CB] py-10">
             <div className="mb-7">
-              <p className="text-[9px] tracking-[0.35em] text-[#9D6F67]">GYM TERMS</p>
+              <p className="text-[11px] tracking-[0.28em] text-[#9D6F67]">GYM TERMS</p>
               <h2 className="mt-3 font-serif text-3xl md:text-4xl">What does that <span className="italic text-[#A77B73]">even mean?</span></h2>
             </div>
             <div className="overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
               {terms.map((item, index) => (
                 <div key={item.term} className={`grid gap-2 px-6 py-5 md:grid-cols-[190px_1fr] md:gap-6 ${index !== terms.length - 1 ? "border-b border-[#E1D3CE]" : ""}`}>
-                  <p className="text-[9px] tracking-[0.18em] text-[#8F655E]">{item.term}</p>
-                  <p className="text-[15px] leading-6 text-[#6F5F59]">{item.meaning}</p>
+                  <p className="text-[11px] tracking-[0.15em] text-[#8F655E]">{item.term}</p>
+                  <p className="text-[16px] leading-7 text-[#6F5F59]">{item.meaning}</p>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="border-t border-[#DED0CB] py-7">
-            <p className="max-w-4xl text-xs leading-5 text-[#8C7770]">Good form is not about making every body look identical. Use a range and variation you can control, and stop if an exercise causes sharp pain, numbness, dizziness or worsening symptoms.</p>
+            <p className="max-w-4xl text-[15px] leading-6 text-[#8C7770]">Good form is not about making every body look identical. Use a range and variation you can control, and stop if an exercise causes sharp pain, numbness, dizziness or worsening symptoms.</p>
           </section>
 
           <section className="pb-14 text-center">
             <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">learn it. practice it. build on it. ♡</p>
             <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <Link href="/dashboard/resources/workouts" className="rounded-full bg-[#211C19] px-8 py-3.5 text-[9px] tracking-[0.25em] text-[#F7F1ED] transition hover:-translate-y-0.5">FIND A WORKOUT →</Link>
-              <Link href="/dashboard/resources" className="rounded-full border border-[#CBA9A2] px-8 py-3.5 text-[9px] tracking-[0.25em] text-[#8F655E] transition hover:bg-[#EAD8D3]">BACK TO RESOURCES</Link>
+              <Link href="/dashboard/resources/workouts" className="rounded-full bg-[#211C19] px-8 py-3.5 text-[11px] tracking-[0.20em] text-[#F7F1ED] transition hover:-translate-y-0.5">FIND A WORKOUT →</Link>
+              <Link href="/dashboard/resources" className="rounded-full border border-[#CBA9A2] px-8 py-3.5 text-[11px] tracking-[0.20em] text-[#8F655E] transition hover:bg-[#EAD8D3]">BACK TO RESOURCES</Link>
             </div>
           </section>
         </section>

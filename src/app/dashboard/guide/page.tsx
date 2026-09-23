@@ -228,7 +228,7 @@ export default function GuidePage() {
                 </span>
               </h2>
 
-              <p className="mt-5 max-w-2xl text-sm leading-7 text-[#6F5F59]">
+              <p className="mt-5 max-w-2xl text-[16px] leading-7 text-[#6F5F59]">
                 Start where you are. Build your routine, get stronger
                 and keep showing up — one day at a time.
               </p>
@@ -361,7 +361,7 @@ export default function GuidePage() {
                 </span>
               </h2>
 
-              <p className="mt-5 max-w-md text-xs leading-6 text-[#806E68]">
+              <p className="mt-5 max-w-md text-[15px] leading-7 text-[#806E68]">
                 Core, glutes, back and full-body strength — with
                 control before intensity.
               </p>
@@ -436,7 +436,7 @@ export default function GuidePage() {
                 </h2>
               </div>
 
-              <p className="max-w-sm text-xs leading-6 text-[#C8B9B4]">
+              <p className="max-w-sm text-[15px] leading-7 text-[#C8B9B4]">
                 Pick the version that feels controlled. Progress when
                 you&apos;re ready.
               </p>
@@ -479,7 +479,7 @@ export default function GuidePage() {
           <section className="py-12">
             <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-12">
               <div>
-                <p className="text-[10px] tracking-[0.4em] text-[#9D6F67]">
+                <p className="text-[12px] tracking-[0.35em] text-[#9D6F67]">
                   HOW IT COMES TOGETHER
                 </p>
 
@@ -490,7 +490,7 @@ export default function GuidePage() {
                   </span>
                 </h2>
 
-                <p className="mt-5 max-w-xl text-sm leading-7 text-[#6F5F59]">
+                <p className="mt-5 max-w-xl text-[16px] leading-7 text-[#6F5F59]">
                   Today keeps you focused on the six promises in front of you.
                   The Guide helps you understand how your training, nutrition,
                   recovery and progression fit together across the full 75 days.
@@ -498,7 +498,7 @@ export default function GuidePage() {
               </div>
 
               <div className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-                <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
+                <p className="text-[12px] tracking-[0.26em] text-[#9D6F67]">
                   WHEN YOU NEED MORE
                 </p>
 
@@ -506,7 +506,7 @@ export default function GuidePage() {
                   Need a workout, meal idea or something to help you show up?
                 </p>
 
-                <p className="mt-4 text-sm leading-7 text-[#806E68]">
+                <p className="mt-4 text-[16px] leading-7 text-[#806E68]">
                   Your Resources library is where you&apos;ll find practical tools
                   to help you complete the work — from training ideas to nourishment
                   and recovery support.
@@ -514,7 +514,7 @@ export default function GuidePage() {
 
                 <Link
                   href="/dashboard/resources"
-                  className="mt-6 inline-flex items-center rounded-full bg-[#211C19] px-7 py-3.5 text-[10px] tracking-[0.24em] text-[#F7F1ED] transition hover:-translate-y-0.5"
+                  className="mt-6 inline-flex items-center rounded-full bg-[#211C19] px-7 py-3.5 text-[12px] tracking-[0.20em] text-[#F7F1ED] transition hover:-translate-y-0.5"
                 >
                   EXPLORE RESOURCES →
                 </Link>
@@ -552,7 +552,7 @@ export default function GuidePage() {
                   >
                     <span className="text-[#9D6F67]">♡</span>
 
-                    <p className="text-[12px] tracking-[0.12em]">
+                    <p className="text-[14px] tracking-[0.10em]">
                       {item.toUpperCase()}
                     </p>
                   </div>
@@ -595,7 +595,7 @@ export default function GuidePage() {
                 </h2>
               </div>
 
-              <div className="text-xs leading-6 text-[#806E68]">
+              <div className="text-[15px] leading-7 text-[#806E68]">
                 <p>
                   Lock In With Lav provides general fitness and wellness
                   education, not individualized medical care or rehabilitation.

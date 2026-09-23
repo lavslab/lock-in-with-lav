@@ -28,6 +28,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={`${cormorant.variable} ${dmSans.variable}`}
     >
       <body>{children}</body>

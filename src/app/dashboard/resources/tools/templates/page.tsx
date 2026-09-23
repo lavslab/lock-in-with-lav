@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -44,40 +44,56 @@ const templates = [
 
 const days = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
+const emptyWorkouts = () =>
+  Object.fromEntries(days.map((day) => [day, ""]));
+
+const emptyMeals = () =>
+  Array.from({ length: 5 }, () => ({ meal: "", prep: "" }));
+
+const emptyGrocery = () => ({
+  Protein: "",
+  Produce: "",
+  Carbs: "",
+  "Fats + Extras": "",
+});
+
+const defaultHabits = () => [
+  "Workout",
+  "Water",
+  "Read",
+  "Nutrition",
+];
+
+const emptyHabitChecks = () =>
+  Array.from({ length: 4 }, () => Array(7).fill(false));
+
 export default function TemplatesPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [active, setActive] = useState<TemplateKey>("weekly");
 
   const [priorities, setPriorities] = useState(["", "", ""]);
   const [weeklyFocus, setWeeklyFocus] = useState("");
-  const [workouts, setWorkouts] = useState<Record<string, string>>(
-    Object.fromEntries(days.map((day) => [day, ""]))
-  );
+  const [workouts, setWorkouts] =
+    useState<Record<string, string>>(emptyWorkouts());
 
-  const [meals, setMeals] = useState(
-    Array.from({ length: 5 }, () => ({ meal: "", prep: "" }))
-  );
+  const [meals, setMeals] = useState(emptyMeals());
 
-  const [grocery, setGrocery] = useState<Record<string, string>>({
-    Protein: "",
-    Produce: "",
-    Carbs: "",
-    "Fats + Extras": "",
-  });
+  const [grocery, setGrocery] =
+    useState<Record<string, string>>(emptyGrocery());
 
-  const [habitNames, setHabitNames] = useState([
-    "Workout",
-    "Water",
-    "Read",
-    "Nutrition",
-  ]);
-  const [habitChecks, setHabitChecks] = useState<boolean[][]>(
-    Array.from({ length: 4 }, () => Array(7).fill(false))
-  );
+  const [habitNames, setHabitNames] =
+    useState(defaultHabits());
+
+  const [habitChecks, setHabitChecks] =
+    useState<boolean[][]>(emptyHabitChecks());
+
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    const getUser = async () => {
+    const getUserAndTemplates = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -87,15 +103,122 @@ export default function TemplatesPage() {
         return;
       }
 
-      const savedName = user.user_metadata?.name;
-      if (savedName) setFirstName(savedName);
-      else if (user.email) setFirstName(user.email.split("@")[0]);
+      setUserId(user.id);
 
+      const savedName = user.user_metadata?.name;
+
+      if (savedName) {
+        setFirstName(savedName);
+      } else if (user.email) {
+        setFirstName(user.email.split("@")[0]);
+      }
+
+      const { data, error } = await supabase
+        .from("user_templates")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Could not load templates:", error);
+      }
+
+      if (data) {
+        if (Array.isArray(data.priorities)) {
+          setPriorities(data.priorities);
+        }
+
+        setWeeklyFocus(data.weekly_focus ?? "");
+
+        if (
+          data.workouts &&
+          typeof data.workouts === "object" &&
+          !Array.isArray(data.workouts)
+        ) {
+          setWorkouts({
+            ...emptyWorkouts(),
+            ...data.workouts,
+          });
+        }
+
+        if (Array.isArray(data.meals)) {
+          setMeals(data.meals);
+        }
+
+        setGrocery({
+          Protein: data.grocery_proteins ?? "",
+          Produce: data.grocery_produce ?? "",
+          Carbs: data.grocery_carbs ?? "",
+          "Fats + Extras": data.grocery_extras ?? "",
+        });
+
+        if (Array.isArray(data.habits)) {
+          setHabitNames(data.habits);
+        }
+
+        if (Array.isArray(data.habit_checks)) {
+          setHabitChecks(data.habit_checks);
+        }
+      }
+
+      setDataLoaded(true);
       setIsLoadingUser(false);
     };
 
-    getUser();
+    getUserAndTemplates();
   }, []);
+
+  useEffect(() => {
+    if (!userId || !dataLoaded) return;
+
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+    }
+
+    saveTimer.current = setTimeout(async () => {
+      const { error } = await supabase
+        .from("user_templates")
+        .upsert(
+          {
+            user_id: userId,
+            priorities,
+            weekly_focus: weeklyFocus,
+            workouts,
+            meals,
+            grocery_proteins: grocery.Protein ?? "",
+            grocery_produce: grocery.Produce ?? "",
+            grocery_carbs: grocery.Carbs ?? "",
+            grocery_extras: grocery["Fats + Extras"] ?? "",
+            habits: habitNames,
+            habit_checks: habitChecks,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id",
+          }
+        );
+
+      if (error) {
+        console.error("Could not save templates:", error);
+      }
+    }, 600);
+
+    return () => {
+      if (saveTimer.current) {
+        clearTimeout(saveTimer.current);
+      }
+    };
+  }, [
+    userId,
+    dataLoaded,
+    priorities,
+    weeklyFocus,
+    workouts,
+    meals,
+    grocery,
+    habitNames,
+    habitChecks,
+  ]);
 
   const initial =
     !isLoadingUser && firstName !== "there"
@@ -103,7 +226,9 @@ export default function TemplatesPage() {
       : "♡";
 
   const activeTemplate = useMemo(
-    () => templates.find((template) => template.key === active) ?? templates[0],
+    () =>
+      templates.find((template) => template.key === active) ??
+      templates[0],
     [active]
   );
 
@@ -114,25 +239,20 @@ export default function TemplatesPage() {
     if (active === "weekly") {
       setPriorities(["", "", ""]);
       setWeeklyFocus("");
-      setWorkouts(Object.fromEntries(days.map((day) => [day, ""])));
+      setWorkouts(emptyWorkouts());
     }
 
     if (active === "meal") {
-      setMeals(Array.from({ length: 5 }, () => ({ meal: "", prep: "" })));
+      setMeals(emptyMeals());
     }
 
     if (active === "grocery") {
-      setGrocery({
-        Protein: "",
-        Produce: "",
-        Carbs: "",
-        "Fats + Extras": "",
-      });
+      setGrocery(emptyGrocery());
     }
 
     if (active === "habits") {
-      setHabitNames(["Workout", "Water", "Read", "Nutrition"]);
-      setHabitChecks(Array.from({ length: 4 }, () => Array(7).fill(false)));
+      setHabitNames(defaultHabits());
+      setHabitChecks(emptyHabitChecks());
     }
   };
 
@@ -151,6 +271,7 @@ export default function TemplatesPage() {
               <p className="text-[11px] tracking-[0.28em] text-[#9D6F67]">
                 LOCK IN WITH LAV
               </p>
+
               <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
                 put it on paper. ♡
               </p>
@@ -199,6 +320,7 @@ export default function TemplatesPage() {
                     <span className="font-serif text-3xl text-[#D2B0A9]">
                       {template.number}
                     </span>
+
                     <span className="rounded-full border border-[#D6C3BD] px-3 py-1.5 text-[10px] tracking-[0.14em] text-[#8F655E]">
                       {template.tag}
                     </span>
@@ -207,9 +329,11 @@ export default function TemplatesPage() {
                   <p className="mt-5 text-[11px] tracking-[0.18em]">
                     {template.title}
                   </p>
+
                   <p className="mt-2 font-serif text-2xl italic text-[#A77B73]">
                     {template.subtitle}
                   </p>
+
                   <p className="mt-3 text-[14px] leading-6 text-[#6F5F59]">
                     {template.description}
                   </p>
@@ -225,6 +349,7 @@ export default function TemplatesPage() {
                   <p className="text-[11px] tracking-[0.28em] text-[#9D6F67]">
                     {activeTemplate.number} • {activeTemplate.title}
                   </p>
+
                   <h2 className="mt-3 font-serif text-3xl md:text-4xl">
                     {activeTemplate.subtitle}
                   </h2>
@@ -245,6 +370,7 @@ export default function TemplatesPage() {
                     <p className="text-[11px] tracking-[0.2em] text-[#9D6F67]">
                       TOP 3 PRIORITIES
                     </p>
+
                     <div className="mt-4 space-y-3">
                       {priorities.map((priority, index) => (
                         <input
@@ -264,6 +390,7 @@ export default function TemplatesPage() {
                     <p className="mt-6 text-[11px] tracking-[0.2em] text-[#9D6F67]">
                       THIS WEEK&apos;S FOCUS
                     </p>
+
                     <textarea
                       value={weeklyFocus}
                       onChange={(e) => setWeeklyFocus(e.target.value)}
@@ -277,6 +404,7 @@ export default function TemplatesPage() {
                     <p className="text-[11px] tracking-[0.2em] text-[#9D6F67]">
                       TRAINING PLAN
                     </p>
+
                     <div className="mt-4 grid gap-2 sm:grid-cols-2">
                       {days.map((day) => (
                         <label
@@ -286,8 +414,9 @@ export default function TemplatesPage() {
                           <span className="text-[11px] tracking-[0.16em] text-[#9D6F67]">
                             {day}
                           </span>
+
                           <input
-                            value={workouts[day]}
+                            value={workouts[day] ?? ""}
                             onChange={(e) =>
                               setWorkouts({
                                 ...workouts,
@@ -309,6 +438,7 @@ export default function TemplatesPage() {
                   <p className="text-[11px] tracking-[0.2em] text-[#9D6F67]">
                     MEALS + PREP
                   </p>
+
                   <div className="mt-4 space-y-3">
                     {meals.map((item, index) => (
                       <div
@@ -318,21 +448,29 @@ export default function TemplatesPage() {
                         <span className="font-serif text-2xl text-[#D2B0A9]">
                           {String(index + 1).padStart(2, "0")}
                         </span>
+
                         <input
                           value={item.meal}
                           onChange={(e) => {
                             const next = [...meals];
-                            next[index] = { ...next[index], meal: e.target.value };
+                            next[index] = {
+                              ...next[index],
+                              meal: e.target.value,
+                            };
                             setMeals(next);
                           }}
                           placeholder="Meal"
                           className="bg-transparent text-[15px] outline-none placeholder:text-[#AA9690]"
                         />
+
                         <input
                           value={item.prep}
                           onChange={(e) => {
                             const next = [...meals];
-                            next[index] = { ...next[index], prep: e.target.value };
+                            next[index] = {
+                              ...next[index],
+                              prep: e.target.value,
+                            };
                             setMeals(next);
                           }}
                           placeholder="Prep / notes"
@@ -354,10 +492,14 @@ export default function TemplatesPage() {
                       <span className="text-[11px] tracking-[0.2em] text-[#9D6F67]">
                         {category.toUpperCase()}
                       </span>
+
                       <textarea
                         value={value}
                         onChange={(e) =>
-                          setGrocery({ ...grocery, [category]: e.target.value })
+                          setGrocery({
+                            ...grocery,
+                            [category]: e.target.value,
+                          })
                         }
                         placeholder="Add items..."
                         rows={5}
@@ -373,6 +515,7 @@ export default function TemplatesPage() {
                   <div className="min-w-[720px]">
                     <div className="grid grid-cols-[180px_repeat(7,1fr)] gap-2">
                       <div />
+
                       {days.map((day) => (
                         <div
                           key={day}
@@ -399,18 +542,24 @@ export default function TemplatesPage() {
                               key={`${habitIndex}-${day}`}
                               type="button"
                               onClick={() => {
-                                const next = habitChecks.map((row) => [...row]);
+                                const next = habitChecks.map((row) => [
+                                  ...row,
+                                ]);
+
                                 next[habitIndex][dayIndex] =
                                   !next[habitIndex][dayIndex];
+
                                 setHabitChecks(next);
                               }}
                               className={`rounded-xl border py-3 font-serif text-lg transition ${
-                                habitChecks[habitIndex][dayIndex]
+                                habitChecks[habitIndex]?.[dayIndex]
                                   ? "border-[#A77B73] bg-[#DDB5AE] text-[#6F514B]"
                                   : "border-[#DED0CB] bg-[#F7F1ED] text-[#B79F99]"
                               }`}
                             >
-                              {habitChecks[habitIndex][dayIndex] ? "♡" : "○"}
+                              {habitChecks[habitIndex]?.[dayIndex]
+                                ? "♡"
+                                : "○"}
                             </button>
                           ))}
                         </div>

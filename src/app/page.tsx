@@ -1,317 +1,660 @@
-import AppPreview from "@/components/AppPreview";
+"use client";
 
-export default function Home() {
-  const included = [
-    {
-      number: "01",
-      title: "DAILY TRACKER",
-      description:
-        "Check off your daily commitments and watch your 75-day journey build.",
-    },
-    {
-      number: "02",
-      title: "THE GUIDE",
-      description:
-        "Your challenge rules, expectations and everything you need to get started.",
-    },
-    {
-      number: "03",
-      title: "PROGRESS",
-      description:
-        "Track your consistency, reflections, milestones and transformation.",
-    },
-    {
-      number: "04",
-      title: "PRIVATE PHOTOS",
-      description:
-        "Keep your progress photos safely stored inside your own account.",
-    },
-    {
-      number: "05",
-      title: "CHECK-INS",
-      description:
-        "Pause each week to reflect on what's working and where you want to improve.",
-    },
-    {
-      number: "06",
-      title: "RESOURCES",
-      description:
-        "Workouts, wellness resources and extra support throughout your challenge.",
-    },
-  ];
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { getCurrentChallengeDay } from "@/lib/challenge";
+import DashboardSidebar from "@/components/DashboardSidebar";
+
+const commitments = [
+  {
+    number: "01",
+    title: "WORKOUT #1",
+    description: "45 min movement",
+    column: "move",
+  },
+  {
+    number: "02",
+    title: "WORKOUT #2",
+    description: "Get outside",
+    column: "get_outside",
+  },
+  {
+    number: "03",
+    title: "HYDRATE",
+    description: "Hit your water goal",
+    column: "hydrate",
+  },
+  {
+    number: "04",
+    title: "READ",
+    description: "10 pages",
+    column: "read",
+  },
+  {
+    number: "05",
+    title: "NUTRITION",
+    description: "Stay on plan",
+    column: "nourish",
+  },
+  {
+    number: "06",
+    title: "PROGRESS PHOTO",
+    description: "Document the journey",
+    column: "document",
+  },
+  {
+    number: "07",
+    title: "NO ALCOHOL",
+    description: "Stay alcohol-free",
+    column: "no_alcohol",
+  },
+] as const;
+
+type CommitmentColumn = (typeof commitments)[number]["column"];
+
+type DailyProgress = {
+  move: boolean;
+  get_outside: boolean;
+  hydrate: boolean;
+  read: boolean;
+  nourish: boolean;
+  document: boolean;
+  no_alcohol: boolean;
+};
+
+const emptyProgress: DailyProgress = {
+  move: false,
+  get_outside: false,
+  hydrate: false,
+  read: false,
+  nourish: false,
+  document: false,
+  no_alcohol: false,
+};
+
+function formatDateForDatabase(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+export default function DashboardPage() {
+  const [progress, setProgress] = useState<DailyProgress>(emptyProgress);
+  const [firstName, setFirstName] = useState("there");
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [waterBottles, setWaterBottles] = useState(0);
+  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
+    null
+  );
+
+  const today = new Date();
+
+  const formattedDate = today
+    .toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "2-digit",
+      year: "numeric",
+    })
+    .toUpperCase();
+
+  const currentDay = challengeStartDate
+    ? getCurrentChallengeDay(challengeStartDate, today)
+    : 1;
+
+  const dayNumber = String(currentDay).padStart(2, "0");
+
+  const currentHour = today.getHours();
+
+  let greeting = "good morning";
+
+  if (currentHour >= 12 && currentHour < 17) {
+    greeting = "good afternoon";
+  } else if (currentHour >= 17) {
+    greeting = "good evening";
+  }
+
+  const initial =
+    !isLoadingUser && firstName !== "there"
+      ? firstName.charAt(0).toUpperCase()
+      : "♡";
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      setIsLoadingUser(true);
+      setIsLoadingProgress(true);
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Could not load user:", userError);
+      }
+
+      if (!user) {
+        setIsLoadingUser(false);
+        setIsLoadingProgress(false);
+        return;
+      }
+
+      setUserId(user.id);
+
+      const savedName = user.user_metadata?.name;
+
+      if (savedName) {
+        setFirstName(savedName);
+      } else if (user.email) {
+        setFirstName(user.email.split("@")[0]);
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("challenge_start_date")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Could not load profile:", profileError);
+        setIsLoadingUser(false);
+        setIsLoadingProgress(false);
+        return;
+      }
+
+      if (!profile?.challenge_start_date) {
+        setIsLoadingUser(false);
+        setIsLoadingProgress(false);
+        return;
+      }
+
+      setChallengeStartDate(profile.challenge_start_date);
+
+      const calculatedDay = getCurrentChallengeDay(
+        profile.challenge_start_date
+      );
+
+      const savedWaterBottles = Number(
+        localStorage.getItem(`water-bottles-${user.id}-${calculatedDay}`) || "0"
+      );
+      setWaterBottles(Math.min(Math.max(savedWaterBottles, 0), 8));
+
+      const { data: savedProgress, error: progressError } = await supabase
+        .from("daily_progress")
+        .select(
+          "move, get_outside, hydrate, read, nourish, document, no_alcohol"
+        )
+        .eq("user_id", user.id)
+        .eq("challenge_day", calculatedDay)
+        .maybeSingle();
+
+      if (progressError) {
+        console.error("Could not load daily progress:", progressError);
+      } else if (savedProgress) {
+        if (
+          savedProgress.hydrate &&
+          !localStorage.getItem(`water-bottles-${user.id}-${calculatedDay}`)
+        ) {
+          setWaterBottles(8);
+          localStorage.setItem(
+            `water-bottles-${user.id}-${calculatedDay}`,
+            "8"
+          );
+        }
+
+        setProgress({
+          move: savedProgress.move,
+          get_outside: savedProgress.get_outside,
+          hydrate: savedProgress.hydrate,
+          read: savedProgress.read,
+          nourish: savedProgress.nourish,
+          document: savedProgress.document,
+          no_alcohol: savedProgress.no_alcohol ?? false,
+        });
+      }
+
+      setIsLoadingUser(false);
+      setIsLoadingProgress(false);
+    };
+
+    loadDashboard();
+  }, []);
+
+  const toggleCommitment = async (
+    column: CommitmentColumn
+  ) => {
+    if (!userId || !challengeStartDate || isLoadingProgress) {
+      return;
+    }
+
+    const newValue = !progress[column];
+
+    const updatedProgress = {
+      ...progress,
+      [column]: newValue,
+    };
+
+    // Update the UI immediately.
+    setProgress(updatedProgress);
+
+    const progressDate = formatDateForDatabase(today);
+
+    const { error } = await supabase.from("daily_progress").upsert(
+      {
+        user_id: userId,
+        challenge_day: currentDay,
+        progress_date: progressDate,
+        move: updatedProgress.move,
+        get_outside: updatedProgress.get_outside,
+        hydrate: updatedProgress.hydrate,
+        read: updatedProgress.read,
+        nourish: updatedProgress.nourish,
+        document: updatedProgress.document,
+        no_alcohol: updatedProgress.no_alcohol,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id,challenge_day",
+      }
+    );
+
+    if (error) {
+      console.error("Could not save daily progress:", error);
+
+      // Put the UI back if Supabase could not save it.
+      setProgress(progress);
+    }
+  };
+
+  const updateWaterBottles = async (nextCount: number) => {
+    if (!userId || !challengeStartDate || isLoadingProgress) return;
+
+    const clampedCount = Math.min(Math.max(nextCount, 0), 8);
+    const hydrateComplete = clampedCount === 8;
+
+    setWaterBottles(clampedCount);
+    localStorage.setItem(
+      `water-bottles-${userId}-${currentDay}`,
+      String(clampedCount)
+    );
+
+    const updatedProgress = {
+      ...progress,
+      hydrate: hydrateComplete,
+    };
+
+    setProgress(updatedProgress);
+
+    const progressDate = formatDateForDatabase(today);
+
+    const { error } = await supabase.from("daily_progress").upsert(
+      {
+        user_id: userId,
+        challenge_day: currentDay,
+        progress_date: progressDate,
+        move: updatedProgress.move,
+        get_outside: updatedProgress.get_outside,
+        hydrate: updatedProgress.hydrate,
+        read: updatedProgress.read,
+        nourish: updatedProgress.nourish,
+        document: updatedProgress.document,
+        no_alcohol: updatedProgress.no_alcohol,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id,challenge_day",
+      }
+    );
+
+    if (error) {
+      console.error("Could not save water progress:", error);
+    }
+  };
+
+  const completedCount = commitments.filter(
+    (item) => progress[item.column]
+  ).length;
+
+  const percentage = Math.round(
+    (completedCount / commitments.length) * 100
+  );
+
+  const dayComplete = completedCount === commitments.length;
 
   return (
-    <main className="overflow-hidden bg-[#F7F1ED] text-[#211C19]">
-      {/* NAVIGATION */}
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-7 md:px-12">
-        <div className="leading-none">
-          <p className="font-serif text-2xl tracking-[0.08em]">LOCK IN</p>
-          <p className="mt-1 text-[9px] tracking-[0.5em]">WITH LAV</p>
-        </div>
+    <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
+      <div className="flex min-h-screen">
+        {/* SIDEBAR */}
+        <DashboardSidebar
+          firstName={firstName}
+          initial={initial}
+          isLoadingUser={isLoadingUser}
+        />
 
-        <div className="flex items-center gap-5">
-          <a
-            href="#about"
-            className="hidden text-[10px] tracking-[0.2em] md:block"
-          >
-            THE CHALLENGE
-          </a>
+        {/* DASHBOARD */}
+        <section className="flex-1 px-6 py-8 md:px-10 lg:px-14">
+          {/* TOP BAR */}
+          <header className="flex items-center justify-between">
+            <div>
+              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+                {formattedDate}
+              </p>
 
-          <a
-            href="#included"
-            className="hidden text-[10px] tracking-[0.2em] md:block"
-          >
-            WHAT&apos;S INCLUDED
-          </a>
+              <p className="mt-2 font-serif text-2xl italic text-[#A77B73]">
+                {isLoadingUser
+                  ? `${greeting}. ♡`
+                  : `${greeting}, ${firstName}. ♡`}
+              </p>
+            </div>
 
-          <button className="rounded-full border border-[#B98F87] px-5 py-2 text-[10px] tracking-[0.2em] transition hover:bg-[#E8C5BF]">
-            LOG IN
-          </button>
-        </div>
-      </nav>
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EAD8D3] font-serif md:hidden">
+              {initial}
+            </div>
+          </header>
 
-      {/* HERO */}
-      <section className="mx-auto flex min-h-[82vh] max-w-7xl flex-col items-center justify-center px-6 pb-20 pt-10 text-center">
-        <p className="mb-7 text-[10px] tracking-[0.45em] text-[#9D6F67] md:text-xs">
-          JANUARY 01 — MARCH 16, 2027
-        </p>
+          {/* DAY HERO */}
+          <div className="mt-12 grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
+            {/* CHALLENGE CARD */}
+            <div className="rounded-[2rem] bg-[#211C19] p-8 text-[#F7F1ED] md:p-10">
+              <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
+                YOUR CHALLENGE
+              </p>
 
-        <div className="mb-5 text-2xl">♡</div>
+              <div className="mt-7 flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
+                <div>
+                  <h1 className="font-serif text-6xl leading-none md:text-8xl">
+                    Day {dayNumber}
+                  </h1>
 
-        <h1 className="font-serif text-[clamp(5rem,14vw,11rem)] leading-[0.72] tracking-[-0.065em]">
-          LOCK IN
-        </h1>
+                  <p className="mt-4 text-[9px] tracking-[0.35em] text-[#BFAEAA]">
+                    OF 75
+                  </p>
+                </div>
 
-        <p className="mt-8 text-sm tracking-[0.7em] md:text-lg">WITH LAV</p>
+                <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-full border-[7px] border-[#DDB5AE]">
+                  <div className="text-center">
+                    <p className="font-serif text-3xl">
+                      {percentage}%
+                    </p>
 
-        <p className="mt-12 max-w-xl font-serif text-3xl italic leading-relaxed text-[#5C4B46] md:text-4xl">
-          75 days. Show up for yourself.
-        </p>
-
-        <p className="mt-5 max-w-lg text-sm leading-7 text-[#76645E]">
-          Build the discipline, routines and confidence to become the version
-          of you you&apos;ve been waiting for.
-        </p>
-
-        <a
-          href="#about"
-          className="mt-10 rounded-full bg-[#DDB5AE] px-14 py-4 text-[10px] tracking-[0.35em] shadow-sm transition duration-300 hover:-translate-y-1 hover:bg-[#D3A49C]"
-        >
-          DISCOVER THE CHALLENGE
-        </a>
-
-        <p className="mt-6 text-[9px] tracking-[0.3em] text-[#9D8881]">
-          75 DAYS • ONE DAY AT A TIME
-        </p>
-      </section>
-
-      {/* EDITORIAL IMAGE + STATEMENT */}
-      <section className="border-y border-[#E2D4CF] bg-[#FBF8F6]">
-        <div className="mx-auto grid max-w-7xl md:grid-cols-2">
-          {/* IMAGE */}
-          <div className="relative h-[520px] overflow-hidden md:h-[700px]">
-            <img
-              src="/lock-in-morning.jpg"
-              alt="Morning wellness routine with journal, laptop and matcha"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-
-            {/* subtle warm overlay */}
-            <div className="absolute inset-0 bg-[#B98F87]/5" />
-          </div>
-
-          {/* STATEMENT */}
-          <div className="flex h-[520px] flex-col justify-center px-8 py-16 md:h-[700px] md:px-20">
-            <p className="mb-8 text-[9px] tracking-[0.4em] text-[#9D6F67]">
-              THE NEXT 75 DAYS
-            </p>
-
-            <h2 className="max-w-lg font-serif text-5xl leading-[0.95] md:text-7xl">
-              A better you
-              <span className="block italic text-[#A77B73]">
-                is always worth it.
-              </span>
-            </h2>
-
-            <p className="mt-9 max-w-md text-sm leading-7 text-[#76645E]">
-              This isn&apos;t about becoming perfect overnight. It&apos;s about
-              choosing yourself every single day — building routines that make
-              you feel stronger, more confident and more in control of your
-              life.
-            </p>
-
-            <p className="mt-10 font-serif text-3xl italic text-[#A77B73]">
-              you&apos;re locking in for you. ♡
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ABOUT */}
-      <section
-        id="about"
-        className="mx-auto max-w-7xl px-6 py-28 md:px-12 md:py-40"
-      >
-        <div className="grid gap-16 md:grid-cols-[0.8fr_1.2fr] md:gap-24">
-          <div>
-            <p className="text-[9px] tracking-[0.45em] text-[#9D6F67]">
-              LOCK IN WITH LAV
-            </p>
-
-            <p className="mt-6 font-serif text-3xl italic text-[#A77B73]">
-              one day at a time. ♡
-            </p>
-          </div>
-
-          <div>
-            <h2 className="font-serif text-5xl leading-none md:text-7xl">
-              This is your
-              <span className="block italic">75 days.</span>
-            </h2>
-
-            <p className="mt-8 max-w-2xl text-sm leading-8 text-[#76645E]">
-              Lock In With Lav is a 75-day wellness and discipline challenge
-              designed to help you create routines you can actually carry
-              forward. You&apos;ll show up daily, track your habits, document
-              your progress and build consistency one choice at a time.
-            </p>
-          </div>
-        </div>
-
-        {/* THREE PILLARS */}
-        <div className="mt-24 grid border-y border-[#DCCBC5] md:grid-cols-3">
-          <div className="border-b border-[#DCCBC5] px-5 py-14 md:border-b-0 md:border-r md:px-10">
-            <p className="font-serif text-5xl text-[#C59B93]">01</p>
-            <h3 className="mt-8 text-xs tracking-[0.35em]">DISCIPLINE</h3>
-            <p className="mt-5 text-sm leading-7 text-[#76645E]">
-              Keep the promises you make to yourself, even on the days when
-              motivation isn&apos;t there.
-            </p>
-          </div>
-
-          <div className="border-b border-[#DCCBC5] px-5 py-14 md:border-b-0 md:border-r md:px-10">
-            <p className="font-serif text-5xl text-[#C59B93]">02</p>
-            <h3 className="mt-8 text-xs tracking-[0.35em]">ROUTINE</h3>
-            <p className="mt-5 text-sm leading-7 text-[#76645E]">
-              Build simple daily habits that support your body, your mind and
-              the life you&apos;re creating.
-            </p>
-          </div>
-
-          <div className="px-5 py-14 md:px-10">
-            <p className="font-serif text-5xl text-[#C59B93]">03</p>
-            <h3 className="mt-8 text-xs tracking-[0.35em]">PROGRESS</h3>
-            <p className="mt-5 text-sm leading-7 text-[#76645E]">
-              Watch what happens when small choices compound over 75
-              intentional days.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* WHAT'S INCLUDED */}
-      <section
-        id="included"
-        className="bg-[#EAD8D3] px-6 py-28 md:px-12 md:py-36"
-      >
-        <div className="mx-auto max-w-7xl">
-          <div className="max-w-3xl">
-            <p className="text-[9px] tracking-[0.45em] text-[#8F655E]">
-              INSIDE YOUR CHALLENGE
-            </p>
-
-            <h2 className="mt-7 font-serif text-5xl leading-none md:text-7xl">
-              Everything you need
-              <span className="block italic">to stay locked in.</span>
-            </h2>
-          </div>
-
-          <div className="mt-20 grid gap-px overflow-hidden rounded-[2rem] bg-[#CFB5AE] md:grid-cols-2 lg:grid-cols-3">
-            {included.map((item) => (
-              <div
-                key={item.number}
-                className="min-h-[260px] bg-[#F7F1ED] p-9 md:p-11"
-              >
-                <p className="font-serif text-3xl text-[#B98F87]">
-                  {item.number}
-                </p>
-
-                <h3 className="mt-10 text-[11px] tracking-[0.3em]">
-                  {item.title}
-                </h3>
-
-                <p className="mt-5 text-sm leading-7 text-[#76645E]">
-                  {item.description}
-                </p>
+                    <p className="mt-1 text-[6px] tracking-[0.25em] text-[#D5C8C3]">
+                      TODAY
+                    </p>
+                  </div>
+                </div>
               </div>
-            ))}
+
+              {/* PROGRESS BAR */}
+              <div className="mt-10 h-[5px] overflow-hidden rounded-full bg-[#413735]">
+                <div
+                  className="h-full rounded-full bg-[#DDB5AE] transition-all duration-500"
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+
+              <p className="mt-5 font-serif text-xl italic text-[#DDB5AE]">
+                {dayComplete
+                  ? `Day ${dayNumber} complete. You showed up. ♡`
+                  : currentDay === 1
+                    ? "day one. show up for yourself. ♡"
+                    : `day ${currentDay}. keep showing up. ♡`}
+              </p>
+            </div>
+
+            {/* JOURNEY CARD */}
+            <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-8">
+              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+                YOUR JOURNEY
+              </p>
+
+              <h2 className="mt-5 font-serif text-4xl leading-none">
+                75 days of
+                <span className="block italic text-[#A77B73]">
+                  choosing you.
+                </span>
+              </h2>
+
+              <div className="mt-9 grid grid-cols-3 text-center">
+                <div>
+                  <p className="font-serif text-3xl">
+                    {dayNumber}
+                  </p>
+
+                  <p className="mt-2 text-[6px] tracking-[0.2em] text-[#8C7770]">
+                    CURRENT
+                  </p>
+                </div>
+
+                <div className="border-x border-[#DED0CB]">
+                  <p className="font-serif text-3xl">
+                    {dayComplete ? "1" : "0"}
+                  </p>
+
+                  <p className="mt-2 text-[6px] tracking-[0.2em] text-[#8C7770]">
+                    COMPLETE
+                  </p>
+                </div>
+
+                <div>
+                  <p className="font-serif text-3xl">
+                    {dayComplete ? "1" : "0"}
+                  </p>
+
+                  <p className="mt-2 text-[6px] tracking-[0.2em] text-[#8C7770]">
+                    STREAK
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                href="/dashboard/journey"
+                className="mt-9 block w-full rounded-full border border-[#CBA9A2] py-3 text-center text-[7px] tracking-[0.3em] transition hover:bg-[#EAD8D3]"
+              >
+                VIEW JOURNEY
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
-      
-<AppPreview />
 
-      {/* DATES */}
-      <section className="px-6 py-28 text-center md:py-40">
-        <p className="text-[9px] tracking-[0.45em] text-[#9D6F67]">
-          MARK YOUR CALENDAR
-        </p>
+          {/* COMMITMENTS */}
+          <section className="mt-12">
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+                  DAY {dayNumber}
+                </p>
 
-        <h2 className="mt-8 font-serif text-5xl leading-none md:text-8xl">
-          January 01
-          <span className="mx-4 text-[#B98F87]">—</span>
-          March 16
-        </h2>
+                <h2 className="mt-3 font-serif text-4xl md:text-5xl">
+                  Today&apos;s commitments
+                </h2>
+              </div>
 
-        <p className="mt-8 text-xs tracking-[0.35em] text-[#76645E]">
-          2027 • 75 DAYS
-        </p>
+              <p className="hidden font-serif text-xl italic text-[#A77B73] sm:block">
+                {isLoadingProgress
+                  ? "loading... ♡"
+                  : `${completedCount}/${commitments.length} complete ♡`}
+              </p>
+            </div>
 
-        <p className="mx-auto mt-10 max-w-2xl font-serif text-3xl italic text-[#6E5953]">
-          imagine where you could be 75 days from now. ♡
-        </p>
-      </section>
+            <div className="mt-8 grid gap-3 lg:grid-cols-2">
+              {commitments.map((item) => {
+                const isComplete = progress[item.column];
 
-      {/* FINAL CTA */}
-      <section className="bg-[#211C19] px-6 py-28 text-center text-[#F7F1ED] md:py-40">
-        <p className="text-[9px] tracking-[0.45em] text-[#DDB5AE]">
-          JANUARY 01, 2027
-        </p>
+                if (item.column === "hydrate") {
+                  return (
+                    <div
+                      key={item.number}
+                      className={`rounded-2xl border p-5 transition duration-300 lg:col-span-2 ${
+                        isComplete
+                          ? "border-[#CBA9A2] bg-[#EAD8D3]"
+                          : "border-[#DED0CB] bg-[#FBF8F6]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-5">
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-serif transition ${
+                            isComplete
+                              ? "border-[#A77B73] bg-[#DDB5AE] text-[#211C19]"
+                              : "border-[#CBA9A2] text-[#A77B73]"
+                          }`}
+                        >
+                          {item.number}
+                        </div>
 
-        <h2 className="mx-auto mt-8 max-w-4xl font-serif text-6xl leading-[0.85] md:text-9xl">
-          Ready to
-          <span className="block italic text-[#DDB5AE]">lock in?</span>
-        </h2>
+                        <div className="flex-1">
+                          <p className="text-[11px] tracking-[0.18em] text-[#211C19]">
+                            HYDRATE
+                          </p>
+                          <p className="mt-2 text-sm leading-5 text-[#8C7770]">
+                            {waterBottles}/8 bottles • 1 gallon
+                          </p>
+                        </div>
 
-        <p className="mx-auto mt-10 max-w-md text-sm leading-7 text-[#D5C8C3]">
-          75 days. One commitment to yourself. A stronger, happier you on the
-          other side.
-        </p>
+                        <span className="font-serif text-xl italic text-[#A77B73]">
+                          {isComplete ? "done ♡" : `${waterBottles}/8`}
+                        </span>
+                      </div>
 
-        <button className="mt-10 rounded-full bg-[#DDB5AE] px-16 py-4 text-[10px] tracking-[0.4em] text-[#211C19] transition hover:-translate-y-1 hover:bg-[#E8C9C3]">
-          JOIN THE CHALLENGE
-        </button>
+                      <div className="mt-5 grid grid-cols-8 gap-2">
+                        {Array.from({ length: 8 }).map((_, index) => {
+                          const filled = index < waterBottles;
 
-        <p className="mt-10 font-serif text-2xl italic text-[#DDB5AE]">
-          you got this. ♡
-        </p>
-      </section>
+                          return (
+                            <button
+                              key={index}
+                              type="button"
+                              disabled={isLoadingProgress}
+                              onClick={() =>
+                                updateWaterBottles(
+                                  filled && index === waterBottles - 1
+                                    ? index
+                                    : index + 1
+                                )
+                              }
+                              aria-label={`Bottle ${index + 1} ${
+                                filled ? "complete" : "incomplete"
+                              }`}
+                              className={`flex h-12 items-center justify-center rounded-xl border text-lg transition hover:-translate-y-0.5 ${
+                                filled
+                                  ? "border-[#A77B73] bg-[#DDB5AE]"
+                                  : "border-[#D6C3BD] bg-[#F7F1ED]"
+                              }`}
+                            >
+                              <span
+                                className={
+                                  filled ? "opacity-100" : "opacity-35"
+                                }
+                              >
+                                ♡
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
 
-      {/* FOOTER */}
-      <footer className="flex flex-col gap-6 border-t border-[#3A322F] bg-[#211C19] px-6 py-10 text-[#F7F1ED] md:flex-row md:items-center md:justify-between md:px-12">
-        <div>
-          <p className="font-serif text-2xl tracking-[0.08em]">LOCK IN</p>
-          <p className="mt-1 text-[8px] tracking-[0.5em]">WITH LAV</p>
-        </div>
+                      <p className="mt-3 text-[10px] tracking-[0.14em] text-[#9D6F67]">
+                        TAP AS YOU GO • EACH = 16 OZ
+                      </p>
+                    </div>
+                  );
+                }
 
-        <p className="text-[8px] tracking-[0.25em] text-[#A99B96]">
-          75 DAYS • DISCIPLINE • ROUTINE • PROGRESS
-        </p>
+                return (
+                  <div
+                    key={item.number}
+                    onClick={() => toggleCommitment(item.column)}
+                    className={`group flex items-center gap-5 rounded-2xl border p-5 transition duration-300 ${
+                      isLoadingProgress
+                        ? "cursor-wait opacity-70"
+                        : "cursor-pointer"
+                    } ${
+                      isComplete
+                        ? "border-[#CBA9A2] bg-[#EAD8D3]"
+                        : "border-[#DED0CB] bg-[#FBF8F6] hover:-translate-y-0.5 hover:border-[#CBA9A2]"
+                    }`}
+                  >
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-serif transition ${
+                        isComplete
+                          ? "border-[#A77B73] bg-[#DDB5AE] text-[#211C19]"
+                          : "border-[#CBA9A2] text-[#A77B73]"
+                      }`}
+                    >
+                      {item.number}
+                    </div>
 
-        <p className="text-[8px] tracking-[0.2em] text-[#A99B96]">
-          © 2027 LOCK IN WITH LAV
-        </p>
-      </footer>
+                    <div className="flex-1">
+                      <p
+                        className={`text-[11px] tracking-[0.18em] ${
+                          isComplete ? "text-[#6F514B]" : "text-[#211C19]"
+                        }`}
+                      >
+                        {item.title}
+                      </p>
+
+                      <p className="mt-2 text-sm leading-5 text-[#8C7770]">
+                        {item.description}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      disabled={isLoadingProgress}
+                      aria-label={`Mark ${item.title} ${
+                        isComplete ? "incomplete" : "complete"
+                      }`}
+                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs transition ${
+                        isComplete
+                          ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
+                          : "border-[#BFA39D] group-hover:bg-[#F1E6E2]"
+                      }`}
+                    >
+                      {isComplete ? "✓" : ""}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* COMPLETION MESSAGE */}
+          {dayComplete && (
+            <section className="mt-8 rounded-[2rem] border border-[#D4B0A8] bg-[#FBF8F6] px-8 py-10 text-center">
+              <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
+                DAY {dayNumber} COMPLETE
+              </p>
+
+              <p className="mt-5 font-serif text-4xl italic text-[#A77B73] md:text-5xl">
+                You kept your promise to yourself. ♡
+              </p>
+
+              <p className="mx-auto mt-5 max-w-lg text-xs leading-6 text-[#806E68]">
+                One day down. Keep choosing yourself, one day at a time.
+              </p>
+            </section>
+          )}
+
+          {/* DAILY NOTE */}
+          <section className="mt-12 rounded-[2rem] bg-[#EAD8D3] px-8 py-10 md:px-10">
+            <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
+              A NOTE FOR TODAY
+            </p>
+
+            <p className="mt-5 max-w-3xl font-serif text-3xl italic leading-snug md:text-4xl">
+              You don&apos;t have to have the next 75 days figured out.
+              You just have to show up for today.
+            </p>
+
+            <p className="mt-6 text-[8px] tracking-[0.3em] text-[#8F655E]">
+              ONE DAY AT A TIME ♡
+            </p>
+          </section>
+        </section>
+      </div>
     </main>
   );
 }
