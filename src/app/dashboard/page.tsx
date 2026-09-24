@@ -326,6 +326,36 @@ export default function DashboardPage() {
 
   const dayComplete = completedCount === commitments.length;
 
+  if (isLoadingUser || isLoadingProgress) {
+    return (
+      <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
+        <div className="flex min-h-screen">
+          <DashboardSidebar
+            firstName={firstName}
+            initial={initial}
+            isLoadingUser={isLoadingUser}
+          />
+
+          <section className="flex flex-1 items-center justify-center px-6 py-8 md:px-10 lg:px-14">
+            <div className="text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#D6C3BD] bg-[#FBF8F6] font-serif text-2xl text-[#A77B73]">
+                ♡
+              </div>
+
+              <p className="mt-6 text-[9px] tracking-[0.35em] text-[#9D6F67]">
+                LOCKING IN
+              </p>
+
+              <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
+                loading your day... ♡
+              </p>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
@@ -337,52 +367,49 @@ export default function DashboardPage() {
         />
 
         {/* DASHBOARD */}
-        <section className="flex-1 px-6 py-8 md:px-10 lg:px-14">
+        <section className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-6 sm:pt-8 md:px-10 md:pb-8 lg:px-14">
           {/* TOP BAR */}
           <header className="flex items-center justify-between">
             <div>
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+              <p className="text-[10px] tracking-[0.28em] text-[#9D6F67] md:text-[8px] md:tracking-[0.35em]">
                 {formattedDate}
               </p>
 
-              <p className="mt-2 font-serif text-2xl italic text-[#A77B73]">
+              <p className="mt-2 font-serif text-[1.7rem] italic leading-tight text-[#A77B73] md:text-2xl">
                 {isLoadingUser
                   ? `${greeting}. ♡`
                   : `${greeting}, ${firstName}. ♡`}
               </p>
             </div>
 
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EAD8D3] font-serif md:hidden">
-              {initial}
-            </div>
           </header>
 
           {/* DAY HERO */}
-          <div className="mt-12 grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="mt-8 grid gap-5 md:mt-12 md:gap-8 lg:grid-cols-[1.3fr_0.7fr]">
             {/* CHALLENGE CARD */}
-            <div className="rounded-[2rem] bg-[#211C19] p-8 text-[#F7F1ED] md:p-10">
-              <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
+            <div className="rounded-[1.75rem] bg-[#211C19] p-6 text-[#F7F1ED] sm:p-8 md:rounded-[2rem] md:p-10">
+              <p className="text-[10px] tracking-[0.32em] text-[#DDB5AE] md:text-[8px] md:tracking-[0.4em]">
                 YOUR CHALLENGE
               </p>
 
-              <div className="mt-7 flex flex-col justify-between gap-8 sm:flex-row sm:items-end">
+              <div className="mt-6 flex items-end justify-between gap-4 sm:mt-7 sm:gap-8">
                 <div>
-                  <h1 className="font-serif text-6xl leading-none md:text-8xl">
+                  <h1 className="font-serif text-5xl leading-none sm:text-6xl md:text-8xl">
                     Day {dayNumber}
                   </h1>
 
-                  <p className="mt-4 text-[9px] tracking-[0.35em] text-[#BFAEAA]">
+                  <p className="mt-3 text-[10px] tracking-[0.28em] text-[#BFAEAA] md:mt-4 md:text-[9px] md:tracking-[0.35em]">
                     OF 75
                   </p>
                 </div>
 
-                <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-full border-[7px] border-[#DDB5AE]">
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-[6px] border-[#DDB5AE] sm:h-28 sm:w-28 sm:border-[7px]">
                   <div className="text-center">
-                    <p className="font-serif text-3xl">
+                    <p className="font-serif text-2xl sm:text-3xl">
                       {percentage}%
                     </p>
 
-                    <p className="mt-1 text-[6px] tracking-[0.25em] text-[#D5C8C3]">
+                    <p className="mt-1 text-[9px] tracking-[0.18em] text-[#D5C8C3] md:text-[6px] md:tracking-[0.25em]">
                       TODAY
                     </p>
                   </div>
@@ -390,14 +417,14 @@ export default function DashboardPage() {
               </div>
 
               {/* PROGRESS BAR */}
-              <div className="mt-10 h-[5px] overflow-hidden rounded-full bg-[#413735]">
+              <div className="mt-8 h-[5px] overflow-hidden rounded-full bg-[#413735] md:mt-10">
                 <div
                   className="h-full rounded-full bg-[#DDB5AE] transition-all duration-500"
                   style={{ width: `${percentage}%` }}
                 />
               </div>
 
-              <p className="mt-5 font-serif text-xl italic text-[#DDB5AE]">
+              <p className="mt-4 font-serif text-lg italic leading-snug text-[#DDB5AE] sm:text-xl md:mt-5">
                 {dayComplete
                   ? `Day ${dayNumber} complete. You showed up. ♡`
                   : currentDay === 1
@@ -407,45 +434,45 @@ export default function DashboardPage() {
             </div>
 
             {/* JOURNEY CARD */}
-            <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-8">
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+            <div className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 sm:p-8 md:rounded-[2rem]">
+              <p className="text-[10px] tracking-[0.28em] text-[#9D6F67] md:text-[8px] md:tracking-[0.35em]">
                 YOUR JOURNEY
               </p>
 
-              <h2 className="mt-5 font-serif text-4xl leading-none">
+              <h2 className="mt-4 font-serif text-3xl leading-none sm:text-4xl md:mt-5">
                 75 days of
                 <span className="block italic text-[#A77B73]">
                   choosing you.
                 </span>
               </h2>
 
-              <div className="mt-9 grid grid-cols-3 text-center">
+              <div className="mt-7 grid grid-cols-3 text-center md:mt-9">
                 <div>
-                  <p className="font-serif text-3xl">
+                  <p className="font-serif text-2xl sm:text-3xl">
                     {dayNumber}
                   </p>
 
-                  <p className="mt-2 text-[6px] tracking-[0.2em] text-[#8C7770]">
+                  <p className="mt-2 text-[9px] tracking-[0.14em] text-[#8C7770] md:text-[6px] md:tracking-[0.2em]">
                     CURRENT
                   </p>
                 </div>
 
                 <div className="border-x border-[#DED0CB]">
-                  <p className="font-serif text-3xl">
+                  <p className="font-serif text-2xl sm:text-3xl">
                     {dayComplete ? "1" : "0"}
                   </p>
 
-                  <p className="mt-2 text-[6px] tracking-[0.2em] text-[#8C7770]">
+                  <p className="mt-2 text-[9px] tracking-[0.14em] text-[#8C7770] md:text-[6px] md:tracking-[0.2em]">
                     COMPLETE
                   </p>
                 </div>
 
                 <div>
-                  <p className="font-serif text-3xl">
+                  <p className="font-serif text-2xl sm:text-3xl">
                     {dayComplete ? "1" : "0"}
                   </p>
 
-                  <p className="mt-2 text-[6px] tracking-[0.2em] text-[#8C7770]">
+                  <p className="mt-2 text-[9px] tracking-[0.14em] text-[#8C7770] md:text-[6px] md:tracking-[0.2em]">
                     STREAK
                   </p>
                 </div>
@@ -453,7 +480,7 @@ export default function DashboardPage() {
 
               <Link
                 href="/dashboard/journey"
-                className="mt-9 block w-full rounded-full border border-[#CBA9A2] py-3 text-center text-[7px] tracking-[0.3em] transition hover:bg-[#EAD8D3]"
+                className="mt-7 block w-full rounded-full border border-[#CBA9A2] py-3.5 text-center text-[10px] tracking-[0.22em] transition hover:bg-[#EAD8D3] md:mt-9 md:py-3 md:text-[7px] md:tracking-[0.3em]"
               >
                 VIEW JOURNEY
               </Link>
@@ -461,26 +488,26 @@ export default function DashboardPage() {
           </div>
 
           {/* COMMITMENTS */}
-          <section className="mt-12">
+          <section className="mt-10 md:mt-12">
             <div className="flex items-end justify-between">
               <div>
-                <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+                <p className="text-[10px] tracking-[0.28em] text-[#9D6F67] md:text-[8px] md:tracking-[0.35em]">
                   DAY {dayNumber}
                 </p>
 
-                <h2 className="mt-3 font-serif text-4xl md:text-5xl">
+                <h2 className="mt-3 font-serif text-3xl sm:text-4xl md:text-5xl">
                   Today&apos;s commitments
                 </h2>
               </div>
 
-              <p className="hidden font-serif text-xl italic text-[#A77B73] sm:block">
+              <p className="font-serif text-sm italic text-[#A77B73] sm:text-xl">
                 {isLoadingProgress
                   ? "loading... ♡"
                   : `${completedCount}/${commitments.length} complete ♡`}
               </p>
             </div>
 
-            <div className="mt-8 grid gap-3 lg:grid-cols-2">
+            <div className="mt-6 grid gap-3 sm:mt-8 lg:grid-cols-2">
               {commitments.map((item) => {
                 const isComplete = progress[item.column];
 
@@ -488,13 +515,13 @@ export default function DashboardPage() {
                   return (
                     <div
                       key={item.number}
-                      className={`rounded-2xl border p-5 transition duration-300 lg:col-span-2 ${
+                      className={`rounded-2xl border p-4 transition duration-300 sm:p-5 lg:col-span-2 ${
                         isComplete
                           ? "border-[#CBA9A2] bg-[#EAD8D3]"
                           : "border-[#DED0CB] bg-[#FBF8F6]"
                       }`}
                     >
-                      <div className="flex items-center gap-5">
+                      <div className="flex items-center gap-4 sm:gap-5">
                         <div
                           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-serif transition ${
                             isComplete
@@ -519,7 +546,7 @@ export default function DashboardPage() {
                         </span>
                       </div>
 
-                      <div className="mt-5 grid grid-cols-8 gap-2">
+                      <div className="mt-5 grid grid-cols-4 gap-2 sm:grid-cols-8">
                         {Array.from({ length: 8 }).map((_, index) => {
                           const filled = index < waterBottles;
 
@@ -538,7 +565,7 @@ export default function DashboardPage() {
                               aria-label={`Bottle ${index + 1} ${
                                 filled ? "complete" : "incomplete"
                               }`}
-                              className={`flex h-12 items-center justify-center rounded-xl border text-lg transition hover:-translate-y-0.5 ${
+                              className={`flex h-11 items-center justify-center rounded-xl border text-lg transition hover:-translate-y-0.5 sm:h-12 ${
                                 filled
                                   ? "border-[#A77B73] bg-[#DDB5AE]"
                                   : "border-[#D6C3BD] bg-[#F7F1ED]"
@@ -556,7 +583,7 @@ export default function DashboardPage() {
                         })}
                       </div>
 
-                      <p className="mt-3 text-[10px] tracking-[0.14em] text-[#9D6F67]">
+                      <p className="mt-3 text-[10px] tracking-[0.12em] text-[#9D6F67] sm:tracking-[0.14em]">
                         TAP AS YOU GO • EACH = 16 OZ
                       </p>
                     </div>
@@ -567,7 +594,7 @@ export default function DashboardPage() {
                   <div
                     key={item.number}
                     onClick={() => toggleCommitment(item.column)}
-                    className={`group flex items-center gap-5 rounded-2xl border p-5 transition duration-300 ${
+                    className={`group flex items-center gap-4 rounded-2xl border p-4 transition duration-300 sm:gap-5 sm:p-5 ${
                       isLoadingProgress
                         ? "cursor-wait opacity-70"
                         : "cursor-pointer"
@@ -623,12 +650,12 @@ export default function DashboardPage() {
 
           {/* COMPLETION MESSAGE */}
           {dayComplete && (
-            <section className="mt-8 rounded-[2rem] border border-[#D4B0A8] bg-[#FBF8F6] px-8 py-10 text-center">
-              <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
+            <section className="mt-8 rounded-[1.75rem] border border-[#D4B0A8] bg-[#FBF8F6] px-5 py-8 text-center sm:px-8 sm:py-10 md:rounded-[2rem]">
+              <p className="text-[10px] tracking-[0.3em] text-[#9D6F67] md:text-[8px] md:tracking-[0.4em]">
                 DAY {dayNumber} COMPLETE
               </p>
 
-              <p className="mt-5 font-serif text-4xl italic text-[#A77B73] md:text-5xl">
+              <p className="mt-5 font-serif text-3xl italic text-[#A77B73] sm:text-4xl md:text-5xl">
                 You kept your promise to yourself. ♡
               </p>
 
@@ -639,21 +666,22 @@ export default function DashboardPage() {
           )}
 
           {/* DAILY NOTE */}
-          <section className="mt-12 rounded-[2rem] bg-[#EAD8D3] px-8 py-10 md:px-10">
-            <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
+          <section className="mt-10 rounded-[1.75rem] bg-[#EAD8D3] px-6 py-8 sm:px-8 sm:py-10 md:mt-12 md:rounded-[2rem] md:px-10">
+            <p className="text-[10px] tracking-[0.28em] text-[#8F655E] md:text-[8px] md:tracking-[0.35em]">
               A NOTE FOR TODAY
             </p>
 
-            <p className="mt-5 max-w-3xl font-serif text-3xl italic leading-snug md:text-4xl">
+            <p className="mt-5 max-w-3xl font-serif text-[1.75rem] italic leading-snug sm:text-3xl md:text-4xl">
               You don&apos;t have to have the next 75 days figured out.
               You just have to show up for today.
             </p>
 
-            <p className="mt-6 text-[8px] tracking-[0.3em] text-[#8F655E]">
+            <p className="mt-6 text-[10px] tracking-[0.22em] text-[#8F655E] md:text-[8px] md:tracking-[0.3em]">
               ONE DAY AT A TIME ♡
             </p>
           </section>
         </section>
+
       </div>
     </main>
   );

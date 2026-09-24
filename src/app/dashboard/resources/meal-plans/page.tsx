@@ -215,7 +215,7 @@ export default function MealPlansPage() {
               </h2>
 
               <p className="mt-3 max-w-2xl text-[15px] leading-7 text-[#806E68]">
-                Once you know what you're eating, turn the plan into something
+                Once you know what you&apos;re eating, turn the plan into something
                 you can actually use throughout the week.
               </p>
             </div>

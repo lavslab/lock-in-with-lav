@@ -203,7 +203,7 @@ export default function LowerBodyWarmUpPage() {
 
           <section className="pb-14 text-center">
             <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-              hips warm. legs ready. let's work. ♡
+              hips warm. legs ready. let&apos;s work. ♡
             </p>
 
             <Link

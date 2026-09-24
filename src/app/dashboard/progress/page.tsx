@@ -140,7 +140,7 @@ export default function ProgressPage() {
       const { data: progressRows, error: progressError } = await supabase
         .from("daily_progress")
         .select(
-          "challenge_day, move, get_outside, hydrate, read, nourish, document"
+          "challenge_day, move, get_outside, hydrate, read, nourish, document, no_alcohol"
         )
         .eq("user_id", user.id)
         .order("challenge_day", { ascending: true });
@@ -573,6 +573,36 @@ export default function ProgressPage() {
     },
   ];
 
+  if (isLoadingUser) {
+    return (
+      <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
+        <div className="flex min-h-screen">
+          <DashboardSidebar
+            firstName={firstName}
+            initial={initial}
+            isLoadingUser={isLoadingUser}
+          />
+
+          <section className="flex flex-1 items-center justify-center px-6 py-8">
+            <div className="text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#DDB5AE] bg-[#FBF8F6] font-serif text-2xl text-[#A77B73]">
+                ♡
+              </div>
+
+              <p className="mt-6 text-[10px] tracking-[0.35em] text-[#9D6F67]">
+                LOCKING IN
+              </p>
+
+              <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
+                loading your progress... ♡
+              </p>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
@@ -699,6 +729,7 @@ export default function ProgressPage() {
                 <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#EEE3DF]">
                   {photoUrls[1] ? (
                     <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={photoUrls[1]}
                         alt="Day 1 progress"
@@ -798,6 +829,7 @@ export default function ProgressPage() {
 
                       {photoUrls[currentDay] ? (
                         <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={photoUrls[currentDay]}
                             alt={`Day ${currentDay} progress`}
@@ -935,6 +967,7 @@ export default function ProgressPage() {
                     className="group overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] text-left transition hover:-translate-y-0.5 hover:border-[#CBA9A2]"
                   >
                     <div className="relative aspect-[4/5] overflow-hidden bg-[#EEE3DF]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={photoUrls[day]}
                         alt={`Day ${day} progress`}
@@ -985,6 +1018,7 @@ export default function ProgressPage() {
                 onClick={(event) => event.stopPropagation()}
               >
                 <div className="relative max-h-[70vh] overflow-hidden bg-[#EEE3DF]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={photoUrls[selectedDiaryDay]}
                     alt={`Day ${selectedDiaryDay} progress`}

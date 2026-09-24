@@ -163,7 +163,7 @@ export default function JourneyPage() {
         await supabase
           .from("daily_progress")
           .select(
-            "challenge_day, move, get_outside, hydrate, read, nourish, document"
+            "challenge_day, move, get_outside, hydrate, read, nourish, document, no_alcohol"
           )
           .eq("user_id", user.id)
           .order("challenge_day", { ascending: true });

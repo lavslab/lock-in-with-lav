@@ -15,7 +15,7 @@ const recipes = [
   { id:"salmon-power-bowl", title:"Salmon Power Bowl", subtitle:"colourful, balanced + satisfying.", meal:"Dinner", goals:["High Protein","Meal Prep"], calories:510, protein:39, carbs:43, time:"25 MIN" },
   { id:"loaded-chicken-potato", title:"Loaded Chicken Potato", subtitle:"comfort food with a protein goal.", meal:"Dinner", goals:["High Protein","Post-Workout"], calories:490, protein:45, carbs:52, time:"30 MIN" },
   { id:"protein-snack-box", title:"Protein Snack Box", subtitle:"snacky, but make it useful.", meal:"Snacks", goals:["High Protein","Lower Carb","Quick"], calories:260, protein:28, carbs:18, time:"5 MIN" },
-  { id:"strawberry-protein-smoothie", title:"Strawberry Protein Smoothie", subtitle:"cold, creamy + done in five.", meal:"Shakes", goals:["High Protein","Quick","Post-Workout"], calories:300, protein:35, carbs:32, time:"5 MIN" },,
+  { id:"strawberry-protein-smoothie", title:"Strawberry Protein Smoothie", subtitle:"cold, creamy + done in five.", meal:"Shakes", goals:["High Protein","Quick","Post-Workout"], calories:300, protein:35, carbs:32, time:"5 MIN" },
 
   {
     id: "ground-turkey-sweet-potato-bowl",

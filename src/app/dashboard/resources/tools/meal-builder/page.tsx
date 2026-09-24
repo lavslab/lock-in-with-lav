@@ -87,8 +87,12 @@ export default function MealBuilderPage() {
       ? firstName.charAt(0).toUpperCase()
       : "♡";
 
-  const selections = [protein, carb, produceChoice, fat].filter(
-    (item): item is FoodOption => item !== null
+  const selections = useMemo(
+    () =>
+      [protein, carb, produceChoice, fat].filter(
+        (item): item is FoodOption => item !== null
+      ),
+    [protein, carb, produceChoice, fat]
   );
 
   const totals = useMemo(
@@ -102,7 +106,7 @@ export default function MealBuilderPage() {
         }),
         { calories: 0, protein: 0, carbs: 0, fat: 0 }
       ),
-    [protein, carb, produceChoice, fat]
+    [selections]
   );
 
   const getSelected = (key: string) => {
@@ -252,13 +256,14 @@ export default function MealBuilderPage() {
                 </h2>
 
                 <div className="mt-7 space-y-2">
-                  {[
-                    ["PROTEIN", protein],
-                    ["CARB", carb],
-                    ["PRODUCE", produceChoice],
-                    ["FAT", fat],
-                  ].map(([label, item]) => {
-                    const food = item as FoodOption | null;
+                  {(
+                    [
+                      ["PROTEIN", protein],
+                      ["CARB", carb],
+                      ["PRODUCE", produceChoice],
+                      ["FAT", fat],
+                    ] as [string, FoodOption | null][]
+                  ).map(([label, food]) => {
 
                     return (
                       <div

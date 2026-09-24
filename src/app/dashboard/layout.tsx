@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+
+import DashboardMobileNav from "@/components/DashboardMobileNav";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardLayout({
@@ -12,13 +14,10 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
-  // No authenticated user = no dashboard access.
   if (!user) {
     redirect("/auth");
   }
 
-  // Logged-in users should also have a completed challenge setup
-  // before entering the dashboard.
   const { data: profile } = await supabase
     .from("profiles")
     .select("challenge_start_date")
@@ -29,5 +28,22 @@ export default async function DashboardLayout({
     redirect("/onboarding");
   }
 
-  return <>{children}</>;
+  const savedName =
+    typeof user.user_metadata?.name === "string"
+      ? user.user_metadata.name.trim()
+      : "";
+
+  const accountName =
+    savedName || user.email?.split("@")[0] || "";
+
+  const accountInitial = accountName
+    ? accountName.charAt(0).toUpperCase()
+    : "♡";
+
+  return (
+    <>
+      <DashboardMobileNav initial={accountInitial} />
+      <div className="pb-24 md:pb-0">{children}</div>
+    </>
+  );
 }

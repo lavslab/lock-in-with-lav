@@ -192,6 +192,36 @@ export default function AccountPage() {
     router.refresh();
   };
 
+  if (isLoadingUser) {
+    return (
+      <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
+        <div className="flex min-h-screen">
+          <DashboardSidebar
+            firstName={firstName}
+            initial={initial}
+            isLoadingUser={isLoadingUser}
+          />
+
+          <section className="flex flex-1 items-center justify-center px-6 py-8">
+            <div className="text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#DDB5AE] bg-[#FBF8F6] font-serif text-2xl text-[#A77B73]">
+                ♡
+              </div>
+
+              <p className="mt-6 text-[10px] tracking-[0.35em] text-[#9D6F67]">
+                LOCKING IN
+              </p>
+
+              <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
+                loading your account... ♡
+              </p>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">

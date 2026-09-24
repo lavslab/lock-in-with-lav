@@ -5,45 +5,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
-const commitments = [
-  {
-    number: "01",
-    title: "MOVE",
-    subtitle: "Workout #1",
-    description: "Your main workout for the day.",
-  },
-  {
-    number: "02",
-    title: "GET OUTSIDE",
-    subtitle: "Workout #2",
-    description: "Walk, jog or move outside.",
-  },
-  {
-    number: "03",
-    title: "HYDRATE",
-    subtitle: "Water goal",
-    description: "Stay on top of your water.",
-  },
-  {
-    number: "04",
-    title: "READ",
-    subtitle: "10 pages",
-    description: "Read something that helps you grow.",
-  },
-  {
-    number: "05",
-    title: "NOURISH",
-    subtitle: "Nutrition",
-    description: "Eat in a way that supports your goals.",
-  },
-  {
-    number: "06",
-    title: "DOCUMENT",
-    subtitle: "Progress photo",
-    description: "Document the journey. ♡",
-  },
-];
-
 const phases = [
   {
     number: "01",
@@ -153,6 +114,36 @@ export default function GuidePage() {
 
   const currentPhaseNumber = currentDay <= 25 ? "01" : currentDay <= 50 ? "02" : "03";
   const currentPhase = phases.find((phase) => phase.number === currentPhaseNumber) ?? phases[0];
+
+  if (isLoadingUser) {
+    return (
+      <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
+        <div className="flex min-h-screen">
+          <DashboardSidebar
+            firstName={firstName}
+            initial={initial}
+            isLoadingUser={isLoadingUser}
+          />
+
+          <section className="flex flex-1 items-center justify-center px-6 py-8">
+            <div className="text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#DDB5AE] bg-[#FBF8F6] font-serif text-2xl text-[#A77B73]">
+                ♡
+              </div>
+
+              <p className="mt-6 text-[10px] tracking-[0.35em] text-[#9D6F67]">
+                LOCKING IN
+              </p>
+
+              <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
+                loading your guide... ♡
+              </p>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">

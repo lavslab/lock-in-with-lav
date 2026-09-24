@@ -6,11 +6,11 @@ export type DailyProgressRow = {
   read: boolean;
   nourish: boolean;
   document: boolean;
+  no_alcohol: boolean;
 };
 
 export function parseChallengeDate(dateString: string) {
   const [year, month, day] = dateString.split("-").map(Number);
-
   return new Date(year, month - 1, day);
 }
 
@@ -63,7 +63,8 @@ export function isDayComplete(
     row.hydrate &&
     row.read &&
     row.nourish &&
-    row.document
+    row.document &&
+    row.no_alcohol
   );
 }
 
