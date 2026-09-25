@@ -1,13 +1,16 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import DashboardSidebar from "@/components/DashboardSidebar";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AccountPage() {
   const router = useRouter();
+
+  // Use the same browser-client pattern as the rest of the current auth flow.
+  const supabase = useMemo(() => createClient(), []);
 
   const [firstName, setFirstName] = useState("there");
   const [email, setEmail] = useState("");
@@ -29,6 +32,8 @@ export default function AccountPage() {
       : "♡";
 
   useEffect(() => {
+    let mounted = true;
+
     const loadAccount = async () => {
       setIsLoadingUser(true);
 
@@ -36,6 +41,8 @@ export default function AccountPage() {
         data: { user },
         error,
       } = await supabase.auth.getUser();
+
+      if (!mounted) return;
 
       if (error) {
         console.error("Could not load account:", error);
@@ -46,7 +53,10 @@ export default function AccountPage() {
         return;
       }
 
-      const savedName = user.user_metadata?.name;
+      const savedName =
+        typeof user.user_metadata?.name === "string"
+          ? user.user_metadata.name.trim()
+          : "";
 
       if (savedName) {
         setFirstName(savedName);
@@ -59,7 +69,11 @@ export default function AccountPage() {
     };
 
     loadAccount();
-  }, [router]);
+
+    return () => {
+      mounted = false;
+    };
+  }, [router, supabase]);
 
   const handleProfileSave = async (
     event: FormEvent<HTMLFormElement>
@@ -325,9 +339,7 @@ export default function AccountPage() {
                   disabled={isLoadingUser || isSavingProfile}
                   className="rounded-full bg-[#211C19] px-7 py-3 text-[10px] tracking-[0.25em] text-[#F7F1ED] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isSavingProfile
-                    ? "SAVING..."
-                    : "SAVE CHANGES"}
+                  {isSavingProfile ? "SAVING..." : "SAVE CHANGES"}
                 </button>
               </form>
             </section>
@@ -403,9 +415,7 @@ export default function AccountPage() {
                   disabled={isSavingPassword}
                   className="rounded-full border border-[#A77B73] px-7 py-3 text-[10px] tracking-[0.25em] text-[#6F514B] transition hover:bg-[#EAD8D3] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {isSavingPassword
-                    ? "UPDATING..."
-                    : "UPDATE PASSWORD"}
+                  {isSavingPassword ? "UPDATING..." : "UPDATE PASSWORD"}
                 </button>
               </form>
             </section>

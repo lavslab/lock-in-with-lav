@@ -14,10 +14,14 @@ export default async function DashboardLayout({
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Protect all dashboard routes.
+  // Logged-out visitors are sent to the auth page.
   if (!user) {
     redirect("/auth");
   }
 
+  // Users who have not completed onboarding
+  // are sent to choose their challenge start date.
   const { data: profile } = await supabase
     .from("profiles")
     .select("challenge_start_date")
@@ -33,8 +37,7 @@ export default async function DashboardLayout({
       ? user.user_metadata.name.trim()
       : "";
 
-  const accountName =
-    savedName || user.email?.split("@")[0] || "";
+  const accountName = savedName || user.email?.split("@")[0] || "";
 
   const accountInitial = accountName
     ? accountName.charAt(0).toUpperCase()
