@@ -9,7 +9,7 @@ export default function AuthPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [mode, setMode] = useState<"login" | "signup">("signup");
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("signup");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,6 +49,22 @@ export default function AuthPage() {
     setError("");
 
     try {
+      if (mode === "forgot") {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        });
+
+        if (error) {
+          setError(error.message);
+          return;
+        }
+
+        setMessage(
+          "Check your inbox. We sent you a link to reset your password. ♡"
+        );
+        return;
+      }
+
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -100,7 +116,7 @@ export default function AuthPage() {
     }
   }
 
-  function switchMode(newMode: "login" | "signup") {
+  function switchMode(newMode: "login" | "signup" | "forgot") {
     setMode(newMode);
     setMessage("");
     setError("");
@@ -166,7 +182,11 @@ export default function AuthPage() {
             </Link>
 
             <p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">
-              {mode === "signup" ? "JOIN THE CHALLENGE" : "WELCOME BACK"}
+              {mode === "signup"
+                ? "JOIN THE CHALLENGE"
+                : mode === "login"
+                ? "WELCOME BACK"
+                : "PASSWORD RESET"}
             </p>
 
             <h2 className="mt-4 font-serif text-5xl leading-none md:text-6xl">
@@ -177,11 +197,18 @@ export default function AuthPage() {
                     {" "}lock in.
                   </span>
                 </>
-              ) : (
+              ) : mode === "login" ? (
                 <>
                   Welcome
                   <span className="italic text-[#A77B73]">
                     {" "}back. ♡
+                  </span>
+                </>
+              ) : (
+                <>
+                  Let&apos;s get you
+                  <span className="block italic text-[#A77B73]">
+                    back in.
                   </span>
                 </>
               )}
@@ -190,38 +217,44 @@ export default function AuthPage() {
             <p className="mt-5 font-serif text-xl italic text-[#8F7C76]">
               {mode === "signup"
                 ? "your 75 days are waiting. ♡"
-                : "pick up where you left off."}
+                : mode === "login"
+                ? "pick up where you left off."
+                : "we'll send a reset link to your inbox. ♡"}
             </p>
 
-            {/* MODE TOGGLE */}
-            <div className="mt-9 grid grid-cols-2 rounded-full bg-[#EEE3DF] p-1">
-              <button
-                type="button"
-                onClick={() => switchMode("signup")}
-                className={`rounded-full px-5 py-3 text-[7px] tracking-[0.22em] transition ${
-                  mode === "signup"
-                    ? "bg-[#211C19] text-[#F7F1ED]"
-                    : "text-[#8F655E]"
-                }`}
-              >
-                CREATE ACCOUNT
-              </button>
+            {mode !== "forgot" && (
+              <div className="mt-9 grid grid-cols-2 rounded-full bg-[#EEE3DF] p-1">
+                <button
+                  type="button"
+                  onClick={() => switchMode("signup")}
+                  className={`rounded-full px-5 py-3 text-[7px] tracking-[0.22em] transition ${
+                    mode === "signup"
+                      ? "bg-[#211C19] text-[#F7F1ED]"
+                      : "text-[#8F655E]"
+                  }`}
+                >
+                  CREATE ACCOUNT
+                </button>
 
-              <button
-                type="button"
-                onClick={() => switchMode("login")}
-                className={`rounded-full px-5 py-3 text-[7px] tracking-[0.22em] transition ${
-                  mode === "login"
-                    ? "bg-[#211C19] text-[#F7F1ED]"
-                    : "text-[#8F655E]"
-                }`}
-              >
-                LOG IN
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => switchMode("login")}
+                  className={`rounded-full px-5 py-3 text-[7px] tracking-[0.22em] transition ${
+                    mode === "login"
+                      ? "bg-[#211C19] text-[#F7F1ED]"
+                      : "text-[#8F655E]"
+                  }`}
+                >
+                  LOG IN
+                </button>
+              </div>
+            )}
 
             {/* FORM */}
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <form
+              onSubmit={handleSubmit}
+              className={mode === "forgot" ? "mt-9 space-y-5" : "mt-8 space-y-5"}
+            >
               {mode === "signup" && (
                 <div>
                   <label
@@ -262,31 +295,45 @@ export default function AuthPage() {
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="password"
-                  className="text-[7px] tracking-[0.25em] text-[#806E68]"
-                >
-                  PASSWORD
-                </label>
+              {mode !== "forgot" && (
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="text-[7px] tracking-[0.25em] text-[#806E68]"
+                  >
+                    PASSWORD
+                  </label>
 
-                <input
-                  id="password"
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="mt-2 w-full rounded-2xl border border-[#D8C7C1] bg-[#FBF8F6] px-5 py-4 font-serif text-lg outline-none transition placeholder:text-[#C1AFAA] focus:border-[#A77B73]"
-                />
+                  <input
+                    id="password"
+                    type="password"
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="mt-2 w-full rounded-2xl border border-[#D8C7C1] bg-[#FBF8F6] px-5 py-4 font-serif text-lg outline-none transition placeholder:text-[#C1AFAA] focus:border-[#A77B73]"
+                  />
 
-                {mode === "signup" && (
-                  <p className="mt-2 text-[7px] tracking-[0.1em] text-[#A7938D]">
-                    AT LEAST 6 CHARACTERS
-                  </p>
-                )}
-              </div>
+                  {mode === "signup" && (
+                    <p className="mt-2 text-[7px] tracking-[0.1em] text-[#A7938D]">
+                      AT LEAST 6 CHARACTERS
+                    </p>
+                  )}
+
+                  {mode === "login" && (
+                    <div className="mt-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => switchMode("forgot")}
+                        className="font-serif text-sm italic text-[#A77B73] transition hover:text-[#806E68]"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* ERROR */}
               {error && (
@@ -315,13 +362,27 @@ export default function AuthPage() {
                   ? "ONE SEC..."
                   : mode === "signup"
                   ? "CREATE MY ACCOUNT →"
-                  : "LOG IN →"}
+                  : mode === "login"
+                  ? "LOG IN →"
+                  : "SEND RESET LINK →"}
               </button>
+
+              {mode === "forgot" && (
+                <button
+                  type="button"
+                  onClick={() => switchMode("login")}
+                  className="w-full py-2 text-[7px] tracking-[0.22em] text-[#927D76] transition hover:text-[#211C19]"
+                >
+                  ← BACK TO LOG IN
+                </button>
+              )}
             </form>
 
             <div className="mt-8 text-center">
               <p className="font-serif text-lg italic text-[#A77B73]">
-                one day at a time. ♡
+                {mode === "forgot"
+                  ? "we'll get you back in. ♡"
+                  : "one day at a time. ♡"}
               </p>
 
               <Link
