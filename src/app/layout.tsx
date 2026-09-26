@@ -15,9 +15,36 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Lock In With Lav | 75 Day Challenge",
+  metadataBase: new URL("https://www.lockinwithlav.com"),
+
+  title: "Lock In With Lav",
   description:
-    "75 days to build stronger routines, discipline and confidence. Lock in with Lav.",
+    "Build stronger routines, discipline and confidence. Lock in with Lav.",
+
+  openGraph: {
+    title: "Lock In With Lav",
+    description:
+      "Build stronger routines, discipline and confidence. Lock in with Lav.",
+    url: "https://www.lockinwithlav.com",
+    siteName: "Lock In With Lav",
+    images: [
+      {
+        url: "/Lock-in.png",
+        width: 1648,
+        height: 928,
+        alt: "Lock In With Lav",
+      },
+    ],
+    type: "website",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "Lock In With Lav",
+    description:
+      "Build stronger routines, discipline and confidence. Lock in with Lav.",
+    images: ["/Lock-in.png"],
+  },
 };
 
 export default function RootLayout({
