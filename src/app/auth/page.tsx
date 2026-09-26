@@ -18,6 +18,9 @@ export default function AuthPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  const [resending, setResending] = useState(false);
+  const [confirmationSent, setConfirmationSent] = useState(false);
+
   async function sendUserToNextStep(userId: string) {
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
@@ -47,6 +50,7 @@ export default function AuthPage() {
     setLoading(true);
     setMessage("");
     setError("");
+    setConfirmationSent(false);
 
     try {
       if (mode === "forgot") {
@@ -116,10 +120,43 @@ export default function AuthPage() {
     }
   }
 
+  async function handleResendConfirmation() {
+    if (!email || resending || confirmationSent) return;
+
+    setResending(true);
+    setError("");
+
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      setConfirmationSent(true);
+
+      window.setTimeout(() => {
+        setConfirmationSent(false);
+      }, 30000);
+    } catch {
+      setError("We couldn't resend the email. Please try again.");
+    } finally {
+      setResending(false);
+    }
+  }
+
   function switchMode(newMode: "login" | "signup" | "forgot") {
     setMode(newMode);
     setMessage("");
     setError("");
+    setConfirmationSent(false);
   }
 
   return (
@@ -253,7 +290,9 @@ export default function AuthPage() {
             {/* FORM */}
             <form
               onSubmit={handleSubmit}
-              className={mode === "forgot" ? "mt-9 space-y-5" : "mt-8 space-y-5"}
+              className={
+                mode === "forgot" ? "mt-9 space-y-5" : "mt-8 space-y-5"
+              }
             >
               {mode === "signup" && (
                 <div>
@@ -350,6 +389,28 @@ export default function AuthPage() {
                   <p className="font-serif text-lg italic text-[#806E68]">
                     {message}
                   </p>
+
+                  {mode === "signup" &&
+                    message.includes("Check your email") && (
+                      <div className="mt-3 border-t border-[#D8C7C1] pt-3">
+                        <p className="text-[7px] tracking-[0.14em] text-[#927D76]">
+                          DIDN&apos;T GET IT?
+                        </p>
+
+                        <button
+                          type="button"
+                          onClick={handleResendConfirmation}
+                          disabled={resending || confirmationSent}
+                          className="mt-2 font-serif text-sm italic text-[#A77B73] underline underline-offset-4 transition hover:text-[#806E68] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {resending
+                            ? "Sending..."
+                            : confirmationSent
+                            ? "Email sent again ♡"
+                            : "Resend confirmation email"}
+                        </button>
+                      </div>
+                    )}
                 </div>
               )}
 
