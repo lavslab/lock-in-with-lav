@@ -114,7 +114,7 @@ export default function Home() {
           {/* IMAGE */}
           <div className="relative h-[520px] overflow-hidden md:h-[700px]">
             <img
-              src="/lock-in-morning.jpg"
+              src="/Lock-in.png"
               alt="Morning wellness routine with journal, laptop and matcha"
               className="absolute inset-0 h-full w-full object-cover"
             />
