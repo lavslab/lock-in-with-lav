@@ -434,7 +434,7 @@ export default function AccountPage() {
 
                   <p className="mt-2 text-sm text-[#806E68]">
                     Your progress will be here when you come back. ♡
-                  </p>
+                  </p>  
                 </div>
 
                 <button
