@@ -18,6 +18,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
+  themeColor: "#F7F1ED",
 };
 
 export const metadata: Metadata = {
@@ -27,6 +28,12 @@ export const metadata: Metadata = {
   description:
     "Build stronger routines, discipline and confidence. Lock in with Lav.",
 
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Lock In With Lav",
+  },
+
   openGraph: {
     title: "Lock In With Lav",
     description:
@@ -35,7 +42,7 @@ export const metadata: Metadata = {
     siteName: "Lock In With Lav",
     images: [
       {
-        url: "/Lock-in.png",
+        url: "/lock-in.png",
         width: 1648,
         height: 928,
         alt: "Lock In With Lav",
@@ -49,7 +56,7 @@ export const metadata: Metadata = {
     title: "Lock In With Lav",
     description:
       "Build stronger routines, discipline and confidence. Lock in with Lav.",
-    images: ["/Lock-in.png"],
+    images: ["/lock-in.png"],
   },
 };
 
