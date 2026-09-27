@@ -53,9 +53,10 @@ export default function AuthPage() {
     setConfirmationSent(false);
 
     try {
+      // FORGOT PASSWORD
       if (mode === "forgot") {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/auth/reset-password`,
+          redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
         });
 
         if (error) {
@@ -69,6 +70,7 @@ export default function AuthPage() {
         return;
       }
 
+      // SIGN UP
       if (mode === "signup") {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -96,6 +98,7 @@ export default function AuthPage() {
           "Account created. Check your email to confirm your account. ♡"
         );
       } else {
+        // LOG IN
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -229,7 +232,7 @@ export default function AuthPage() {
             <h2 className="mt-4 font-serif text-5xl leading-none md:text-6xl">
               {mode === "signup" ? (
                 <>
-                  Let&apos;s
+                  Let's
                   <span className="italic text-[#A77B73]">
                     {" "}lock in.
                   </span>
@@ -243,7 +246,7 @@ export default function AuthPage() {
                 </>
               ) : (
                 <>
-                  Let&apos;s get you
+                  Let's get you
                   <span className="block italic text-[#A77B73]">
                     back in.
                   </span>
@@ -394,7 +397,7 @@ export default function AuthPage() {
                     message.includes("Check your email") && (
                       <div className="mt-3 border-t border-[#D8C7C1] pt-3">
                         <p className="text-[7px] tracking-[0.14em] text-[#927D76]">
-                          DIDN&apos;T GET IT?
+                          DIDN'T GET IT?
                         </p>
 
                         <button
