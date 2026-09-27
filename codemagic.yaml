@@ -1,10 +1,16 @@
 workflows:
-  ios-test-build:
-    name: Lock In With Lav - iOS Test Build
+  ios-testflight-build:
+    name: Lock In With Lav - TestFlight Build
     max_build_duration: 60
     instance_type: mac_mini_m2
 
+    integrations:
+      app_store_connect: Codemagic
+
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.lockinwithlav.app
       node: latest
       xcode: latest
 
@@ -17,17 +23,25 @@ workflows:
         script: |
           npx cap sync ios
 
-      - name: Build iOS simulator app
+      - name: Set up iOS code signing
         script: |
-          xcodebuild build \
-            -project ios/App/App.xcodeproj \
-            -scheme App \
-            -sdk iphonesimulator \
-            -configuration Debug \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO
+          xcode-project use-profiles
+
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --project "$CM_BUILD_DIR/ios/App/App.xcodeproj" \
+            --scheme "App"
 
     artifacts:
-      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - build/ios/ipa/*.ipa
+      - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
