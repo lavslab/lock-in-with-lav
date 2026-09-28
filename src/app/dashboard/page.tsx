@@ -63,6 +63,16 @@ type DailyProgress = {
   no_alcohol: boolean;
 };
 
+type SelectedWorkout = {
+  id: string;
+  title: string;
+  subtitle: string;
+  type: string;
+  time: string;
+  equipment: string;
+  exercises: string;
+};
+
 const emptyProgress: DailyProgress = {
   move: false,
   get_outside: false,
@@ -105,6 +115,8 @@ export default function DashboardPage() {
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [waterBottles, setWaterBottles] = useState(0);
+  const [selectedWorkout, setSelectedWorkout] =
+    useState<SelectedWorkout | null>(null);
 
   const [challengeStartDate, setChallengeStartDate] = useState<
     string | null
@@ -176,6 +188,25 @@ export default function DashboardPage() {
         setFirstName(savedName);
       } else if (user.email) {
         setFirstName(user.email.split("@")[0]);
+      }
+
+      const todayKey = formatDateForDatabase(new Date());
+      const selectedWorkoutKey =
+        `selected-workout-${user.id}-${todayKey}`;
+      const savedSelectedWorkout =
+        localStorage.getItem(selectedWorkoutKey);
+
+      if (savedSelectedWorkout) {
+        try {
+          const parsedWorkout =
+            JSON.parse(savedSelectedWorkout) as SelectedWorkout;
+
+          if (parsedWorkout?.id && parsedWorkout?.title) {
+            setSelectedWorkout(parsedWorkout);
+          }
+        } catch {
+          localStorage.removeItem(selectedWorkoutKey);
+        }
       }
 
       const { data: profile, error: profileError } = await supabase
@@ -474,7 +505,6 @@ export default function DashboardPage() {
                 <h2 className="mt-3 font-serif text-4xl leading-none sm:text-5xl">
                   Day {dayNumber}
                   <span className="ml-2 italic text-[#A77B73]">
-                    
                   </span>
                 </h2>
 
@@ -570,7 +600,7 @@ export default function DashboardPage() {
               {commitments.map((item) => {
                 const isComplete = progress[item.column];
 
-                {/* HYDRATE */}
+                /* HYDRATE */
                 if (item.column === "hydrate") {
                   return (
                     <div
@@ -676,7 +706,7 @@ export default function DashboardPage() {
                   );
                 }
 
-                {/* MOVE */}
+                /* MOVE */
                 if (item.column === "move") {
                   return (
                     <div
@@ -710,18 +740,20 @@ export default function DashboardPage() {
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-3">
-                            <div>
+                            <div className="min-w-0">
                               <p className="text-[9px] tracking-[0.18em]">
                                 MOVE
                               </p>
 
                               <p className="mt-1 text-[12px] text-[#8C7770]">
-                                45 min movement
+                                {selectedWorkout
+                                  ? selectedWorkout.title
+                                  : "45 min movement"}
                               </p>
                             </div>
 
                             {isComplete && (
-                              <span className="font-serif text-xs italic text-[#A77B73]">
+                              <span className="shrink-0 font-serif text-xs italic text-[#A77B73]">
                                 done ♡
                               </span>
                             )}
@@ -729,21 +761,62 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      <Link
-                        href="/dashboard/resources/workouts"
-                        className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
-                      >
-                        <span>FIND A WORKOUT</span>
+                      {selectedWorkout ? (
+                        <div className="ml-[46px] mt-3 border-t border-[#E1D3CE] pt-3">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[7px] tracking-[0.15em] text-[#9D6F67]">
+                            <span>
+                              {selectedWorkout.type.toUpperCase()}
+                            </span>
 
-                        <span className="font-serif text-sm">
-                          →
-                        </span>
-                      </Link>
+                            <span>•</span>
+
+                            <span>
+                              {selectedWorkout.time}
+                            </span>
+
+                            <span>•</span>
+
+                            <span>
+                              {selectedWorkout.exercises}
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex items-center justify-between gap-4">
+                            <Link
+                              href={`/dashboard/resources/workouts/${selectedWorkout.id}`}
+                              className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
+                            >
+                              <span>OPEN TODAY&apos;S WORKOUT</span>
+                              <span className="font-serif text-sm">
+                                →
+                              </span>
+                            </Link>
+
+                            <Link
+                              href="/dashboard/resources/workouts"
+                              className="shrink-0 text-[7px] tracking-[0.16em] text-[#9D6F67] transition hover:text-[#211C19]"
+                            >
+                              CHANGE
+                            </Link>
+                          </div>
+                        </div>
+                      ) : (
+                        <Link
+                          href="/dashboard/resources/workouts"
+                          className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
+                        >
+                          <span>FIND A WORKOUT</span>
+
+                          <span className="font-serif text-sm">
+                            →
+                          </span>
+                        </Link>
+                      )}
                     </div>
                   );
                 }
 
-                {/* STANDARD COMMITMENTS */}
+                /* STANDARD COMMITMENTS */
                 return (
                   <button
                     key={item.number}

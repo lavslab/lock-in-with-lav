@@ -289,7 +289,6 @@ const workouts = [
 ];
 
 const locations = ["All", "Home", "Gym", "No Equipment"];
-
 const levels = ["All", "Beginner", "Intermediate", "Advanced"];
 
 const types = [
@@ -302,6 +301,14 @@ const types = [
   "Cardio",
 ];
 
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 /* ---------------------------------
    PAGE
 --------------------------------- */
@@ -309,6 +316,10 @@ const types = [
 export default function WorkoutsPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(
+    null
+  );
 
   const [location, setLocation] = useState("All");
   const [level, setLevel] = useState("All");
@@ -325,12 +336,30 @@ export default function WorkoutsPage() {
         return;
       }
 
+      setUserId(user.id);
+
       const savedName = user.user_metadata?.name;
 
       if (savedName) {
         setFirstName(savedName);
       } else if (user.email) {
         setFirstName(user.email.split("@")[0]);
+      }
+
+      const todayKey = formatLocalDate(new Date());
+      const storageKey = `selected-workout-${user.id}-${todayKey}`;
+      const savedWorkout = localStorage.getItem(storageKey);
+
+      if (savedWorkout) {
+        try {
+          const parsedWorkout = JSON.parse(savedWorkout);
+
+          if (parsedWorkout?.id) {
+            setSelectedWorkoutId(parsedWorkout.id);
+          }
+        } catch {
+          localStorage.removeItem(storageKey);
+        }
       }
 
       setIsLoadingUser(false);
@@ -358,6 +387,40 @@ export default function WorkoutsPage() {
       return locationMatch && levelMatch && typeMatch;
     });
   }, [location, level, type]);
+
+  const chooseWorkoutForToday = (workout: (typeof workouts)[number]) => {
+    if (!userId) {
+      return;
+    }
+
+    const todayKey = formatLocalDate(new Date());
+    const storageKey = `selected-workout-${userId}-${todayKey}`;
+
+    const selectedWorkout = {
+      id: workout.id,
+      title: workout.title,
+      subtitle: workout.subtitle,
+      type: workout.type,
+      time: workout.time,
+      equipment: workout.equipment,
+      exercises: workout.exercises,
+    };
+
+    localStorage.setItem(storageKey, JSON.stringify(selectedWorkout));
+    setSelectedWorkoutId(workout.id);
+  };
+
+  const removeWorkoutForToday = () => {
+    if (!userId) {
+      return;
+    }
+
+    const todayKey = formatLocalDate(new Date());
+    const storageKey = `selected-workout-${userId}-${todayKey}`;
+
+    localStorage.removeItem(storageKey);
+    setSelectedWorkoutId(null);
+  };
 
   const FilterButton = ({
     label,
@@ -498,12 +561,17 @@ export default function WorkoutsPage() {
               <div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {filteredWorkouts.map((workout, index) => {
                   const Icon = workout.icon;
+                  const isSelected =
+                    selectedWorkoutId === workout.id;
 
                   return (
-                    <Link
+                    <article
                       key={workout.id}
-                      href={`/dashboard/resources/workouts/${workout.id}`}
-                      className="group flex min-h-[300px] flex-col justify-between rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:border-[#CBA9A2] hover:shadow-sm"
+                      className={`group flex min-h-[300px] flex-col justify-between rounded-[1.75rem] border bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:shadow-sm ${
+                        isSelected
+                          ? "border-[#A77B73]"
+                          : "border-[#DED0CB] hover:border-[#CBA9A2]"
+                      }`}
                     >
                       <div>
                         {/* ICON + LEVEL */}
@@ -568,18 +636,46 @@ export default function WorkoutsPage() {
                           </div>
                         </div>
 
-                        {/* VIEW WORKOUT */}
-                        <div className="mt-5 flex items-center justify-between">
-                          <span className="text-[7px] tracking-[0.25em] text-[#9D6F67]">
-                            VIEW WORKOUT
-                          </span>
+                        {/* ACTIONS */}
+                        <div className="mt-5 grid gap-2">
+                          <button
+                            type="button"
+                            disabled={!userId}
+                            onClick={() => {
+                              if (isSelected) {
+                                removeWorkoutForToday();
+                              } else {
+                                chooseWorkoutForToday(workout);
+                              }
+                            }}
+                            className={`flex w-full items-center justify-center rounded-full border px-4 py-3 text-[7px] tracking-[0.22em] transition ${
+                              isSelected
+                                ? "border-[#A77B73] bg-[#EAD8D3] text-[#6F514B]"
+                                : "border-[#CBA9A2] text-[#9D6F67] hover:bg-[#EAD8D3]"
+                            } ${
+                              !userId
+                                ? "cursor-wait opacity-60"
+                                : ""
+                            }`}
+                          >
+                            {isSelected
+                              ? "CHOSEN FOR TODAY ✓"
+                              : "CHOOSE FOR TODAY"}
+                          </button>
 
-                          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition group-hover:bg-[#EAD8D3]">
-                            →
-                          </span>
+                          <Link
+                            href={`/dashboard/resources/workouts/${workout.id}`}
+                            className="flex items-center justify-between border-t border-[#E1D3CE] pt-3 text-[7px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
+                          >
+                            <span>VIEW WORKOUT</span>
+
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition hover:bg-[#EAD8D3]">
+                              →
+                            </span>
+                          </Link>
                         </div>
                       </div>
-                    </Link>
+                    </article>
                   );
                 })}
               </div>
