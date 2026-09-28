@@ -43,33 +43,35 @@ export default function Home() {
   return (
     <main className="overflow-hidden bg-[#F7F1ED] text-[#211C19]">
       {/* NAVIGATION */}
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-7 md:px-12">
-        <div className="leading-none">
-          <p className="font-serif text-2xl tracking-[0.08em]">LOCK IN</p>
-          <p className="mt-1 text-[9px] tracking-[0.5em]">WITH LAV</p>
-        </div>
+      <nav className="mx-auto max-w-7xl px-6 pb-7 pt-[calc(env(safe-area-inset-top)+1.75rem)] md:px-12 md:pt-7">
+        <div className="flex items-center justify-between">
+          <div className="leading-none">
+            <p className="font-serif text-2xl tracking-[0.08em]">LOCK IN</p>
+            <p className="mt-1 text-[9px] tracking-[0.5em]">WITH LAV</p>
+          </div>
 
-        <div className="flex items-center gap-5">
-          <a
-            href="#about"
-            className="hidden text-[10px] tracking-[0.2em] md:block"
-          >
-            THE CHALLENGE
-          </a>
+          <div className="flex items-center gap-5">
+            <a
+              href="#about"
+              className="hidden text-[10px] tracking-[0.2em] md:block"
+            >
+              THE CHALLENGE
+            </a>
 
-          <a
-            href="#included"
-            className="hidden text-[10px] tracking-[0.2em] md:block"
-          >
-            WHAT&apos;S INCLUDED
-          </a>
+            <a
+              href="#included"
+              className="hidden text-[10px] tracking-[0.2em] md:block"
+            >
+              WHAT&apos;S INCLUDED
+            </a>
 
-          <a
-            href="/auth"
-            className="rounded-full border border-[#B98F87] px-5 py-2 text-[10px] tracking-[0.2em] transition hover:bg-[#E8C5BF]"
-          >
-            LOG IN
-          </a>
+            <a
+              href="/auth"
+              className="rounded-full border border-[#B98F87] px-5 py-2 text-[10px] tracking-[0.2em] transition hover:bg-[#E8C5BF]"
+            >
+              LOG IN
+            </a>
+          </div>
         </div>
       </nav>
 
