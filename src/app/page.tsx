@@ -4,13 +4,13 @@ export default function Home() {
       number: "01",
       title: "DAILY TRACKER",
       description:
-        "Check off your daily commitments and watch your 75-day journey build.",
+        "Check off your daily commitments and watch your Lock In journey build.",
     },
     {
       number: "02",
       title: "THE GUIDE",
       description:
-        "Your challenge rules, expectations and everything you need to get started.",
+        "Your Lock In method, expectations and everything you need to get started.",
     },
     {
       number: "03",
@@ -34,11 +34,24 @@ export default function Home() {
       number: "06",
       title: "RESOURCES",
       description:
-        "Workouts, wellness resources and extra support throughout your challenge.",
+        "Workouts, wellness resources and extra support throughout your journey.",
     },
   ];
 
-  const calendarDays = Array.from({ length: 35 }, (_, index) => index + 1);
+  const weekDays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+  /*
+   * January 1, 2027 falls on a Friday.
+   * Five blank cells place Day 01 in the correct calendar position.
+   */
+  const januaryCalendar = [
+    null,
+    null,
+    null,
+    null,
+    null,
+    ...Array.from({ length: 31 }, (_, index) => index + 1),
+  ];
 
   return (
     <main className="overflow-hidden bg-[#F7F1ED] text-[#211C19]">
@@ -83,7 +96,7 @@ export default function Home() {
       {/* HERO */}
       <section className="mx-auto flex min-h-[82vh] max-w-7xl flex-col items-center justify-center px-6 pb-20 pt-10 text-center">
         <p className="mb-7 text-[10px] tracking-[0.45em] text-[#9D6F67] md:text-xs">
-          THE 75 DAY CHALLENGE
+          YOUR JOURNEY • YOUR TIMELINE
         </p>
 
         <div className="mb-5 text-2xl">♡</div>
@@ -99,7 +112,7 @@ export default function Home() {
         {/* CURRENT CHALLENGE TEASER */}
         <div className="mt-8">
           <p className="text-[9px] tracking-[0.4em] text-[#9D6F67]">
-            CURRENT CHALLENGE
+            CURRENT 75 DAY CHALLENGE
           </p>
 
           <p className="mt-4 font-serif text-2xl text-[#6E5953] md:text-3xl">
@@ -129,10 +142,10 @@ export default function Home() {
         <div className="mx-auto max-w-7xl">
           {/* CHALLENGE INTRO */}
           <div className="grid items-center gap-14 md:grid-cols-[0.85fr_1.15fr] md:gap-20">
-            {/* 75 DAY CALENDAR VISUAL */}
+            {/* REAL MONTH CALENDAR VISUAL */}
             <div className="mx-auto w-full max-w-[430px] md:mx-0">
               <p className="mb-7 text-[9px] tracking-[0.45em] text-[#8F655E]">
-                DISCOVER THE CHALLENGE
+                DISCOVER YOUR LOCK IN
               </p>
 
               <div className="relative rounded-[2rem] border border-[#B98F87] bg-[#F7F1ED]/40 px-6 pb-7 pt-8 sm:px-8">
@@ -151,18 +164,46 @@ export default function Home() {
                     </p>
 
                     <p className="mt-1 font-serif text-3xl italic text-[#A77B73]">
-                      75 days.
+                      lock in.
                     </p>
                   </div>
 
-                  <p className="text-[8px] tracking-[0.3em] text-[#9D7770]">
-                    LOCK IN WITH LAV
-                  </p>
+                  <div className="text-right">
+                    <p className="text-[8px] tracking-[0.3em] text-[#9D7770]">
+                      
+                    </p>
+
+                    <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
+                      2027
+                    </p>
+                  </div>
                 </div>
 
-                {/* DAY NUMBERS */}
-                <div className="mt-6 grid grid-cols-7 gap-x-2 gap-y-4">
-                  {calendarDays.map((day) => {
+                {/* WEEKDAYS */}
+                <div className="mt-6 grid grid-cols-7 gap-x-2">
+                  {weekDays.map((day) => (
+                    <div
+                      key={day}
+                      className="text-center text-[7px] tracking-[0.12em] text-[#8F655E]"
+                    >
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* CALENDAR DAYS */}
+                <div className="mt-4 grid grid-cols-7 gap-x-2 gap-y-4">
+                  {januaryCalendar.map((day, index) => {
+                    if (day === null) {
+                      return (
+                        <div
+                          key={`blank-${index}`}
+                          className="h-8"
+                          aria-hidden="true"
+                        />
+                      );
+                    }
+
                     const isCurrentDay = day === 1;
 
                     return (
@@ -211,20 +252,19 @@ export default function Home() {
             {/* CHALLENGE MESSAGE */}
             <div>
               <h2 className="font-serif text-5xl leading-[0.95] md:text-7xl">
-                75 days.
+                Choose your timeline.
                 <span className="block italic text-[#A77B73]">
-                  But only one day
+                  Then take it
                 </span>
                 <span className="block italic text-[#A77B73]">
-                  at a time.
+                  one day at a time.
                 </span>
               </h2>
 
               <p className="mt-7 max-w-2xl text-sm leading-8 text-[#76645E]">
-                Lock In With Lav is a 75-day wellness and discipline challenge
-                built around one simple idea: you don&apos;t have to conquer
-                all 75 days at once. Just show up for today, complete your
-                commitments, and do it again tomorrow.
+                Lock In With Lav is your space to build discipline, create
+                routines and keep showing up for yourself. Choose 21, 30, 60
+                or 75 days, commit to the journey, and LOCK IN.
               </p>
             </div>
           </div>
@@ -232,7 +272,7 @@ export default function Home() {
           {/* INCLUDED */}
           <div className="mt-24 border-t border-[#CFB5AE] pt-16">
             <p className="text-[9px] tracking-[0.45em] text-[#8F655E]">
-              INSIDE YOUR CHALLENGE
+              INSIDE YOUR LOCK IN
             </p>
 
             <h2 className="mt-7 font-serif text-5xl leading-none md:text-7xl">
@@ -278,7 +318,7 @@ export default function Home() {
             </p>
 
             <p className="mt-6 text-[8px] tracking-[0.35em] text-[#9D8881]">
-              7 COMMITMENTS • 75 DAYS • ONE DAY AT A TIME
+              7 COMMITMENTS • YOUR TIMELINE • ONE DAY AT A TIME
             </p>
           </div>
         </div>
@@ -290,7 +330,7 @@ export default function Home() {
         className="bg-[#211C19] px-6 py-24 text-center text-[#F7F1ED] md:py-32"
       >
         <p className="text-[9px] tracking-[0.45em] text-[#DDB5AE]">
-          YOUR 75 DAYS START HERE
+          YOUR LOCK IN STARTS HERE
         </p>
 
         <h2 className="mx-auto mt-7 max-w-4xl font-serif text-6xl leading-[0.85] md:text-8xl">
@@ -304,7 +344,7 @@ export default function Home() {
           href="/auth"
           className="mt-10 inline-block rounded-full bg-[#DDB5AE] px-16 py-4 text-[10px] tracking-[0.4em] text-[#211C19] transition duration-300 hover:-translate-y-1 hover:bg-[#E8C9C3]"
         >
-          JOIN THE CHALLENGE
+          START YOUR LOCK IN
         </a>
       </section>
 
@@ -321,7 +361,7 @@ export default function Home() {
         </div>
 
         <p className="text-[8px] tracking-[0.25em] text-[#A99B96]">
-          75 DAYS • DISCIPLINE • ROUTINE • PROGRESS
+          DISCIPLINE • ROUTINE • PROGRESS • YOU
         </p>
 
         <p className="text-[8px] tracking-[0.2em] text-[#A99B96]">

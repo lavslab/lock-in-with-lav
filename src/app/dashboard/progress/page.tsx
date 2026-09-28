@@ -36,6 +36,9 @@ export default function ProgressPage() {
     null
   );
 
+  // Duration selected during onboarding.
+  const [challengeLength, setChallengeLength] = useState(75);
+
   const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
   const [photoPaths, setPhotoPaths] = useState<Record<number, string>>({});
   const [editingPhotoDay, setEditingPhotoDay] = useState<number | null>(null);
@@ -69,6 +72,7 @@ export default function ProgressPage() {
   const [completedWins, setCompletedWins] = useState<Record<string, boolean>>(
     {}
   );
+
   const [isCustomWinModalOpen, setIsCustomWinModalOpen] = useState(false);
   const [customWin, setCustomWin] = useState("");
   const [isSavingCustomWin, setIsSavingCustomWin] = useState(false);
@@ -93,6 +97,7 @@ export default function ProgressPage() {
     proud_of: "",
     next_week_focus: "",
   });
+
   const [isSavingCheckin, setIsSavingCheckin] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
 
@@ -160,7 +165,7 @@ export default function ProgressPage() {
 
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("challenge_start_date")
+        .select("challenge_start_date, challenge_length")
         .eq("id", user.id)
         .single();
 
@@ -168,6 +173,7 @@ export default function ProgressPage() {
         console.error("Could not load profile:", error);
       } else if (profile) {
         setChallengeStartDate(profile.challenge_start_date);
+        setChallengeLength(profile.challenge_length ?? 75);
       }
 
       const { data: savedWins, error: winsLoadError } = await supabase
@@ -248,22 +254,64 @@ export default function ProgressPage() {
 
   if (challengeStartDate) {
     startDate = parseChallengeDate(challengeStartDate);
-    endDate = getChallengeEndDate(challengeStartDate);
-    currentDay = getCurrentChallengeDay(challengeStartDate, today);
+
+    endDate = getChallengeEndDate(
+      challengeStartDate,
+      challengeLength
+    );
+
+    currentDay = getCurrentChallengeDay(
+      challengeStartDate,
+      challengeLength,
+      today
+    );
   }
 
-  const safeCurrentDay = Math.max(1, Math.min(75, currentDay));
+  const safeCurrentDay = Math.max(
+    1,
+    Math.min(challengeLength, currentDay)
+  );
+
   const dayNumber = String(safeCurrentDay).padStart(2, "0");
 
   const startLabel = startDate ? formatShortDate(startDate) : "—";
   const endLabel = endDate ? formatShortDate(endDate) : "—";
 
-  const currentWeek = Math.min(11, Math.max(1, Math.ceil(safeCurrentDay / 7)));
-  const currentWeekUnlockDay = currentWeek * 7;
-  const currentWeekUnlocked = safeCurrentDay >= currentWeekUnlockDay;
-  const currentWeekComplete = Boolean(weeklyCheckins[currentWeek]);
+  /*
+   * A Lock In can end partway through a seven-day week.
+   *
+   * Examples:
+   * 21 days = 3 check-ins
+   * 30 days = 5 check-ins
+   * 60 days = 9 check-ins
+   * 75 days = 11 check-ins
+   *
+   * The final partial-week reflection unlocks on the final
+   * challenge day instead of requiring the member to wait
+   * until a day beyond their Lock In.
+   */
+  const totalCheckins = Math.ceil(challengeLength / 7);
 
-  const completedCheckins = Object.keys(weeklyCheckins).length;
+  const currentWeek = Math.min(
+    totalCheckins,
+    Math.max(1, Math.ceil(safeCurrentDay / 7))
+  );
+
+  const currentWeekUnlockDay = Math.min(
+    currentWeek * 7,
+    challengeLength
+  );
+
+  const currentWeekUnlocked =
+    safeCurrentDay >= currentWeekUnlockDay;
+
+  const currentWeekComplete = Boolean(
+    weeklyCheckins[currentWeek]
+  );
+
+  const completedCheckins = Object.keys(weeklyCheckins).filter(
+    (week) => Number(week) <= totalCheckins
+  ).length;
 
   const initial =
     !isLoadingUser && firstName !== "there"
@@ -1027,17 +1075,17 @@ export default function ProgressPage() {
                 </div>
               </div>
 
-              {/* DAY 75 */}
+              {/* FINAL DAY */}
               <div className="overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
                 <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#F1EAE7]">
-                  {safeCurrentDay >= 75 ? (
+                  {safeCurrentDay >= challengeLength ? (
                     <>
-                      {photoUrls[75] ? (
+                      {photoUrls[challengeLength] ? (
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={photoUrls[75]}
-                            alt="Day 75 progress"
+                            src={photoUrls[challengeLength]}
+                            alt={`Day ${challengeLength} progress`}
                             className="h-full w-full object-cover"
                           />
 
@@ -1045,7 +1093,9 @@ export default function ProgressPage() {
                             type="button"
                             onClick={() =>
                               setEditingPhotoDay(
-                                editingPhotoDay === 75 ? null : 75
+                                editingPhotoDay === challengeLength
+                                  ? null
+                                  : challengeLength
                               )
                             }
                             className="absolute right-4 top-4 z-10 rounded-full bg-[#211C19]/90 px-4 py-2 text-[10px] tracking-[0.2em] text-[#F7F1ED]"
@@ -1053,11 +1103,13 @@ export default function ProgressPage() {
                             EDIT PHOTO
                           </button>
 
-                          {editingPhotoDay === 75 && (
+                          {editingPhotoDay === challengeLength && (
                             <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
                               <button
                                 type="button"
-                                onClick={() => openPhotoPicker(75)}
+                                onClick={() =>
+                                  openPhotoPicker(challengeLength)
+                                }
                                 className="block w-full px-4 py-3 text-left text-[12px] tracking-[0.15em] hover:bg-[#EADCD7]"
                               >
                                 REPLACE PHOTO
@@ -1065,7 +1117,9 @@ export default function ProgressPage() {
 
                               <button
                                 type="button"
-                                onClick={() => removeProgressPhoto(75)}
+                                onClick={() =>
+                                  removeProgressPhoto(challengeLength)
+                                }
                                 className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[12px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]"
                               >
                                 REMOVE PHOTO
@@ -1076,7 +1130,9 @@ export default function ProgressPage() {
                       ) : (
                         <button
                           type="button"
-                          onClick={() => openPhotoPicker(75)}
+                          onClick={() =>
+                            openPhotoPicker(challengeLength)
+                          }
                           disabled={isUploadingPhoto}
                           className="flex flex-col items-center disabled:opacity-50"
                         >
@@ -1086,7 +1142,7 @@ export default function ProgressPage() {
 
                           <span className="mt-3 text-[12px] tracking-[0.2em] text-[#8F655E]">
                             {isUploadingPhoto &&
-                            photoTargetDay === 75
+                            photoTargetDay === challengeLength
                               ? "UPLOADING..."
                               : "ADD PHOTO"}
                           </span>
@@ -1100,7 +1156,7 @@ export default function ProgressPage() {
                       </span>
 
                       <p className="mt-3 text-[12px] tracking-[0.2em] text-[#A7938D]">
-                        SEE YOU ON DAY 75
+                        SEE YOU ON DAY {challengeLength}
                       </p>
                     </div>
                   )}
@@ -1109,7 +1165,7 @@ export default function ProgressPage() {
                 <div className="flex items-center justify-between p-5">
                   <div>
                     <p className="text-[12px] tracking-[0.25em]">
-                      DAY 75
+                      DAY {String(challengeLength).padStart(2, "0")}
                     </p>
 
                     <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
@@ -1284,7 +1340,7 @@ export default function ProgressPage() {
               </div>
 
               <p className="text-[11px] tracking-[0.18em] text-[#927D76]">
-                {completedCheckins} OF 11 COMPLETE
+                {completedCheckins} OF {totalCheckins} COMPLETE
               </p>
             </div>
 

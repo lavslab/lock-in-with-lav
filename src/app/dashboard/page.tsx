@@ -88,9 +88,12 @@ export default function DashboardPage() {
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [waterBottles, setWaterBottles] = useState(0);
+
   const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
     null
   );
+
+  const [challengeLength, setChallengeLength] = useState(75);
 
   const today = new Date();
 
@@ -104,7 +107,7 @@ export default function DashboardPage() {
     .toUpperCase();
 
   const currentDay = challengeStartDate
-    ? getCurrentChallengeDay(challengeStartDate, today)
+    ? getCurrentChallengeDay(challengeStartDate, challengeLength, today)
     : 1;
 
   const dayNumber = String(currentDay).padStart(2, "0");
@@ -156,7 +159,7 @@ export default function DashboardPage() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("challenge_start_date")
+        .select("challenge_start_date, challenge_length")
         .eq("id", user.id)
         .single();
 
@@ -173,10 +176,14 @@ export default function DashboardPage() {
         return;
       }
 
+      const profileChallengeLength = profile.challenge_length ?? 75;
+
       setChallengeStartDate(profile.challenge_start_date);
+      setChallengeLength(profileChallengeLength);
 
       const calculatedDay = getCurrentChallengeDay(
-        profile.challenge_start_date
+        profile.challenge_start_date,
+        profileChallengeLength
       );
 
       const savedWaterBottles = Number(
@@ -372,29 +379,44 @@ export default function DashboardPage() {
         />
 
         {/* DASHBOARD */}
-        <section className="min-w-0 flex-1 px-4 pb-28 pt-5 sm:px-6 sm:pt-8 md:px-10 md:pb-8 lg:px-14">
+        <section className="min-w-0 flex-1 px-5 py-6 sm:px-6 sm:py-8 md:px-10 lg:px-14">
           {/* TOP BAR */}
-          <header className="flex items-center justify-between">
+          <header className="flex items-start justify-between gap-4 border-b border-[#DED0CB] pb-5 md:pb-6">
             <div>
               <p className="text-[10px] tracking-[0.28em] text-[#9D6F67] md:text-[8px] md:tracking-[0.35em]">
                 {formattedDate}
               </p>
 
-              <p className="mt-2 font-serif text-[1.7rem] italic leading-tight text-[#A77B73] md:text-2xl">
-                {isLoadingUser
-                  ? `${greeting}. ♡`
-                  : `${greeting}, ${firstName}. ♡`}
-              </p>
+              <h1 className="mt-2 font-serif text-3xl sm:text-4xl md:text-5xl">
+                {greeting},{" "}
+                <span className="italic text-[#A77B73]">
+                  {firstName}. ♡
+                </span>
+              </h1>
             </div>
+
+            <Link
+              href="/dashboard/account"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#CBA9A2] bg-[#FBF8F6] font-serif text-sm text-[#A77B73] transition hover:bg-[#EAD8D3] md:hidden"
+              aria-label="My account"
+            >
+              {initial}
+            </Link>
           </header>
 
           {/* DAY HERO */}
-          <div className="mt-8 grid gap-5 md:mt-12 md:gap-8 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
             {/* CHALLENGE CARD */}
-            <div className="rounded-[1.75rem] bg-[#211C19] p-6 text-[#F7F1ED] sm:p-8 md:rounded-[2rem] md:p-10">
-              <p className="text-[10px] tracking-[0.32em] text-[#DDB5AE] md:text-[8px] md:tracking-[0.4em]">
-                YOUR CHALLENGE
-              </p>
+            <section className="rounded-[1.75rem] bg-[#211C19] p-6 text-[#F7F1ED] sm:p-8 md:rounded-[2rem] md:p-10">
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-[10px] tracking-[0.3em] text-[#DDB5AE] md:text-[8px] md:tracking-[0.4em]">
+                  TODAY
+                </p>
+
+                <p className="font-serif text-base italic text-[#DDB5AE] sm:text-lg">
+                  keep showing up. ♡
+                </p>
+              </div>
 
               <div className="mt-6 flex items-end justify-between gap-4 sm:mt-7 sm:gap-8">
                 <div>
@@ -403,7 +425,7 @@ export default function DashboardPage() {
                   </h1>
 
                   <p className="mt-3 text-[10px] tracking-[0.28em] text-[#BFAEAA] md:mt-4 md:text-[9px] md:tracking-[0.35em]">
-                    OF 75
+                    OF {challengeLength}
                   </p>
                 </div>
 
@@ -421,21 +443,25 @@ export default function DashboardPage() {
               </div>
 
               {/* PROGRESS BAR */}
-              <div className="mt-8 h-[5px] overflow-hidden rounded-full bg-[#413735] md:mt-10">
-                <div
-                  className="h-full rounded-full bg-[#DDB5AE] transition-all duration-500"
-                  style={{ width: `${percentage}%` }}
-                />
-              </div>
+              <div className="mt-8 md:mt-10">
+                <div className="h-[3px] overflow-hidden rounded-full bg-[#4A403C]">
+                  <div
+                    className="h-full rounded-full bg-[#DDB5AE] transition-all duration-500"
+                    style={{ width: `${percentage}%` }}
+                  />
+                </div>
 
-              <p className="mt-4 font-serif text-lg italic leading-snug text-[#DDB5AE] sm:text-xl md:mt-5">
-                {dayComplete
-                  ? `Day ${dayNumber} complete. You showed up. ♡`
-                  : currentDay === 1
-                    ? "day one. show up for yourself. ♡"
-                    : `day ${currentDay}. keep showing up. ♡`}
-              </p>
-            </div>
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-[9px] tracking-[0.18em] text-[#BFAEAA] md:text-[7px] md:tracking-[0.25em]">
+                    {completedCount} OF {commitments.length} COMPLETE
+                  </p>
+
+                  <p className="font-serif text-sm italic text-[#DDB5AE]">
+                    {dayComplete ? "day complete ♡" : "keep going ♡"}
+                  </p>
+                </div>
+              </div>
+            </section>
 
             {/* JOURNEY CARD */}
             <div className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 sm:p-8 md:rounded-[2rem]">
@@ -444,7 +470,7 @@ export default function DashboardPage() {
               </p>
 
               <h2 className="mt-4 font-serif text-3xl leading-none sm:text-4xl md:mt-5">
-                75 days of
+                {challengeLength} days of
                 <span className="block italic text-[#A77B73]">
                   choosing you.
                 </span>
@@ -694,7 +720,7 @@ export default function DashboardPage() {
             </p>
 
             <p className="mt-5 max-w-3xl font-serif text-[1.75rem] italic leading-snug sm:text-3xl md:text-4xl">
-              You don&apos;t have to have the next 75 days figured out.
+              You don&apos;t have to have the whole journey figured out.
               You just have to show up for today.
             </p>
 

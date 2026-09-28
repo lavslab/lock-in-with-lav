@@ -11,8 +11,6 @@ import {
   parseChallengeDate,
 } from "@/lib/challenge";
 
-const TOTAL_DAYS = 75;
-
 type MeasurementRow = {
   id?: string;
   challenge_day: number;
@@ -43,6 +41,7 @@ function formatFullDate(date: Date) {
 function getChallengeDate(startDate: Date, challengeDay: number) {
   const date = new Date(startDate);
   date.setDate(startDate.getDate() + challengeDay - 1);
+
   return date;
 }
 
@@ -64,6 +63,7 @@ function getCompletedCommitmentCount(row?: DailyProgressRow) {
 
 function formatMeasurement(value: number | string | null | undefined) {
   if (value === null || value === undefined || value === "") return "—";
+
   return value;
 }
 
@@ -77,6 +77,8 @@ export default function JourneyPage() {
   const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
     null
   );
+
+  const [challengeLength, setChallengeLength] = useState(75);
 
   const [dailyProgress, setDailyProgress] = useState<DailyProgressRow[]>([]);
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
@@ -118,7 +120,7 @@ export default function JourneyPage() {
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("challenge_start_date")
+        .select("challenge_start_date, challenge_length")
         .eq("id", user.id)
         .single();
 
@@ -126,6 +128,7 @@ export default function JourneyPage() {
         console.error("Could not load profile:", profileError);
       } else if (profile) {
         setChallengeStartDate(profile.challenge_start_date);
+        setChallengeLength(profile.challenge_length ?? 75);
       }
 
       const { data: progressRows, error: progressError } = await supabase
@@ -154,10 +157,17 @@ export default function JourneyPage() {
 
   if (challengeStartDate) {
     startDate = parseChallengeDate(challengeStartDate);
-    currentDay = getCurrentChallengeDay(challengeStartDate);
+
+    currentDay = getCurrentChallengeDay(
+      challengeStartDate,
+      challengeLength
+    );
   }
 
-  const safeCurrentDay = Math.min(Math.max(currentDay, 1), TOTAL_DAYS);
+  const safeCurrentDay = Math.min(
+    Math.max(currentDay, 1),
+    challengeLength
+  );
 
   const dayNumber = String(safeCurrentDay).padStart(2, "0");
 
@@ -166,12 +176,19 @@ export default function JourneyPage() {
    * commitments for that day are complete.
    */
   const completedDayNumbers = dailyProgress
-    .filter((row) => getCompletedCommitmentCount(row) === 7)
+    .filter(
+      (row) =>
+        row.challenge_day <= challengeLength &&
+        getCompletedCommitmentCount(row) === 7
+    )
     .map((row) => row.challenge_day);
 
   const completedDays = completedDayNumbers.length;
 
-  const challengeProgress = getChallengePercentage(completedDays);
+  const challengeProgress = getChallengePercentage(
+    completedDays,
+    challengeLength
+  );
 
   const initial =
     !isLoadingUser && firstName !== "there"
@@ -182,7 +199,10 @@ export default function JourneyPage() {
    * Journey defaults to today.
    * Clicking an available calendar day changes the summary card.
    */
-  const activeSelectedDay = selectedDay ?? safeCurrentDay;
+  const activeSelectedDay = Math.min(
+    selectedDay ?? safeCurrentDay,
+    challengeLength
+  );
 
   const selectedDate = startDate
     ? getChallengeDate(startDate, activeSelectedDay)
@@ -201,12 +221,12 @@ export default function JourneyPage() {
   const selectedIsUpcoming = activeSelectedDay > safeCurrentDay;
 
   const challengeDays = Array.from(
-    { length: TOTAL_DAYS },
+    { length: challengeLength },
     (_, index) => index + 1
   );
 
   async function openDayDetails(day: number) {
-    if (day > safeCurrentDay) return;
+    if (day > safeCurrentDay || day > challengeLength) return;
 
     setSelectedDay(day);
     setDayDetailsOpen(true);
@@ -228,7 +248,7 @@ export default function JourneyPage() {
       return;
     }
 
-    /*
+    /**
      * PHOTO
      * Grab the newest photo saved for this challenge day.
      */
@@ -262,7 +282,7 @@ export default function JourneyPage() {
       }
     }
 
-    /*
+    /**
      * MEASUREMENTS
      * There may be more than one entry on the same day,
      * so use the newest measurement entry for that day.
@@ -296,6 +316,7 @@ export default function JourneyPage() {
     if (selectedIsComplete) return "complete ♡";
     if (selectedIsCurrent) return "in progress";
     if (selectedIsPast) return "incomplete";
+
     return "upcoming";
   }
 
@@ -402,7 +423,7 @@ export default function JourneyPage() {
 
               <div className="mt-3 flex justify-between text-[8px] tracking-[0.20em] text-[#9A8780]">
                 <span>DAY 01</span>
-                <span>DAY 75</span>
+                <span>DAY {challengeLength}</span>
               </div>
             </div>
           </section>
@@ -425,7 +446,7 @@ export default function JourneyPage() {
                   </p>
 
                   <h2 className="mt-2 font-serif text-4xl italic text-[#A77B73] md:text-5xl">
-                    75 days.
+                    {challengeLength} days.
                   </h2>
                 </div>
 
@@ -472,7 +493,7 @@ export default function JourneyPage() {
                 </div>
               </div>
 
-              {/* ALL 75 DAYS */}
+              {/* CHALLENGE DAYS */}
               <div className="mt-8 grid grid-cols-5 gap-2 sm:grid-cols-10 sm:gap-3 lg:grid-cols-[repeat(15,minmax(0,1fr))]">
                 {challengeDays.map((day) => {
                   const progressForDay = dailyProgress.find(
@@ -537,8 +558,8 @@ export default function JourneyPage() {
                 </p>
 
                 <p className="font-serif text-lg italic text-[#A77B73]">
-                  {completedDays === TOTAL_DAYS
-                    ? "75 days. you did it. ♡"
+                  {completedDays === challengeLength
+                    ? `${challengeLength} days. you did it. ♡`
                     : "keep going. one day at a time. ♡"}
                 </p>
               </div>
@@ -548,7 +569,7 @@ export default function JourneyPage() {
           {/* BOTTOM QUOTE */}
           <div className="py-16 text-center">
             <p className="font-serif text-3xl italic text-[#A77B73]">
-              imagine what 75 days of choosing yourself can do. ♡
+              imagine what choosing yourself, one day at a time, can do. ♡
             </p>
           </div>
         </section>
@@ -673,6 +694,7 @@ export default function JourneyPage() {
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           WEIGHT
                         </p>
+
                         <p className="mt-2 font-serif text-2xl">
                           {formatMeasurement(selectedMeasurement.weight)}
                         </p>
@@ -682,6 +704,7 @@ export default function JourneyPage() {
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           WAIST
                         </p>
+
                         <p className="mt-2 font-serif text-2xl">
                           {formatMeasurement(selectedMeasurement.waist)}
                         </p>
@@ -691,6 +714,7 @@ export default function JourneyPage() {
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           HIPS
                         </p>
+
                         <p className="mt-2 font-serif text-2xl">
                           {formatMeasurement(selectedMeasurement.hips)}
                         </p>
@@ -700,6 +724,7 @@ export default function JourneyPage() {
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           CHEST
                         </p>
+
                         <p className="mt-2 font-serif text-2xl">
                           {formatMeasurement(selectedMeasurement.chest)}
                         </p>
@@ -709,6 +734,7 @@ export default function JourneyPage() {
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           THIGH
                         </p>
+
                         <p className="mt-2 font-serif text-2xl">
                           {formatMeasurement(selectedMeasurement.thigh)}
                         </p>
@@ -718,6 +744,7 @@ export default function JourneyPage() {
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           ARM
                         </p>
+
                         <p className="mt-2 font-serif text-2xl">
                           {formatMeasurement(selectedMeasurement.arm)}
                         </p>
@@ -745,7 +772,10 @@ export default function JourneyPage() {
                       <div>
                         <p className="font-serif text-4xl">
                           {selectedCommitmentCount}
-                          <span className="text-xl text-[#A77B73]"> / 7</span>
+                          <span className="text-xl text-[#A77B73]">
+                            {" "}
+                            / 7
+                          </span>
                         </p>
 
                         <p className="mt-2 font-serif text-lg italic text-[#A77B73]">

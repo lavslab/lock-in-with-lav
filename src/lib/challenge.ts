@@ -1,3 +1,9 @@
+export type ChallengeLength = 21 | 30 | 60 | 75;
+
+export const DEFAULT_CHALLENGE_LENGTH: ChallengeLength = 75;
+
+export const CHALLENGE_LENGTHS: ChallengeLength[] = [21, 30, 60, 75];
+
 export type DailyProgressRow = {
   challenge_day: number;
   move: boolean;
@@ -11,16 +17,32 @@ export type DailyProgressRow = {
 
 export function parseChallengeDate(dateString: string) {
   const [year, month, day] = dateString.split("-").map(Number);
+
   return new Date(year, month - 1, day);
+}
+
+export function isValidChallengeLength(
+  value: number
+): value is ChallengeLength {
+  return CHALLENGE_LENGTHS.includes(value as ChallengeLength);
 }
 
 export function getCurrentChallengeDay(
   challengeStartDate: string,
-  today = new Date()
+  challengeLengthOrToday: number | Date = DEFAULT_CHALLENGE_LENGTH,
+  todayArg = new Date()
 ) {
-  const [year, month, day] = challengeStartDate
-    .split("-")
-    .map(Number);
+  const challengeLength =
+    challengeLengthOrToday instanceof Date
+      ? DEFAULT_CHALLENGE_LENGTH
+      : challengeLengthOrToday;
+
+  const today =
+    challengeLengthOrToday instanceof Date
+      ? challengeLengthOrToday
+      : todayArg;
+
+  const [year, month, day] = challengeStartDate.split("-").map(Number);
 
   const startUtc = Date.UTC(year, month - 1, day);
 
@@ -36,27 +58,26 @@ export function getCurrentChallengeDay(
 
   return Math.min(
     Math.max(differenceInDays + 1, 1),
-    75
+    challengeLength
   );
 }
 
 export function getChallengeEndDate(
-  challengeStartDate: string
+  challengeStartDate: string,
+  challengeLength: number = DEFAULT_CHALLENGE_LENGTH
 ) {
-  const startDate = parseChallengeDate(
-    challengeStartDate
-  );
+  const startDate = parseChallengeDate(challengeStartDate);
 
   const endDate = new Date(startDate);
 
-  endDate.setDate(endDate.getDate() + 74);
+  endDate.setDate(
+    endDate.getDate() + challengeLength - 1
+  );
 
   return endDate;
 }
 
-export function isDayComplete(
-  row: DailyProgressRow
-) {
+export function isDayComplete(row: DailyProgressRow) {
   return (
     row.move &&
     row.get_outside &&
@@ -80,9 +101,7 @@ export function calculateStreak(
   completedDayNumbers: number[],
   currentDay: number
 ) {
-  const completedSet = new Set(
-    completedDayNumbers
-  );
+  const completedSet = new Set(completedDayNumbers);
 
   let dayToCheck = currentDay;
 
@@ -106,9 +125,15 @@ export function calculateStreak(
 }
 
 export function getChallengePercentage(
-  completedDays: number
+  completedDays: number,
+  challengeLength: number = DEFAULT_CHALLENGE_LENGTH
 ) {
-  return Math.round(
-    (completedDays / 75) * 100
+  if (challengeLength <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    100,
+    Math.round((completedDays / challengeLength) * 100)
   );
 }

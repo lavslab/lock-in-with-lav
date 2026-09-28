@@ -4,7 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { getCurrentChallengeDay } from "@/lib/challenge";
+import {
+  DEFAULT_CHALLENGE_LENGTH,
+  getCurrentChallengeDay,
+} from "@/lib/challenge";
 
 type DashboardSidebarProps = {
   firstName: string;
@@ -153,7 +156,7 @@ export default function DashboardSidebar({
 
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("challenge_start_date")
+        .select("challenge_start_date, challenge_length")
         .eq("id", user.id)
         .single();
 
@@ -164,15 +167,28 @@ export default function DashboardSidebar({
 
       if (!profile?.challenge_start_date) return;
 
-      const day = getCurrentChallengeDay(profile.challenge_start_date);
+      const challengeLength =
+        profile.challenge_length ?? DEFAULT_CHALLENGE_LENGTH;
 
-      setCurrentDay(Math.min(Math.max(day, 1), 75));
+      const day = getCurrentChallengeDay(
+        profile.challenge_start_date,
+        challengeLength
+      );
+
+      setCurrentDay(
+        Math.min(
+          Math.max(day, 1),
+          challengeLength
+        )
+      );
     };
 
     loadCurrentDay();
   }, [supabase]);
 
-  function renderNavigationIcon(icon: (typeof navigation)[number]["icon"]) {
+  function renderNavigationIcon(
+    icon: (typeof navigation)[number]["icon"]
+  ) {
     if (icon === "today") {
       return (
         <span className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-current font-serif text-[15px] font-semibold leading-none">
@@ -200,9 +216,13 @@ export default function DashboardSidebar({
     <aside className="hidden w-[250px] flex-col border-r border-[#E1D3CE] bg-[#FBF8F6] px-7 py-8 md:flex">
       {/* LOGO */}
       <div>
-        <p className="font-serif text-3xl tracking-[0.08em]">LOCK IN</p>
+        <p className="font-serif text-3xl tracking-[0.08em]">
+          LOCK IN
+        </p>
 
-        <p className="mt-1 text-[10px] tracking-[0.45em]">WITH LAV</p>
+        <p className="mt-1 text-[10px] tracking-[0.45em]">
+          WITH LAV
+        </p>
       </div>
 
       {/* MEMBER / MY ACCOUNT */}
@@ -227,7 +247,9 @@ export default function DashboardSidebar({
             </p>
           </div>
 
-          <span className="font-serif text-lg text-[#A77B73]">→</span>
+          <span className="font-serif text-lg text-[#A77B73]">
+            →
+          </span>
         </div>
       </Link>
 

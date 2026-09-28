@@ -54,10 +54,20 @@ const trainingWeek = [
   ["07", "RECOVER", "Mobility + Walking"],
 ];
 
+const nourishment = [
+  "Prioritize protein",
+  "Add plants + fiber",
+  "Stay hydrated",
+  "Build balanced meals",
+  "Consistency over restriction",
+];
+
 export default function GuidePage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(null);
+  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     const getUser = async () => {
@@ -103,17 +113,25 @@ export default function GuidePage() {
 
   const currentDay = (() => {
     if (!challengeStartDate) return 1;
+
     const [year, month, day] = challengeStartDate.split("-").map(Number);
     const start = new Date(year, month - 1, day);
     const today = new Date();
+
     start.setHours(0, 0, 0, 0);
     today.setHours(0, 0, 0, 0);
-    const elapsed = Math.floor((today.getTime() - start.getTime()) / 86400000) + 1;
+
+    const elapsed =
+      Math.floor((today.getTime() - start.getTime()) / 86400000) + 1;
+
     return Math.min(75, Math.max(1, elapsed));
   })();
 
-  const currentPhaseNumber = currentDay <= 25 ? "01" : currentDay <= 50 ? "02" : "03";
-  const currentPhase = phases.find((phase) => phase.number === currentPhaseNumber) ?? phases[0];
+  const currentPhaseNumber =
+    currentDay <= 25 ? "01" : currentDay <= 50 ? "02" : "03";
+
+  const currentPhase =
+    phases.find((phase) => phase.number === currentPhaseNumber) ?? phases[0];
 
   if (isLoadingUser) {
     return (
@@ -148,97 +166,63 @@ export default function GuidePage() {
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
-        {/* SIDEBAR */}
         <DashboardSidebar
           firstName={firstName}
           initial={initial}
           isLoadingUser={isLoadingUser}
         />
 
-        {/* MAIN */}
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
-          {/* TOP */}
-          <header className="flex items-center justify-between">
+          {/* HEADER */}
+          <header className="flex items-start justify-between gap-6">
             <div>
-              <p className="text-[11px] tracking-[0.35em] text-[#9D6F67]">
-                LOCK IN WITH LAV
+              <p className="text-[9px] tracking-[0.36em] text-[#9D6F67]">
+                THE GUIDE
               </p>
 
-              <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                your guide to the next 75 days. ♡
-              </p>
+              <h1 className="mt-3 font-serif text-5xl leading-[0.95] md:text-6xl">
+                The Lock In
+                <span className="block italic text-[#A77B73]">Method.</span>
+              </h1>
             </div>
 
             <Link
               href="/dashboard"
-              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[12px] tracking-[0.25em] transition hover:bg-[#EAD8D3] md:hidden"
+              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[10px] tracking-[0.22em] transition hover:bg-[#EAD8D3] md:hidden"
             >
               TODAY
             </Link>
           </header>
 
-          {/* SMALLER HERO */}
-          <section className="mt-10 rounded-[2rem] bg-[#211C19] px-8 py-10 text-[#F7F1ED] md:px-10 md:py-11 lg:px-12">
-            <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-              <div>
-                <p className="text-[12px] tracking-[0.4em] text-[#DDB5AE]">
-                  THE GUIDE
-                </p>
+          {/* INTRO */}
+          <section className="mt-10 grid gap-6 border-y border-[#DED0CB] py-7 md:grid-cols-[0.65fr_1.35fr] md:items-center">
+            <p className="text-[9px] tracking-[0.32em] text-[#9D6F67]">
+              START WHERE YOU ARE
+            </p>
 
-                <h1 className="mt-5 font-serif text-5xl leading-[0.9] md:text-6xl lg:text-7xl">
-                  The Lock In
-                  <span className="block italic text-[#DDB5AE]">
-                    Method.
-                  </span>
-                </h1>
-              </div>
+            <div>
+              <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
+                Not perfection. Practice. ♡
+              </p>
 
-              <p className="max-w-sm font-serif text-xl italic leading-relaxed text-[#E8D8D3] md:text-2xl">
-                75 days of showing up for you. ♡
+              <p className="mt-2 max-w-2xl text-[14px] leading-6 text-[#806E68]">
+                Build your routine, get stronger and keep showing up — one day
+                at a time.
               </p>
             </div>
           </section>
 
-          {/* START HERE */}
-          <section className="grid gap-8 py-12 lg:grid-cols-[0.7fr_1.3fr] lg:gap-16">
-            <div>
-              <p className="text-[12px] tracking-[0.4em] text-[#9D6F67]">
-                START HERE
-              </p>
-
-              <p className="mt-3 font-serif text-3xl italic text-[#A77B73]">
-                75 days.
-              </p>
-            </div>
-
-            <div>
-              <h2 className="font-serif text-4xl leading-none md:text-5xl">
-                Not perfection.
-                <span className="italic text-[#A77B73]">
-                  {" "}Practice.
-                </span>
-              </h2>
-
-              <p className="mt-5 max-w-2xl text-[16px] leading-7 text-[#6F5F59]">
-                Start where you are. Build your routine, get stronger
-                and keep showing up — one day at a time.
-              </p>
-            </div>
-          </section>
-
-          {/* THREE PHASES */}
-          <section className="border-t border-[#DED0CB] py-12">
+          {/* 01 — THE METHOD */}
+          <section className="py-12">
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
-                <p className="text-[12px] tracking-[0.4em] text-[#9D6F67]">
-                  THE METHOD
+                <p className="text-[9px] tracking-[0.36em] text-[#9D6F67]">
+                  01 · THE METHOD
                 </p>
 
                 <h2 className="mt-3 font-serif text-4xl md:text-5xl">
                   Three phases.
-                  <span className="italic text-[#A77B73]">
-                    {" "}One journey.
-                  </span>
+                  <span className="italic text-[#A77B73]"> One journey.</span>
                 </h2>
               </div>
 
@@ -247,102 +231,103 @@ export default function GuidePage() {
               </p>
             </div>
 
-            <div className="mt-8 flex flex-col gap-3 rounded-[1.5rem] border border-[#D6BDB6] bg-[#EAD8D3] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+            {/* CURRENT POSITION */}
+            <div className="mt-8 flex flex-col gap-4 rounded-[1.5rem] border border-[#D6BDB6] bg-[#EAD8D3] px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p className="text-[12px] tracking-[0.35em] text-[#8F655E]">YOU ARE HERE</p>
+                <p className="text-[9px] tracking-[0.30em] text-[#8F655E]">
+                  YOU ARE HERE
+                </p>
+
                 <p className="mt-2 font-serif text-2xl italic text-[#8F655E]">
-                  Phase {currentPhase.number} · {currentPhase.name.toLowerCase()}. ♡
+                  Phase {currentPhase.number} ·{" "}
+                  {currentPhase.name.toLowerCase()}. ♡
                 </p>
               </div>
-              <span className="rounded-full bg-[#211C19] px-5 py-2.5 text-[12px] tracking-[0.22em] text-[#F7F1ED]">
+
+              <span className="w-fit rounded-full bg-[#211C19] px-5 py-2.5 text-[10px] tracking-[0.20em] text-[#F7F1ED]">
                 DAY {String(currentDay).padStart(2, "0")} / 75
               </span>
             </div>
 
+            {/* PHASES */}
             <div className="mt-4 grid gap-4 xl:grid-cols-3">
-              {phases.map((phase) => (
-                <article
-                  key={phase.number}
-                  className={`rounded-[1.75rem] p-6 ${
-                    phase.number === currentPhaseNumber
-                      ? "bg-[#211C19] text-[#F7F1ED]"
-                      : "border border-[#DED0CB] bg-[#FBF8F6]"
-                  }`}
-                >
-                  <div className="flex items-start justify-between">
-                    <span
-                      className={`font-serif text-4xl ${
-                        phase.number === currentPhaseNumber
-                          ? "text-[#DDB5AE]"
-                          : "text-[#D2B0A9]"
-                      }`}
-                    >
-                      {phase.number}
-                    </span>
+              {phases.map((phase) => {
+                const isCurrent = phase.number === currentPhaseNumber;
 
-                    <span
-                      className={`text-[9px] tracking-[0.2em] ${
-                        phase.number === currentPhaseNumber
-                          ? "text-[#C8B5AF]"
-                          : "text-[#9D6F67]"
-                      }`}
-                    >
-                      {phase.days}
-                    </span>
-                  </div>
-
-                  <p className="mt-6 text-[12px] tracking-[0.3em]">
-                    {phase.name}
-                  </p>
-
-                  <h3
-                    className={`mt-2 font-serif text-2xl italic ${
-                      phase.number === currentPhaseNumber
-                        ? "text-[#DDB5AE]"
-                        : "text-[#A77B73]"
+                return (
+                  <article
+                    key={phase.number}
+                    className={`rounded-[1.75rem] p-6 ${
+                      isCurrent
+                        ? "bg-[#211C19] text-[#F7F1ED]"
+                        : "border border-[#DED0CB] bg-[#FBF8F6]"
                     }`}
                   >
-                    {phase.tagline}
-                  </h3>
-
-                  <div
-                    className={`mt-6 border-t pt-4 ${
-                      phase.number === currentPhaseNumber
-                        ? "border-[#493D39]"
-                        : "border-[#E1D3CE]"
-                    }`}
-                  >
-                    {phase.points.map((point) => (
-                      <div
-                        key={point}
-                        className="flex items-center gap-3 py-1.5"
+                    <div className="flex items-start justify-between">
+                      <span
+                        className={`font-serif text-4xl ${
+                          isCurrent ? "text-[#DDB5AE]" : "text-[#D2B0A9]"
+                        }`}
                       >
-                        <span
-                          className={
-                            phase.number === currentPhaseNumber
-                              ? "text-[#DDB5AE]"
-                              : "text-[#A77B73]"
-                          }
-                        >
-                          ♡
-                        </span>
+                        {phase.number}
+                      </span>
 
-                        <p className="text-[12px] tracking-[0.1em]">
-                          {point.toUpperCase()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </article>
-              ))}
+                      <span
+                        className={`text-[8px] tracking-[0.18em] ${
+                          isCurrent ? "text-[#C8B5AF]" : "text-[#9D6F67]"
+                        }`}
+                      >
+                        {phase.days}
+                      </span>
+                    </div>
+
+                    <p className="mt-6 text-[10px] tracking-[0.28em]">
+                      {phase.name}
+                    </p>
+
+                    <h3
+                      className={`mt-2 font-serif text-2xl italic ${
+                        isCurrent ? "text-[#DDB5AE]" : "text-[#A77B73]"
+                      }`}
+                    >
+                      {phase.tagline}
+                    </h3>
+
+                    <div
+                      className={`mt-6 border-t pt-4 ${
+                        isCurrent ? "border-[#493D39]" : "border-[#E1D3CE]"
+                      }`}
+                    >
+                      {phase.points.map((point) => (
+                        <div
+                          key={point}
+                          className="flex items-center gap-3 py-1.5"
+                        >
+                          <span
+                            className={
+                              isCurrent ? "text-[#DDB5AE]" : "text-[#A77B73]"
+                            }
+                          >
+                            ♡
+                          </span>
+
+                          <p className="text-[10px] tracking-[0.10em]">
+                            {point.toUpperCase()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </section>
 
-          {/* HOW WE TRAIN + WEEK */}
-          <section className="grid gap-8 border-t border-[#DED0CB] py-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-12">
+          {/* 02 — TRAINING RHYTHM */}
+          <section className="grid gap-8 border-t border-[#DED0CB] py-12 lg:grid-cols-[0.75fr_1.25fr] lg:gap-12">
             <div>
-              <p className="text-[12px] tracking-[0.4em] text-[#9D6F67]">
-                HOW WE TRAIN
+              <p className="text-[9px] tracking-[0.36em] text-[#9D6F67]">
+                02 · YOUR TRAINING RHYTHM
               </p>
 
               <h2 className="mt-3 font-serif text-4xl leading-none md:text-5xl">
@@ -352,13 +337,13 @@ export default function GuidePage() {
                 </span>
               </h2>
 
-              <p className="mt-5 max-w-md text-[15px] leading-7 text-[#806E68]">
-                Core, glutes, back and full-body strength — with
-                control before intensity.
+              <p className="mt-5 max-w-md text-[14px] leading-7 text-[#806E68]">
+                Core, glutes, back and full-body strength — with control before
+                intensity.
               </p>
 
-              <div className="mt-7 rounded-[1.75rem] bg-[#EAD8D3] p-6">
-                <p className="text-[12px] tracking-[0.3em] text-[#8F655E]">
+              <div className="mt-7 rounded-[1.5rem] bg-[#EAD8D3] p-6">
+                <p className="text-[9px] tracking-[0.28em] text-[#8F655E]">
                   THE GOAL
                 </p>
 
@@ -370,12 +355,11 @@ export default function GuidePage() {
               </div>
             </div>
 
-            {/* WEEK */}
             <div className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
               <div className="flex items-end justify-between">
                 <div>
-                  <p className="text-[12px] tracking-[0.35em] text-[#9D6F67]">
-                    YOUR RHYTHM
+                  <p className="text-[9px] tracking-[0.30em] text-[#9D6F67]">
+                    YOUR WEEK
                   </p>
 
                   <h3 className="mt-2 font-serif text-3xl">
@@ -392,17 +376,17 @@ export default function GuidePage() {
                 {trainingWeek.map(([day, title, focus]) => (
                   <div
                     key={day}
-                    className="grid grid-cols-[40px_1fr_auto] items-center gap-3 border-t border-[#E1D3CE] py-3.5"
+                    className="grid grid-cols-[38px_1fr] gap-x-3 gap-y-1 border-t border-[#E1D3CE] py-3.5 sm:grid-cols-[40px_1fr_auto] sm:items-center"
                   >
-                    <span className="font-serif text-lg text-[#B48A82]">
+                    <span className="row-span-2 font-serif text-lg text-[#B48A82] sm:row-span-1">
                       {day}
                     </span>
 
-                    <span className="text-[12px] tracking-[0.16em]">
+                    <span className="text-[10px] tracking-[0.14em]">
                       {title}
                     </span>
 
-                    <span className="text-right text-[12px] text-[#927D76]">
+                    <span className="text-[11px] text-[#927D76] sm:text-right">
                       {focus}
                     </span>
                   </div>
@@ -411,215 +395,203 @@ export default function GuidePage() {
             </div>
           </section>
 
-          {/* LEVELS */}
-          <section className="rounded-[2rem] bg-[#211C19] px-8 py-9 text-[#F7F1ED] md:px-10">
-            <div className="flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
+          {/* 03 — PROGRESSION */}
+          <section className="border-t border-[#DED0CB] py-12">
+            <div className="grid gap-8 lg:grid-cols-[0.7fr_1.3fr] lg:items-end lg:gap-12">
               <div>
-                <p className="text-[12px] tracking-[0.4em] text-[#DDB5AE]">
-                  START WHERE YOU ARE
+                <p className="text-[9px] tracking-[0.36em] text-[#9D6F67]">
+                  03 · HOW TO PROGRESS
                 </p>
 
-                <h2 className="mt-4 font-serif text-4xl leading-none md:text-5xl">
+                <h2 className="mt-3 font-serif text-4xl leading-none md:text-5xl">
                   Your level.
-                  <span className="block italic text-[#DDB5AE]">
+                  <span className="block italic text-[#A77B73]">
                     Your progress.
                   </span>
                 </h2>
               </div>
 
-              <p className="max-w-sm text-[15px] leading-7 text-[#C8B9B4]">
-                Pick the version that feels controlled. Progress when
-                you&apos;re ready.
+              <p className="max-w-xl text-[14px] leading-7 text-[#806E68]">
+                Pick the version that feels controlled. Build from there and
+                progress when you&apos;re ready.
               </p>
             </div>
 
             <div className="mt-8 grid gap-3 md:grid-cols-3">
-              <div className="rounded-2xl border border-[#4B403C] p-5">
-                <p className="text-[12px] tracking-[0.25em] text-[#DDB5AE]">
+              <div className="rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] p-6">
+                <span className="font-serif text-3xl text-[#D2B0A9]">01</span>
+
+                <p className="mt-5 text-[9px] tracking-[0.25em] text-[#9D6F67]">
                   START HERE
                 </p>
 
-                <p className="mt-2 font-serif text-xl italic text-[#C8B9B4]">
+                <p className="mt-2 font-serif text-2xl italic text-[#A77B73]">
                   learn it.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[#4B403C] p-5">
-                <p className="text-[12px] tracking-[0.25em] text-[#DDB5AE]">
+              <div className="rounded-[1.5rem] border border-[#D6BDB6] bg-[#EAD8D3] p-6">
+                <span className="font-serif text-3xl text-[#A77B73]">02</span>
+
+                <p className="mt-5 text-[9px] tracking-[0.25em] text-[#8F655E]">
                   LOCKED IN
                 </p>
 
-                <p className="mt-2 font-serif text-xl italic text-[#C8B9B4]">
+                <p className="mt-2 font-serif text-2xl italic text-[#8F655E]">
                   build it.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[#4B403C] p-5">
-                <p className="text-[12px] tracking-[0.25em] text-[#DDB5AE]">
+              <div className="rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] p-6">
+                <span className="font-serif text-3xl text-[#D2B0A9]">03</span>
+
+                <p className="mt-5 text-[9px] tracking-[0.25em] text-[#9D6F67]">
                   LEVEL UP
                 </p>
 
-                <p className="mt-2 font-serif text-xl italic text-[#C8B9B4]">
+                <p className="mt-2 font-serif text-2xl italic text-[#A77B73]">
                   challenge it.
                 </p>
               </div>
             </div>
           </section>
 
-          {/* HOW TO USE THE METHOD */}
-          <section className="py-12">
-            <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-12">
-              <div>
-                <p className="text-[12px] tracking-[0.35em] text-[#9D6F67]">
-                  HOW IT COMES TOGETHER
-                </p>
-
-                <h2 className="mt-3 font-serif text-4xl leading-none md:text-5xl">
-                  Your daily rhythm.
-                  <span className="block italic text-[#A77B73]">
-                    Your bigger picture.
-                  </span>
-                </h2>
-
-                <p className="mt-5 max-w-xl text-[16px] leading-7 text-[#6F5F59]">
-                  Today keeps you focused on the six promises in front of you.
-                  The Guide helps you understand how your training, nutrition,
-                  recovery and progression fit together across the full 75 days.
-                </p>
-              </div>
-
-              <div className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-                <p className="text-[12px] tracking-[0.26em] text-[#9D6F67]">
-                  WHEN YOU NEED MORE
-                </p>
-
-                <p className="mt-3 font-serif text-2xl italic leading-snug text-[#A77B73]">
-                  Need a workout, meal idea or something to help you show up?
-                </p>
-
-                <p className="mt-4 text-[16px] leading-7 text-[#806E68]">
-                  Your Resources library is where you&apos;ll find practical tools
-                  to help you complete the work — from training ideas to nourishment
-                  and recovery support.
-                </p>
-
-                <Link
-                  href="/dashboard/resources"
-                  className="mt-6 inline-flex items-center rounded-full bg-[#211C19] px-7 py-3.5 text-[12px] tracking-[0.20em] text-[#F7F1ED] transition hover:-translate-y-0.5"
-                >
-                  EXPLORE RESOURCES →
-                </Link>
-              </div>
-            </div>
-          </section>
-
-          {/* NUTRITION */}
-          <section className="grid overflow-hidden rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] lg:grid-cols-[0.8fr_1.2fr]">
-            <div className="p-7 md:p-9">
-              <p className="text-[12px] tracking-[0.4em] text-[#9D6F67]">
-                NOURISH
+          {/* 04 — NOURISH + RECOVER */}
+          <section className="border-t border-[#DED0CB] py-12">
+            <div className="mb-8">
+              <p className="text-[9px] tracking-[0.36em] text-[#9D6F67]">
+                04 · NOURISH + RECOVER
               </p>
 
-              <h2 className="mt-4 font-serif text-4xl leading-none">
-                Keep it
-                <span className="block italic text-[#A77B73]">
-                  simple.
-                </span>
+              <h2 className="mt-3 font-serif text-4xl md:text-5xl">
+                Support the
+                <span className="italic text-[#A77B73]"> work.</span>
               </h2>
             </div>
 
-            <div className="bg-[#EAD8D3] p-7 md:p-9">
-              <div className="grid gap-3 sm:grid-cols-2">
-                {[
-                  "Prioritize protein",
-                  "Add plants + fiber",
-                  "Stay hydrated",
-                  "Build balanced meals",
-                  "Consistency over restriction",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="flex items-center gap-3 border-b border-[#D3BBB5] pb-3"
-                  >
-                    <span className="text-[#9D6F67]">♡</span>
+            <div className="grid overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] lg:grid-cols-2">
+              <div className="p-7 md:p-8">
+                <p className="text-[9px] tracking-[0.30em] text-[#9D6F67]">
+                  NOURISH
+                </p>
 
-                    <p className="text-[14px] tracking-[0.10em]">
-                      {item.toUpperCase()}
-                    </p>
-                  </div>
-                ))}
+                <h3 className="mt-3 font-serif text-3xl">
+                  Keep it
+                  <span className="italic text-[#A77B73]"> simple.</span>
+                </h3>
+
+                <div className="mt-6">
+                  {nourishment.map((item) => (
+                    <div
+                      key={item}
+                      className="flex items-center gap-3 border-t border-[#E1D3CE] py-3"
+                    >
+                      <span className="text-[#9D6F67]">♡</span>
+
+                      <p className="text-[10px] tracking-[0.10em]">
+                        {item.toUpperCase()}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-[#EAD8D3] p-7 md:p-8">
+                <p className="text-[9px] tracking-[0.30em] text-[#8F655E]">
+                  RECOVER
+                </p>
+
+                <h3 className="mt-3 font-serif text-3xl italic text-[#8F655E]">
+                  Listen before you push.
+                </h3>
+
+                <p className="mt-5 text-[14px] leading-7 text-[#6F5F59]">
+                  Control comes before intensity. Recovery, mobility and rest
+                  are part of the work too. Choose the version that feels
+                  controlled and respect what your body is telling you.
+                </p>
+
+                <p className="mt-6 font-serif text-xl italic text-[#A77B73]">
+                  stronger doesn&apos;t always mean harder. ♡
+                </p>
               </div>
             </div>
           </section>
 
-          {/* MISSED A DAY */}
-          <section className="py-14 text-center">
-            <p className="text-[12px] tracking-[0.4em] text-[#9D6F67]">
-              REAL LIFE HAPPENS
+          {/* RESOURCES CTA */}
+          <section className="border-t border-[#DED0CB] py-12">
+            <div className="flex flex-col justify-between gap-7 rounded-[1.75rem] border border-[#D6BDB6] bg-[#EAD8D3] p-7 md:flex-row md:items-center md:p-8">
+              <div>
+                <p className="text-[9px] tracking-[0.30em] text-[#8F655E]">
+                  WHEN YOU NEED MORE
+                </p>
+
+                <p className="mt-3 max-w-xl font-serif text-2xl italic text-[#8F655E] md:text-3xl">
+                  Need a workout, meal idea or a little support?
+                </p>
+
+                <p className="mt-3 max-w-xl text-[13px] leading-6 text-[#806E68]">
+                  Your Resources library is where the practical tools live.
+                </p>
+              </div>
+
+              <Link
+                href="/dashboard/resources"
+                className="w-fit shrink-0 rounded-full bg-[#211C19] px-7 py-3.5 text-[10px] tracking-[0.20em] text-[#F7F1ED] transition hover:-translate-y-0.5"
+              >
+                EXPLORE RESOURCES →
+              </Link>
+            </div>
+          </section>
+
+          {/* 05 — REMEMBER THIS */}
+          <section className="border-t border-[#DED0CB] py-14 text-center">
+            <p className="text-[9px] tracking-[0.36em] text-[#9D6F67]">
+              05 · REMEMBER THIS
             </p>
 
             <h2 className="mt-4 font-serif text-4xl md:text-5xl">
               Missed a day?
             </h2>
 
-            <p className="mt-1 font-serif text-2xl italic text-[#A77B73]">
+            <p className="mt-2 font-serif text-2xl italic text-[#A77B73]">
               come back tomorrow. ♡
             </p>
 
-            <div className="mx-auto mt-7 max-w-xl rounded-full border border-[#CBA9A2] px-6 py-3">
-              <p className="text-[12px] tracking-[0.2em] text-[#8F655E]">
+            <div className="mx-auto mt-7 w-fit max-w-full rounded-full border border-[#CBA9A2] px-6 py-3">
+              <p className="text-[9px] tracking-[0.18em] text-[#8F655E]">
                 NO PUNISHMENT • NO PRESSURE • JUST RETURN
               </p>
             </div>
           </section>
 
-          {/* SAFETY */}
-          <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-9">
-            <div className="grid gap-6 lg:grid-cols-[0.7fr_1.3fr]">
+          {/* SAFETY NOTE */}
+          <section className="border-t border-[#DED0CB] py-8">
+            <div className="grid gap-4 md:grid-cols-[0.45fr_1.55fr] md:gap-10">
               <div>
-                <p className="text-[12px] tracking-[0.35em] text-[#9D6F67]">
+                <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
                   A NOTE ABOUT YOUR BODY
                 </p>
-
-                <h2 className="mt-3 font-serif text-3xl italic text-[#A77B73]">
-                  Listen before you push.
-                </h2>
               </div>
 
-              <div className="text-[15px] leading-7 text-[#806E68]">
-                <p>
-                  Lock In With Lav provides general fitness and wellness
-                  education, not individualized medical care or rehabilitation.
-                  If you&apos;re postpartum, returning after injury,
-                  experiencing pain, pelvic floor symptoms, abdominal doming
-                  or coning, or think you may have diastasis recti, consider
-                  speaking with a qualified healthcare professional or pelvic
-                  floor physiotherapist before progressing.
-                </p>
-              </div>
+              <p className="text-[11px] leading-5 text-[#927D76]">
+                Lock In With Lav provides general fitness and wellness
+                education, not individualized medical care or rehabilitation.
+                If you&apos;re postpartum, returning after injury, experiencing
+                pain, pelvic floor symptoms, abdominal doming or coning, or
+                think you may have diastasis recti, consider speaking with a
+                qualified healthcare professional or pelvic floor
+                physiotherapist before progressing.
+              </p>
             </div>
           </section>
 
           {/* END */}
-          <section className="py-14 text-center">
-            <p className="text-[12px] tracking-[0.4em] text-[#9D6F67]">
-              YOUR NEXT 75 DAYS
+          <div className="border-t border-[#DED0CB] py-10 text-center">
+            <p className="font-serif text-2xl italic text-[#A77B73]">
+              just keep showing up. ♡
             </p>
-
-            <h2 className="mx-auto mt-4 font-serif text-4xl leading-none md:text-5xl">
-              Just keep
-              <span className="italic text-[#A77B73]">
-                {" "}showing up. ♡
-              </span>
-            </h2>
-
-            <Link
-              href="/dashboard"
-              className="mt-8 inline-block rounded-full bg-[#211C19] px-9 py-3.5 text-[12px] tracking-[0.28em] text-[#F7F1ED] transition hover:-translate-y-0.5"
-            >
-              BACK TO TODAY
-            </Link>
-          </section>
+          </div>
         </section>
       </div>
     </main>
