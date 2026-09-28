@@ -180,8 +180,11 @@ export default function DashboardPage() {
       );
 
       const savedWaterBottles = Number(
-        localStorage.getItem(`water-bottles-${user.id}-${calculatedDay}`) || "0"
+        localStorage.getItem(
+          `water-bottles-${user.id}-${calculatedDay}`
+        ) || "0"
       );
+
       setWaterBottles(Math.min(Math.max(savedWaterBottles, 0), 8));
 
       const { data: savedProgress, error: progressError } = await supabase
@@ -198,9 +201,12 @@ export default function DashboardPage() {
       } else if (savedProgress) {
         if (
           savedProgress.hydrate &&
-          !localStorage.getItem(`water-bottles-${user.id}-${calculatedDay}`)
+          !localStorage.getItem(
+            `water-bottles-${user.id}-${calculatedDay}`
+          )
         ) {
           setWaterBottles(8);
+
           localStorage.setItem(
             `water-bottles-${user.id}-${calculatedDay}`,
             "8"
@@ -225,9 +231,7 @@ export default function DashboardPage() {
     loadDashboard();
   }, []);
 
-  const toggleCommitment = async (
-    column: CommitmentColumn
-  ) => {
+  const toggleCommitment = async (column: CommitmentColumn) => {
     if (!userId || !challengeStartDate || isLoadingProgress) {
       return;
     }
@@ -278,6 +282,7 @@ export default function DashboardPage() {
     const hydrateComplete = clampedCount === 8;
 
     setWaterBottles(clampedCount);
+
     localStorage.setItem(
       `water-bottles-${userId}-${currentDay}`,
       String(clampedCount)
@@ -381,7 +386,6 @@ export default function DashboardPage() {
                   : `${greeting}, ${firstName}. ♡`}
               </p>
             </div>
-
           </header>
 
           {/* DAY HERO */}
@@ -522,20 +526,35 @@ export default function DashboardPage() {
                       }`}
                     >
                       <div className="flex items-center gap-4 sm:gap-5">
-                        <div
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-serif transition ${
+                        <button
+                          type="button"
+                          disabled={isLoadingProgress}
+                          onClick={() =>
+                            updateWaterBottles(isComplete ? 0 : 8)
+                          }
+                          aria-label={
+                            isComplete
+                              ? "Clear hydration progress"
+                              : "Complete hydration goal"
+                          }
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-serif transition duration-300 ${
+                            isLoadingProgress
+                              ? "cursor-wait opacity-70"
+                              : "cursor-pointer hover:-translate-y-0.5"
+                          } ${
                             isComplete
                               ? "border-[#A77B73] bg-[#DDB5AE] text-[#211C19]"
-                              : "border-[#CBA9A2] text-[#A77B73]"
+                              : "border-[#CBA9A2] text-[#A77B73] hover:bg-[#F1E6E2]"
                           }`}
                         >
-                          {item.number}
-                        </div>
+                          {isComplete ? "✓" : item.number}
+                        </button>
 
                         <div className="flex-1">
                           <p className="text-[11px] tracking-[0.18em] text-[#211C19]">
                             HYDRATE
                           </p>
+
                           <p className="mt-2 text-sm leading-5 text-[#8C7770]">
                             {waterBottles}/8 bottles • 1 gallon
                           </p>
@@ -572,11 +591,12 @@ export default function DashboardPage() {
                               }`}
                             >
                               <span
-                                className={
-                                  filled ? "opacity-100" : "opacity-35"
-                                }
+                                className={`text-xl transition ${
+                                  filled ? "opacity-100" : "opacity-30"
+                                }`}
+                                aria-hidden="true"
                               >
-                                ♡
+                                💧
                               </span>
                             </button>
                           );
@@ -617,7 +637,9 @@ export default function DashboardPage() {
                     <div className="flex-1">
                       <p
                         className={`text-[11px] tracking-[0.18em] ${
-                          isComplete ? "text-[#6F514B]" : "text-[#211C19]"
+                          isComplete
+                            ? "text-[#6F514B]"
+                            : "text-[#211C19]"
                         }`}
                       >
                         {item.title}
@@ -681,7 +703,6 @@ export default function DashboardPage() {
             </p>
           </section>
         </section>
-
       </div>
     </main>
   );

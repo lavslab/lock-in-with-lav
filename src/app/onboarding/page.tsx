@@ -198,7 +198,7 @@ export default function OnboardingPage() {
                 <span className="h-px w-12 bg-[#CBA9A2]" />
 
                 <span className="text-[7px] tracking-[0.3em] text-[#9D6F67]">
-                  75 DAYS • 6 COMMITMENTS • ONE YOU
+                  75 DAYS • 7 COMMITMENTS • ALL YOU HAVE TO DO IS SHOW UP
                 </span>
               </div>
             </div>
