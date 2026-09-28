@@ -10,28 +10,24 @@ const categories = [
     number: "01",
     title: "WARM-UPS",
     subtitle: "get ready to move. ♡",
-    description: "Quick routines to use before strength training or cardio.",
     href: "#warm-ups",
   },
   {
     number: "02",
     title: "MOBILITY",
     subtitle: "move a little better.",
-    description: "Focused routines for hips, lower body and upper body.",
     href: "#mobility",
   },
   {
     number: "03",
     title: "STRETCHING",
     subtitle: "slow it down.",
-    description: "Simple post-workout and full-body stretching routines.",
     href: "#stretching",
   },
   {
     number: "04",
     title: "RECOVERY",
     subtitle: "rest counts too. ♡",
-    description: "Easy reset routines for recovery and lower-intensity days.",
     href: "#recovery",
   },
 ];
@@ -39,9 +35,12 @@ const categories = [
 const sections = [
   {
     id: "warm-ups",
+    number: "01",
     label: "WARM-UPS",
     title: "Before you train.",
     subtitle: "wake everything up. ♡",
+    description:
+      "Quick routines to prepare your body for strength training, cardio or whatever movement you have planned.",
     routines: [
       {
         title: "5-Min Full-Body Warm-Up",
@@ -62,9 +61,12 @@ const sections = [
   },
   {
     id: "mobility",
+    number: "02",
     label: "MOBILITY",
     title: "Move with more freedom.",
     subtitle: "small work. big difference.",
+    description:
+      "Focused mobility work for your hips, lower body and upper body when you want a little more room to move.",
     routines: [
       {
         title: "Lower-Body Mobility",
@@ -85,9 +87,12 @@ const sections = [
   },
   {
     id: "stretching",
+    number: "03",
     label: "STRETCHING",
     title: "After the work.",
     subtitle: "slow down + reset. ♡",
+    description:
+      "Simple stretches for after training or whenever your body could use a slower, quieter few minutes.",
     routines: [
       {
         title: "Post-Workout Full-Body Stretch",
@@ -108,9 +113,12 @@ const sections = [
   },
   {
     id: "recovery",
+    number: "04",
     label: "RECOVERY",
     title: "Take the pressure off.",
     subtitle: "recovery is part of training.",
+    description:
+      "Gentle routines for rest days, lower-intensity days or moments when your body needs less instead of more.",
     routines: [
       {
         title: "Rest-Day Reset",
@@ -174,146 +182,213 @@ export default function RecoveryPage() {
           isLoadingUser={isLoadingUser}
         />
 
-        <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
+        <section className="min-w-0 flex-1 px-5 py-8 sm:px-6 md:px-10 lg:px-14">
+          {/* HEADER */}
+
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
                 LOCK IN WITH LAV
               </p>
-              <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
+
+              <p className="mt-2 font-serif text-lg italic text-[#A77B73] sm:text-xl">
                 take care of your body. ♡
               </p>
             </div>
 
             <Link
               href="/dashboard/resources"
-              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
+              className="shrink-0 rounded-full border border-[#CBA9A2] px-4 py-2.5 text-[7px] tracking-[0.2em] transition hover:bg-[#EAD8D3] sm:px-5 sm:py-3 sm:text-[8px]"
             >
               ← RESOURCES
             </Link>
           </header>
 
-          <section className="mt-10 rounded-[2rem] bg-[#211C19] px-8 py-10 text-[#F7F1ED] md:px-10 md:py-12">
-            <div className="flex flex-col justify-between gap-7 md:flex-row md:items-end">
-              <div>
-                <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
-                  MOBILITY + RECOVERY
-                </p>
+          {/* INTRO */}
 
-                <h1 className="mt-5 font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
+          <section className="mx-auto max-w-6xl pb-10 pt-14 md:pb-14 md:pt-20">
+            <div className="grid gap-8 border-b border-[#DED0CB] pb-10 md:grid-cols-[1.2fr_0.8fr] md:items-end md:pb-12">
+              <div>
+                <div className="flex items-center gap-3">
+                  <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+                    MOBILITY + RECOVERY
+                  </p>
+
+                  <span className="h-px w-8 bg-[#CBA9A2]" />
+                </div>
+
+                <h1 className="mt-5 font-serif text-5xl leading-[0.95] sm:text-6xl md:text-7xl">
                   Move well.
-                  <span className="block italic text-[#DDB5AE]">
+                  <span className="block italic text-[#A77B73]">
                     recover well. ♡
                   </span>
                 </h1>
               </div>
 
-              <p className="text-[8px] tracking-[0.18em] text-[#BFAEAA]">
-                WARM UP • MOVE • STRETCH • RESET
-              </p>
+              <div className="md:pb-1">
+                <p className="max-w-md text-xs leading-6 text-[#75635D]">
+                  Warm up before the work, move through the
+                  ranges your body needs and give recovery the
+                  same attention you give training.
+                </p>
+
+                <p className="mt-5 text-[7px] tracking-[0.22em] text-[#9D6F67]">
+                  WARM UP • MOVE • STRETCH • RESET
+                </p>
+              </div>
             </div>
           </section>
 
-          <section className="py-10">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              {categories.map((category) => (
+          {/* QUICK NAV */}
+
+          <section className="mx-auto max-w-6xl pb-12">
+            <div className="mb-5 flex items-end justify-between gap-4">
+              <div>
+                <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+                  FIND WHAT YOU NEED
+                </p>
+
+                <h2 className="mt-2 font-serif text-2xl md:text-3xl">
+                  Where are we{" "}
+                  <span className="italic text-[#A77B73]">
+                    starting? ♡
+                  </span>
+                </h2>
+              </div>
+
+              <p className="hidden font-serif text-sm italic text-[#A77B73] sm:block">
+                pick a section.
+              </p>
+            </div>
+
+            <div className="grid overflow-hidden rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] sm:grid-cols-2 lg:grid-cols-4">
+              {categories.map((category, index) => (
                 <a
                   key={category.number}
                   href={category.href}
-                  className="group rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:border-[#CBA9A2]"
+                  className={`group flex items-center gap-4 px-5 py-5 transition hover:bg-[#F1E5E1] ${
+                    index !== categories.length - 1
+                      ? "border-b border-[#E8DDD9] lg:border-b-0 lg:border-r"
+                      : ""
+                  } ${
+                    index === 1
+                      ? "sm:border-b sm:border-l lg:border-b-0 lg:border-l-0"
+                      : ""
+                  } ${
+                    index === 2
+                      ? "sm:border-r lg:border-r"
+                      : ""
+                  }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <span className="font-serif text-3xl text-[#D2B0A9]">
-                      {category.number}
-                    </span>
-                    <span className="font-serif text-lg text-[#A77B73] transition group-hover:translate-y-1">
-                      ↓
-                    </span>
+                  <span className="font-serif text-2xl italic text-[#C39A92]">
+                    {category.number}
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[7px] tracking-[0.2em] text-[#8F655E]">
+                      {category.title}
+                    </p>
+
+                    <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
+                      {category.subtitle}
+                    </p>
                   </div>
 
-                  <p className="mt-6 text-[8px] tracking-[0.22em]">
-                    {category.title}
-                  </p>
-
-                  <h2 className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                    {category.subtitle}
-                  </h2>
-
-                  <p className="mt-4 text-xs leading-5 text-[#806E68]">
-                    {category.description}
-                  </p>
+                  <span className="font-serif text-lg text-[#A77B73] transition group-hover:translate-y-1">
+                    ↓
+                  </span>
                 </a>
               ))}
             </div>
           </section>
 
-          {sections.map((section) => (
-            <section
-              key={section.id}
-              id={section.id}
-              className="scroll-mt-8 border-t border-[#DED0CB] py-10"
-            >
-              <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
-                <div>
-                  <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                    {section.label}
-                  </p>
-                  <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                    {section.title}
-                  </h2>
-                </div>
+          {/* ROUTINE SECTIONS */}
 
-                <p className="font-serif text-lg italic text-[#A77B73]">
-                  {section.subtitle}
-                </p>
-              </div>
+          <div className="mx-auto max-w-6xl">
+            {sections.map((section) => (
+              <section
+                key={section.id}
+                id={section.id}
+                className="scroll-mt-8 border-t border-[#DED0CB] py-12 md:py-14"
+              >
+                <div className="grid gap-7 md:grid-cols-[0.85fr_2fr] md:gap-12">
+                  {/* SECTION INTRO */}
 
-              <div className="mt-7 grid gap-4 lg:grid-cols-3">
-                {section.routines.map((routine) => (
-                  <Link
-                    key={routine.title}
-                    href={routine.href}
-                    className="group rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:border-[#CBA9A2] hover:shadow-sm"
-                  >
-                    <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
-                      {routine.meta}
+                  <div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-serif text-3xl italic text-[#C39A92]">
+                        {section.number}
+                      </span>
+
+                      <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
+                        {section.label}
+                      </p>
+                    </div>
+
+                    <h2 className="mt-4 font-serif text-3xl leading-tight md:text-4xl">
+                      {section.title}
+                    </h2>
+
+                    <p className="mt-2 font-serif text-base italic text-[#A77B73] md:text-lg">
+                      {section.subtitle}
                     </p>
 
-                    <h3 className="mt-4 font-serif text-2xl">
-                      {routine.title}
-                    </h3>
+                    <p className="mt-4 max-w-sm text-[10px] leading-5 text-[#806E68] sm:text-xs sm:leading-6">
+                      {section.description}
+                    </p>
+                  </div>
 
-                    <div className="mt-7 flex items-center justify-between border-t border-[#E1D3CE] pt-4">
-                      <span className="text-[7px] tracking-[0.23em] text-[#9D6F67]">
-                        OPEN ROUTINE
-                      </span>
+                  {/* ROUTINES */}
 
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-base text-[#A77B73] transition group-hover:bg-[#EAD8D3]">
-                        →
-                      </span>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          ))}
+                  <div className="divide-y divide-[#E1D3CE] border-y border-[#DED0CB]">
+                    {section.routines.map((routine) => (
+                      <Link
+                        key={routine.title}
+                        href={routine.href}
+                        className="group flex items-center justify-between gap-5 py-5"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
+                            {routine.meta}
+                          </p>
 
-          <section className="border-t border-[#DED0CB] py-7">
-            <p className="max-w-4xl text-xs leading-5 text-[#8C7770]">
-              Move within a comfortable range. Stop if a movement causes sharp
-              pain, numbness, dizziness or worsening symptoms, and get
+                          <h3 className="mt-2 font-serif text-xl leading-snug transition group-hover:text-[#A77B73] sm:text-2xl">
+                            {routine.title}
+                          </h3>
+                        </div>
+
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition group-hover:bg-[#EAD8D3] group-hover:translate-x-1">
+                          →
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            ))}
+          </div>
+
+          {/* SAFETY NOTE */}
+
+          <section className="mx-auto max-w-6xl border-t border-[#DED0CB] py-7">
+            <p className="max-w-4xl text-[9px] leading-5 text-[#927D76]">
+              Movement note: Move within a comfortable range.
+              Stop if a movement causes sharp pain, numbness,
+              dizziness or worsening symptoms, and get
               appropriate medical guidance when needed.
             </p>
           </section>
 
-          <section className="pb-14 text-center">
+          {/* END */}
+
+          <section className="mx-auto max-w-6xl pb-14 pt-5 text-center">
             <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
               recovery is part of the work. ♡
             </p>
 
             <Link
               href="/dashboard/resources"
-              className="mt-7 inline-block rounded-full bg-[#211C19] px-8 py-3.5 text-[8px] tracking-[0.25em] text-[#F7F1ED] transition hover:-translate-y-0.5"
+              className="mt-7 inline-block rounded-full border border-[#CBA9A2] px-7 py-3.5 text-[8px] tracking-[0.23em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
             >
               BACK TO RESOURCES
             </Link>

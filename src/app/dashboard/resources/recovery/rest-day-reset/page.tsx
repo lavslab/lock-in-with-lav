@@ -11,49 +11,56 @@ const exercises = [
     name: "Cat-Cow",
     time: "60 SEC",
     cue: "From hands and knees, slowly alternate between gently rounding your spine and opening your chest. Let your breathing guide the movement.",
-    easier: "Make the spinal movement smaller or perform it seated with your hands on your thighs.",
+    easier:
+      "Make the spinal movement smaller or perform it seated with your hands on your thighs.",
   },
   {
     number: "02",
     name: "Child's Pose + Side Reach",
     time: "45 SEC / SIDE",
     cue: "Sit your hips back toward your heels, then walk both hands toward one side and breathe into your upper back and side body.",
-    easier: "Keep your hips higher or place your hands on an elevated surface.",
+    easier:
+      "Keep your hips higher or place your hands on an elevated surface.",
   },
   {
     number: "03",
     name: "90/90 Hip Switches",
     time: "60 SEC",
     cue: "Sit with both knees bent and slowly rotate them from side to side, moving through a comfortable range at your hips.",
-    easier: "Place your hands behind you for support and make the movement smaller.",
+    easier:
+      "Place your hands behind you for support and make the movement smaller.",
   },
   {
     number: "04",
     name: "Half-Kneeling Hip Flexor Stretch",
     time: "45 SEC / SIDE",
     cue: "Gently tuck your pelvis and shift forward until you feel a comfortable stretch through the front of the hip.",
-    easier: "Use padding under your knee and reduce the forward shift.",
+    easier:
+      "Use padding under your knee and reduce the forward shift.",
   },
   {
     number: "05",
     name: "Figure-Four Glute Stretch",
     time: "45 SEC / SIDE",
     cue: "Lie on your back, cross one ankle over the opposite thigh and gently draw the legs toward you until you feel the outer hip and glute.",
-    easier: "Keep the supporting foot on the floor instead of drawing the legs toward you.",
+    easier:
+      "Keep the supporting foot on the floor instead of drawing the legs toward you.",
   },
   {
     number: "06",
     name: "Open Book Rotations",
     time: "45 SEC / SIDE",
     cue: "Lie on your side with your knees bent and slowly open the top arm across your body, allowing your upper back to rotate comfortably.",
-    easier: "Use a smaller rotation and keep the top hand closer to your body.",
+    easier:
+      "Use a smaller rotation and keep the top hand closer to your body.",
   },
   {
     number: "07",
     name: "Legs Up the Wall",
     time: "2–3 MIN",
     cue: "Lie comfortably with your legs supported against a wall and let your breathing slow. Keep your shoulders, jaw and hands relaxed.",
-    easier: "Rest your lower legs on a couch or chair instead of placing them against a wall.",
+    easier:
+      "Rest your lower legs on a couch or chair instead of placing them against a wall.",
   },
 ];
 
@@ -100,117 +107,224 @@ export default function RestDayResetPage() {
           isLoadingUser={isLoadingUser}
         />
 
-        <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
+        <section className="min-w-0 flex-1 px-5 py-8 sm:px-6 md:px-10 lg:px-14">
+          {/* HEADER */}
+
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
                 LOCK IN WITH LAV
               </p>
-              <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                get ready to move. ♡
+
+              <p className="mt-2 font-serif text-lg italic text-[#A77B73] sm:text-xl">
+                rest counts too. ♡
               </p>
             </div>
 
             <Link
               href="/dashboard/resources/recovery"
-              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
+              className="shrink-0 rounded-full border border-[#CBA9A2] px-4 py-2.5 text-[7px] tracking-[0.2em] transition hover:bg-[#EAD8D3] sm:px-5 sm:py-3 sm:text-[8px]"
             >
               ← RECOVERY
             </Link>
           </header>
 
-          <section className="mt-10 rounded-[2rem] bg-[#211C19] px-8 py-10 text-[#F7F1ED] md:px-10 md:py-12">
-            <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
-              RECOVERY • REST DAY
-            </p>
+          {/* INTRO */}
 
-            <h1 className="mt-5 max-w-4xl font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
-              Rest-Day Reset
-              <span className="block italic text-[#DDB5AE]">Warm-Up. ♡</span>
-            </h1>
+          <section className="mx-auto max-w-6xl border-b border-[#DED0CB] pb-10 pt-14 md:pb-12 md:pt-16">
+            <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
+              <div>
+                <p className="text-[8px] tracking-[0.38em] text-[#9D6F67]">
+                  RECOVERY • REST DAY
+                </p>
 
-            <div className="mt-8 flex flex-wrap gap-2">
-              {["10–15 MIN", "7 MOVES", "NO EQUIPMENT", "AT HOME"].map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-[#6E5A55] px-4 py-2 text-[7px] tracking-[0.18em] text-[#DDB5AE]"
-                >
-                  {tag}
-                </span>
-              ))}
+                <h1 className="mt-4 font-serif text-4xl leading-none sm:text-5xl md:text-6xl">
+                  Rest-Day{" "}
+                  <span className="italic text-[#A77B73]">
+                    Reset. ♡
+                  </span>
+                </h1>
+
+                <p className="mt-5 max-w-2xl text-[11px] leading-5 text-[#75635D]">
+                  Gentle movement for the days your body needs less,
+                  not more. Move a little, breathe a little and leave
+                  feeling better than you started.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-x-5 gap-y-2 md:max-w-[260px] md:justify-end">
+                {[
+                  "10–15 MIN",
+                  "7 MOVES",
+                  "NO EQUIPMENT",
+                  "AT HOME",
+                ].map((tag) => (
+                  <span
+                    key={tag}
+                    className="text-[7px] tracking-[0.18em] text-[#9D6F67]"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </div>
           </section>
 
-          <section className="py-10">
-            <div className="mb-7 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+          {/* TODAY'S INTENTION */}
+
+          <section className="mx-auto max-w-6xl py-8">
+            <div className="flex flex-col justify-between gap-4 rounded-[1.5rem] bg-[#EAD8D3]/50 px-6 py-5 sm:flex-row sm:items-center md:px-8">
+              <div>
+                <p className="text-[7px] tracking-[0.28em] text-[#8F655E]">
+                  TODAY&apos;S INTENTION
+                </p>
+
+                <p className="mt-2 font-serif text-xl italic text-[#A77B73] md:text-2xl">
+                  feel better, not worked. ♡
+                </p>
+              </div>
+
+              <p className="max-w-sm text-[9px] leading-5 text-[#806D67] sm:text-right">
+                Keep everything easy. There is no target range,
+                intensity or pace to hit today.
+              </p>
+            </div>
+          </section>
+
+          {/* ROUTINE */}
+
+          <section className="mx-auto max-w-6xl pb-8 pt-5">
+            <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
                 <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                  THE ROUTINE
+                  YOUR RESET
                 </p>
+
                 <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                  Take your time.{" "}
-                  <span className="italic text-[#A77B73]">move. breathe. reset. ♡</span>
+                  Easy movement.{" "}
+                  <span className="italic text-[#A77B73]">
+                    no pressure. ♡
+                  </span>
                 </h2>
               </div>
 
-              <p className="text-[8px] tracking-[0.18em] text-[#8C7770]">
-                GENTLE MOVEMENT • EASY PACE
+              <p className="text-[7px] tracking-[0.18em] text-[#927D76]">
+                MOVE • BREATHE • RESET
               </p>
             </div>
 
-            <div className="space-y-3">
-              {exercises.map((exercise) => (
-                <article
-                  key={exercise.number}
-                  className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-7"
-                >
-                  <div className="grid gap-5 md:grid-cols-[70px_1fr_auto] md:items-start">
-                    <span className="font-serif text-4xl text-[#D2B0A9]">
-                      {exercise.number}
-                    </span>
+            {/* CLEAN MOVEMENT LIST */}
 
-                    <div>
-                      <h3 className="font-serif text-2xl md:text-3xl">
-                        {exercise.name}
-                      </h3>
+            <div className="border-t border-[#DED0CB]">
+              {exercises.map((exercise, index) => {
+                const isFinalMove = index === exercises.length - 1;
 
-                      <p className="mt-4 max-w-3xl text-sm leading-6 text-[#6F5F59]">
-                        {exercise.cue}
-                      </p>
+                return (
+                  <article
+                    key={exercise.number}
+                    className={`border-b border-[#DED0CB] ${
+                      isFinalMove
+                        ? "my-3 rounded-[1.5rem] border border-[#D9C2BC] bg-[#EAD8D3]/40 px-5 sm:px-7"
+                        : ""
+                    }`}
+                  >
+                    <div className="grid gap-4 py-7 md:grid-cols-[70px_1fr_125px] md:gap-7 md:py-8">
+                      {/* NUMBER */}
 
-                      <p className="mt-3 text-xs leading-5 text-[#9D6F67]">
-                        <span className="tracking-[0.12em]">MAKE IT EASIER:</span>{" "}
-                        {exercise.easier}
-                      </p>
+                      <div>
+                        <span className="font-serif text-3xl italic text-[#C39A92]">
+                          {exercise.number}
+                        </span>
+                      </div>
+
+                      {/* MOVEMENT */}
+
+                      <div>
+                        {isFinalMove && (
+                          <p className="mb-2 text-[7px] tracking-[0.25em] text-[#9D6F67]">
+                            FINISH HERE
+                          </p>
+                        )}
+
+                        <h3 className="font-serif text-2xl leading-tight md:text-[1.7rem]">
+                          {exercise.name}
+                        </h3>
+
+                        <p className="mt-3 max-w-3xl text-xs leading-6 text-[#6F5F59]">
+                          {exercise.cue}
+                        </p>
+
+                        <p className="mt-4 text-[10px] leading-5 text-[#927D76]">
+                          <span className="mr-2 text-[7px] tracking-[0.18em] text-[#9D6F67]">
+                            EASIER
+                          </span>
+                          {exercise.easier}
+                        </p>
+                      </div>
+
+                      {/* TIME */}
+
+                      <div className="md:text-right">
+                        <span className="text-[7px] tracking-[0.2em] text-[#8F655E]">
+                          {exercise.time}
+                        </span>
+                      </div>
                     </div>
-
-                    <span className="w-fit rounded-full bg-[#EAD8D3] px-4 py-2 text-[8px] tracking-[0.18em] text-[#8F655E]">
-                      {exercise.time}
-                    </span>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           </section>
 
-          <section className="border-t border-[#DED0CB] py-7">
-            <p className="max-w-4xl text-xs leading-5 text-[#8C7770]">
-              Recovery movement should feel easy and comfortable. You do not need to
-              push your range or turn this into another workout. Stop if a
-              movement causes sharp pain, numbness, dizziness or worsening symptoms.
+          {/* REST REMINDER */}
+
+          <section className="mx-auto max-w-6xl py-10">
+            <div className="grid gap-7 border-y border-[#DED0CB] py-8 md:grid-cols-[0.7fr_1.3fr] md:items-center">
+              <div>
+                <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
+                  REST DAY ≠ DO NOTHING WRONG
+                </p>
+
+                <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
+                  recovery is part of the work. ♡
+                </p>
+              </div>
+
+              <p className="text-[10px] leading-6 text-[#75635D] md:border-l md:border-[#DED0CB] md:pl-8">
+                You do not need to turn recovery into another workout.
+                A walk, a few gentle movements, more sleep or simply
+                taking it easy can all be part of taking care of your body.
+              </p>
+            </div>
+          </section>
+
+          {/* SAFETY */}
+
+          <section className="mx-auto max-w-6xl pb-8">
+            <p className="max-w-4xl text-[9px] leading-5 text-[#927D76]">
+              Movement note: Recovery movement should feel easy and
+              comfortable. You do not need to push your range or turn
+              this into another workout. Stop if a movement causes
+              sharp pain, numbness, dizziness or worsening symptoms.
             </p>
           </section>
 
-          <section className="pb-14 text-center">
-            <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-              nothing to prove today. just reset. ♡
+          {/* END */}
+
+          <section className="mx-auto max-w-6xl pb-14 pt-4 text-center">
+            <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+              THAT&apos;S ENOUGH FOR TODAY
+            </p>
+
+            <p className="mt-3 font-serif text-3xl italic text-[#A77B73] md:text-4xl">
+              nothing to prove. just reset. ♡
             </p>
 
             <Link
               href="/dashboard/resources/recovery"
-              className="mt-7 inline-block rounded-full bg-[#211C19] px-8 py-3.5 text-[8px] tracking-[0.25em] text-[#F7F1ED] transition hover:-translate-y-0.5"
+              className="mt-8 inline-block rounded-full border border-[#CBA9A2] px-7 py-3.5 text-[8px] tracking-[0.23em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
             >
-              BACK TO MOBILITY + RECOVERY
+              ← BACK TO MOBILITY + RECOVERY
             </Link>
           </section>
         </section>

@@ -93,91 +93,171 @@ export default function FullBodyWarmUpPage() {
           isLoadingUser={isLoadingUser}
         />
 
-        <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
+        <section className="min-w-0 flex-1 px-5 py-8 sm:px-6 md:px-10 lg:px-14">
+          {/* HEADER */}
+
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
                 LOCK IN WITH LAV
               </p>
-              <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
+
+              <p className="mt-2 font-serif text-lg italic text-[#A77B73] sm:text-xl">
                 get ready to move. ♡
               </p>
             </div>
 
             <Link
               href="/dashboard/resources/recovery"
-              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
+              className="shrink-0 rounded-full border border-[#CBA9A2] px-4 py-2.5 text-[7px] tracking-[0.2em] transition hover:bg-[#EAD8D3] sm:px-5 sm:py-3 sm:text-[8px]"
             >
               ← RECOVERY
             </Link>
           </header>
 
-          <section className="mt-10 rounded-[2rem] bg-[#211C19] px-8 py-10 text-[#F7F1ED] md:px-10 md:py-12">
-            <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
-              WARM-UP • FULL BODY
-            </p>
+          {/* EDITORIAL INTRO */}
 
-            <h1 className="mt-5 max-w-4xl font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
-              5-Min Full-Body
-              <span className="block italic text-[#DDB5AE]">Warm-Up. ♡</span>
-            </h1>
+          <section className="mx-auto max-w-6xl pb-10 pt-14 md:pb-14 md:pt-20">
+            <div className="grid gap-10 md:grid-cols-[1.3fr_0.7fr] md:items-end">
+              <div>
+                <div className="flex items-center gap-3">
+                  <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+                    WARM-UP
+                  </p>
 
-            <div className="mt-8 flex flex-wrap gap-2">
-              {["5 MIN", "6 MOVES", "NO EQUIPMENT", "HOME + GYM"].map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full border border-[#6E5A55] px-4 py-2 text-[7px] tracking-[0.18em] text-[#DDB5AE]"
-                >
-                  {tag}
-                </span>
-              ))}
+                  <span className="h-px w-8 bg-[#CBA9A2]" />
+
+                  <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
+                    FULL BODY
+                  </p>
+                </div>
+
+                <h1 className="mt-6 max-w-4xl font-serif text-5xl leading-[0.92] sm:text-6xl md:text-7xl lg:text-[5.5rem]">
+                  5-Min Full-Body
+                  <span className="block italic text-[#A77B73]">
+                    Warm-Up. ♡
+                  </span>
+                </h1>
+              </div>
+
+              <div className="md:pb-2">
+                <p className="max-w-sm text-xs leading-6 text-[#75635D]">
+                  Six simple movements to gradually wake up your
+                  whole body before strength training, cardio or
+                  a more active session.
+                </p>
+
+                <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3">
+                  {[
+                    "5 MIN",
+                    "6 MOVES",
+                    "NO EQUIPMENT",
+                    "HOME + GYM",
+                  ].map((tag) => (
+                    <span
+                      key={tag}
+                      className="text-[7px] tracking-[0.2em] text-[#9D6F67]"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-10 h-px bg-[#DED0CB]" />
+          </section>
+
+          {/* BEFORE YOU BEGIN */}
+
+          <section className="mx-auto max-w-6xl pb-12">
+            <div className="grid overflow-hidden rounded-[1.5rem] bg-[#EAD8D3]/55 md:grid-cols-[0.3fr_1.7fr]">
+              <div className="flex items-center border-b border-[#D9C2BC] px-6 py-5 md:border-b-0 md:border-r md:px-7">
+                <p className="text-[8px] tracking-[0.3em] text-[#8F655E]">
+                  BEFORE YOU BEGIN
+                </p>
+              </div>
+
+              <div className="px-6 py-5 md:px-8">
+                <p className="font-serif text-lg italic leading-7 text-[#8F655E] md:text-xl">
+                  Start easy. Let each movement get a little
+                  warmer and a little bigger as you go. ♡
+                </p>
+              </div>
             </div>
           </section>
 
-          <section className="py-10">
-            <div className="mb-7 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+          {/* ROUTINE INTRO */}
+
+          <section className="mx-auto max-w-6xl pb-7">
+            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
               <div>
                 <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
                   THE ROUTINE
                 </p>
+
                 <h2 className="mt-3 font-serif text-3xl md:text-4xl">
                   One round.{" "}
-                  <span className="italic text-[#A77B73]">keep moving. ♡</span>
+                  <span className="italic text-[#A77B73]">
+                    keep moving. ♡
+                  </span>
                 </h2>
               </div>
 
-              <p className="text-[8px] tracking-[0.18em] text-[#8C7770]">
+              <p className="text-[7px] tracking-[0.2em] text-[#927D76]">
                 MOVE WITH CONTROL • NO RUSH
               </p>
             </div>
+          </section>
 
-            <div className="space-y-3">
-              {exercises.map((exercise) => (
+          {/* EXERCISES */}
+
+          <section className="mx-auto max-w-6xl">
+            <div className="border-y border-[#DED0CB]">
+              {exercises.map((exercise, index) => (
                 <article
                   key={exercise.number}
-                  className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-7"
+                  className={`grid gap-5 py-8 md:grid-cols-[90px_1fr_110px] md:gap-8 md:py-10 ${
+                    index !== exercises.length - 1
+                      ? "border-b border-[#DED0CB]"
+                      : ""
+                  }`}
                 >
-                  <div className="grid gap-5 md:grid-cols-[70px_1fr_auto] md:items-start">
-                    <span className="font-serif text-4xl text-[#D2B0A9]">
+                  {/* NUMBER */}
+
+                  <div>
+                    <span className="font-serif text-4xl italic text-[#C39A92] md:text-5xl">
                       {exercise.number}
                     </span>
+                  </div>
 
-                    <div>
-                      <h3 className="font-serif text-2xl md:text-3xl">
-                        {exercise.name}
-                      </h3>
+                  {/* MOVEMENT */}
 
-                      <p className="mt-4 max-w-3xl text-sm leading-6 text-[#6F5F59]">
-                        {exercise.cue}
-                      </p>
+                  <div className="max-w-3xl">
+                    <h3 className="font-serif text-2xl leading-tight md:text-3xl">
+                      {exercise.name}
+                    </h3>
 
-                      <p className="mt-3 text-xs leading-5 text-[#9D6F67]">
-                        <span className="tracking-[0.12em]">MAKE IT EASIER:</span>{" "}
+                    <p className="mt-4 text-xs leading-6 text-[#6F5F59] sm:text-sm sm:leading-7">
+                      {exercise.cue}
+                    </p>
+
+                    <div className="mt-5 flex items-start gap-3">
+                      <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[#C39A92]" />
+
+                      <p className="text-[10px] leading-5 text-[#927D76] sm:text-xs">
+                        <span className="mr-2 text-[7px] tracking-[0.18em] text-[#9D6F67]">
+                          MAKE IT EASIER
+                        </span>
                         {exercise.easier}
                       </p>
                     </div>
+                  </div>
 
-                    <span className="w-fit rounded-full bg-[#EAD8D3] px-4 py-2 text-[8px] tracking-[0.18em] text-[#8F655E]">
+                  {/* TIME */}
+
+                  <div className="flex md:justify-end">
+                    <span className="h-fit rounded-full border border-[#CBA9A2] px-4 py-2 text-[7px] tracking-[0.2em] text-[#8F655E]">
                       {exercise.time}
                     </span>
                   </div>
@@ -186,24 +266,48 @@ export default function FullBodyWarmUpPage() {
             </div>
           </section>
 
-          <section className="border-t border-[#DED0CB] py-7">
-            <p className="max-w-4xl text-xs leading-5 text-[#8C7770]">
-              Warm-ups should feel comfortable and gradually increase movement
-              and body temperature. Stop if a movement causes sharp pain,
-              numbness, dizziness or worsening symptoms.
+          {/* FINISH */}
+
+          <section className="mx-auto max-w-6xl py-12 md:py-16">
+            <div className="grid gap-7 md:grid-cols-[1fr_auto] md:items-center">
+              <div>
+                <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+                  DONE ♡
+                </p>
+
+                <p className="mt-3 font-serif text-3xl italic text-[#A77B73] md:text-4xl">
+                  body warm. now go train.
+                </p>
+              </div>
+
+              <Link
+                href="/dashboard/resources/workouts"
+                className="w-fit rounded-full bg-[#211C19] px-7 py-3.5 text-[8px] tracking-[0.22em] text-[#F7F1ED] transition hover:-translate-y-0.5"
+              >
+                FIND A WORKOUT →
+              </Link>
+            </div>
+          </section>
+
+          {/* SAFETY NOTE */}
+
+          <section className="mx-auto max-w-6xl border-t border-[#DED0CB] py-7">
+            <p className="max-w-4xl text-[9px] leading-5 text-[#927D76]">
+              Movement note: Warm-ups should feel comfortable and
+              gradually increase movement and body temperature.
+              Stop if a movement causes sharp pain, numbness,
+              dizziness or worsening symptoms.
             </p>
           </section>
 
-          <section className="pb-14 text-center">
-            <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-              warm. ready. locked in. ♡
-            </p>
+          {/* BACK */}
 
+          <section className="mx-auto max-w-6xl pb-14 pt-4 text-center">
             <Link
               href="/dashboard/resources/recovery"
-              className="mt-7 inline-block rounded-full bg-[#211C19] px-8 py-3.5 text-[8px] tracking-[0.25em] text-[#F7F1ED] transition hover:-translate-y-0.5"
+              className="inline-block rounded-full border border-[#CBA9A2] px-7 py-3.5 text-[8px] tracking-[0.23em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
             >
-              BACK TO MOBILITY + RECOVERY
+              ← BACK TO MOBILITY + RECOVERY
             </Link>
           </section>
         </section>

@@ -9,14 +9,14 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 const commitments = [
   {
     number: "01",
-    title: "WORKOUT #1",
+    title: "MOVE",
     description: "45 min movement",
     column: "move",
   },
   {
     number: "02",
-    title: "WORKOUT #2",
-    description: "Get outside",
+    title: "GET OUTSIDE",
+    description: "Fresh air + outdoor movement",
     column: "get_outside",
   },
   {
@@ -33,14 +33,14 @@ const commitments = [
   },
   {
     number: "05",
-    title: "NUTRITION",
-    description: "Stay on plan",
+    title: "NOURISH",
+    description: "Eat with intention",
     column: "nourish",
   },
   {
     number: "06",
-    title: "PROGRESS PHOTO",
-    description: "Document the journey",
+    title: "DOCUMENT",
+    description: "Progress photo",
     column: "document",
   },
   {
@@ -81,17 +81,34 @@ function formatDateForDatabase(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function WaterDrop({ filled }: { filled: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className="h-[17px] w-[17px]"
+    >
+      <path
+        d="M12 2.6C12 2.6 5.7 10.05 5.7 15.05C5.7 18.55 8.52 21.35 12 21.35C15.48 21.35 18.3 18.55 18.3 15.05C18.3 10.05 12 2.6 12 2.6Z"
+        fill={filled ? "#A77B73" : "#E5CCC6"}
+      />
+    </svg>
+  );
+}
+
 export default function DashboardPage() {
-  const [progress, setProgress] = useState<DailyProgress>(emptyProgress);
+  const [progress, setProgress] =
+    useState<DailyProgress>(emptyProgress);
+
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingProgress, setIsLoadingProgress] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [waterBottles, setWaterBottles] = useState(0);
 
-  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
-    null
-  );
+  const [challengeStartDate, setChallengeStartDate] = useState<
+    string | null
+  >(null);
 
   const [challengeLength, setChallengeLength] = useState(75);
 
@@ -107,7 +124,11 @@ export default function DashboardPage() {
     .toUpperCase();
 
   const currentDay = challengeStartDate
-    ? getCurrentChallengeDay(challengeStartDate, challengeLength, today)
+    ? getCurrentChallengeDay(
+        challengeStartDate,
+        challengeLength,
+        today
+      )
     : 1;
 
   const dayNumber = String(currentDay).padStart(2, "0");
@@ -176,7 +197,8 @@ export default function DashboardPage() {
         return;
       }
 
-      const profileChallengeLength = profile.challenge_length ?? 75;
+      const profileChallengeLength =
+        profile.challenge_length ?? 75;
 
       setChallengeStartDate(profile.challenge_start_date);
       setChallengeLength(profileChallengeLength);
@@ -192,19 +214,25 @@ export default function DashboardPage() {
         ) || "0"
       );
 
-      setWaterBottles(Math.min(Math.max(savedWaterBottles, 0), 8));
+      setWaterBottles(
+        Math.min(Math.max(savedWaterBottles, 0), 8)
+      );
 
-      const { data: savedProgress, error: progressError } = await supabase
-        .from("daily_progress")
-        .select(
-          "move, get_outside, hydrate, read, nourish, document, no_alcohol"
-        )
-        .eq("user_id", user.id)
-        .eq("challenge_day", calculatedDay)
-        .maybeSingle();
+      const { data: savedProgress, error: progressError } =
+        await supabase
+          .from("daily_progress")
+          .select(
+            "move, get_outside, hydrate, read, nourish, document, no_alcohol"
+          )
+          .eq("user_id", user.id)
+          .eq("challenge_day", calculatedDay)
+          .maybeSingle();
 
       if (progressError) {
-        console.error("Could not load daily progress:", progressError);
+        console.error(
+          "Could not load daily progress:",
+          progressError
+        );
       } else if (savedProgress) {
         if (
           savedProgress.hydrate &&
@@ -238,8 +266,14 @@ export default function DashboardPage() {
     loadDashboard();
   }, []);
 
-  const toggleCommitment = async (column: CommitmentColumn) => {
-    if (!userId || !challengeStartDate || isLoadingProgress) {
+  const toggleCommitment = async (
+    column: CommitmentColumn
+  ) => {
+    if (
+      !userId ||
+      !challengeStartDate ||
+      isLoadingProgress
+    ) {
       return;
     }
 
@@ -250,42 +284,55 @@ export default function DashboardPage() {
       [column]: newValue,
     };
 
-    // Update the UI immediately.
     setProgress(updatedProgress);
 
     const progressDate = formatDateForDatabase(today);
 
-    const { error } = await supabase.from("daily_progress").upsert(
-      {
-        user_id: userId,
-        challenge_day: currentDay,
-        progress_date: progressDate,
-        move: updatedProgress.move,
-        get_outside: updatedProgress.get_outside,
-        hydrate: updatedProgress.hydrate,
-        read: updatedProgress.read,
-        nourish: updatedProgress.nourish,
-        document: updatedProgress.document,
-        no_alcohol: updatedProgress.no_alcohol,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "user_id,challenge_day",
-      }
-    );
+    const { error } = await supabase
+      .from("daily_progress")
+      .upsert(
+        {
+          user_id: userId,
+          challenge_day: currentDay,
+          progress_date: progressDate,
+          move: updatedProgress.move,
+          get_outside: updatedProgress.get_outside,
+          hydrate: updatedProgress.hydrate,
+          read: updatedProgress.read,
+          nourish: updatedProgress.nourish,
+          document: updatedProgress.document,
+          no_alcohol: updatedProgress.no_alcohol,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,challenge_day",
+        }
+      );
 
     if (error) {
-      console.error("Could not save daily progress:", error);
+      console.error(
+        "Could not save daily progress:",
+        error
+      );
 
-      // Put the UI back if Supabase could not save it.
       setProgress(progress);
     }
   };
 
   const updateWaterBottles = async (nextCount: number) => {
-    if (!userId || !challengeStartDate || isLoadingProgress) return;
+    if (
+      !userId ||
+      !challengeStartDate ||
+      isLoadingProgress
+    ) {
+      return;
+    }
 
-    const clampedCount = Math.min(Math.max(nextCount, 0), 8);
+    const clampedCount = Math.min(
+      Math.max(nextCount, 0),
+      8
+    );
+
     const hydrateComplete = clampedCount === 8;
 
     setWaterBottles(clampedCount);
@@ -304,27 +351,32 @@ export default function DashboardPage() {
 
     const progressDate = formatDateForDatabase(today);
 
-    const { error } = await supabase.from("daily_progress").upsert(
-      {
-        user_id: userId,
-        challenge_day: currentDay,
-        progress_date: progressDate,
-        move: updatedProgress.move,
-        get_outside: updatedProgress.get_outside,
-        hydrate: updatedProgress.hydrate,
-        read: updatedProgress.read,
-        nourish: updatedProgress.nourish,
-        document: updatedProgress.document,
-        no_alcohol: updatedProgress.no_alcohol,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "user_id,challenge_day",
-      }
-    );
+    const { error } = await supabase
+      .from("daily_progress")
+      .upsert(
+        {
+          user_id: userId,
+          challenge_day: currentDay,
+          progress_date: progressDate,
+          move: updatedProgress.move,
+          get_outside: updatedProgress.get_outside,
+          hydrate: updatedProgress.hydrate,
+          read: updatedProgress.read,
+          nourish: updatedProgress.nourish,
+          document: updatedProgress.document,
+          no_alcohol: updatedProgress.no_alcohol,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,challenge_day",
+        }
+      );
 
     if (error) {
-      console.error("Could not save water progress:", error);
+      console.error(
+        "Could not save water progress:",
+        error
+      );
     }
   };
 
@@ -336,7 +388,8 @@ export default function DashboardPage() {
     (completedCount / commitments.length) * 100
   );
 
-  const dayComplete = completedCount === commitments.length;
+  const dayComplete =
+    completedCount === commitments.length;
 
   if (isLoadingUser || isLoadingProgress) {
     return (
@@ -350,15 +403,15 @@ export default function DashboardPage() {
 
           <section className="flex flex-1 items-center justify-center px-6 py-8 md:px-10 lg:px-14">
             <div className="text-center">
-              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#D6C3BD] bg-[#FBF8F6] font-serif text-2xl text-[#A77B73]">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#D6C3BD] bg-[#FBF8F6] font-serif text-xl text-[#A77B73]">
                 ♡
               </div>
 
-              <p className="mt-6 text-[9px] tracking-[0.35em] text-[#9D6F67]">
+              <p className="mt-5 text-[8px] tracking-[0.32em] text-[#9D6F67]">
                 LOCKING IN
               </p>
 
-              <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
+              <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
                 loading your day... ♡
               </p>
             </div>
@@ -371,23 +424,21 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
-        {/* SIDEBAR */}
         <DashboardSidebar
           firstName={firstName}
           initial={initial}
           isLoadingUser={isLoadingUser}
         />
 
-        {/* DASHBOARD */}
-        <section className="min-w-0 flex-1 px-5 py-6 sm:px-6 sm:py-8 md:px-10 lg:px-14">
-          {/* TOP BAR */}
-          <header className="flex items-start justify-between gap-4 border-b border-[#DED0CB] pb-5 md:pb-6">
+        <section className="min-w-0 flex-1 px-5 py-6 sm:px-6 md:px-10 lg:px-14">
+          {/* HEADER */}
+          <header className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[10px] tracking-[0.28em] text-[#9D6F67] md:text-[8px] md:tracking-[0.35em]">
+              <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
                 {formattedDate}
               </p>
 
-              <h1 className="mt-2 font-serif text-3xl sm:text-4xl md:text-5xl">
+              <h1 className="mt-2 font-serif text-3xl leading-none sm:text-4xl">
                 {greeting},{" "}
                 <span className="italic text-[#A77B73]">
                   {firstName}. ♡
@@ -397,300 +448,356 @@ export default function DashboardPage() {
 
             <Link
               href="/dashboard/account"
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#CBA9A2] bg-[#FBF8F6] font-serif text-sm text-[#A77B73] transition hover:bg-[#EAD8D3] md:hidden"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#CBA9A2] bg-[#FBF8F6] font-serif text-sm text-[#A77B73] transition hover:bg-[#EAD8D3] md:hidden"
               aria-label="My account"
             >
               {initial}
             </Link>
           </header>
 
-          {/* DAY HERO */}
-          <div className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
-            {/* CHALLENGE CARD */}
-            <section className="rounded-[1.75rem] bg-[#211C19] p-6 text-[#F7F1ED] sm:p-8 md:rounded-[2rem] md:p-10">
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-[10px] tracking-[0.3em] text-[#DDB5AE] md:text-[8px] md:tracking-[0.4em]">
-                  TODAY
+          {/* TODAY SUMMARY */}
+          <section className="mt-7 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6 sm:px-7 sm:py-7 md:px-8">
+            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
+                    TODAY
+                  </p>
+
+                  <span className="h-px w-7 bg-[#CBA9A2]" />
+
+                  <p className="text-[8px] tracking-[0.22em] text-[#9D6F67]">
+                    DAY {dayNumber} OF {challengeLength}
+                  </p>
+                </div>
+
+                <h2 className="mt-3 font-serif text-4xl leading-none sm:text-5xl">
+                  Day {dayNumber}
+                  <span className="ml-2 italic text-[#A77B73]">
+                    
+                  </span>
+                </h2>
+
+                <p className="mt-3 font-serif text-base italic text-[#A77B73]">
+                  keep showing up.
                 </p>
-
-                <p className="font-serif text-base italic text-[#DDB5AE] sm:text-lg">
-                  keep showing up. ♡
-                </p>
               </div>
 
-              <div className="mt-6 flex items-end justify-between gap-4 sm:mt-7 sm:gap-8">
+              <div className="flex items-end gap-8 sm:gap-12">
                 <div>
-                  <h1 className="font-serif text-5xl leading-none sm:text-6xl md:text-8xl">
-                    Day {dayNumber}
-                  </h1>
+                  <p className="font-serif text-2xl text-[#211C19]">
+                    {percentage}%
+                  </p>
 
-                  <p className="mt-3 text-[10px] tracking-[0.28em] text-[#BFAEAA] md:mt-4 md:text-[9px] md:tracking-[0.35em]">
-                    OF {challengeLength}
+                  <p className="mt-1 text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                    TODAY
                   </p>
                 </div>
 
-                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full border-[6px] border-[#DDB5AE] sm:h-28 sm:w-28 sm:border-[7px]">
-                  <div className="text-center">
-                    <p className="font-serif text-2xl sm:text-3xl">
-                      {percentage}%
-                    </p>
-
-                    <p className="mt-1 text-[9px] tracking-[0.18em] text-[#D5C8C3] md:text-[6px] md:tracking-[0.25em]">
-                      TODAY
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* PROGRESS BAR */}
-              <div className="mt-8 md:mt-10">
-                <div className="h-[3px] overflow-hidden rounded-full bg-[#4A403C]">
-                  <div
-                    className="h-full rounded-full bg-[#DDB5AE] transition-all duration-500"
-                    style={{ width: `${percentage}%` }}
-                  />
-                </div>
-
-                <div className="mt-3 flex items-center justify-between">
-                  <p className="text-[9px] tracking-[0.18em] text-[#BFAEAA] md:text-[7px] md:tracking-[0.25em]">
-                    {completedCount} OF {commitments.length} COMPLETE
-                  </p>
-
-                  <p className="font-serif text-sm italic text-[#DDB5AE]">
-                    {dayComplete ? "day complete ♡" : "keep going ♡"}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            {/* JOURNEY CARD */}
-            <div className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 sm:p-8 md:rounded-[2rem]">
-              <p className="text-[10px] tracking-[0.28em] text-[#9D6F67] md:text-[8px] md:tracking-[0.35em]">
-                YOUR JOURNEY
-              </p>
-
-              <h2 className="mt-4 font-serif text-3xl leading-none sm:text-4xl md:mt-5">
-                {challengeLength} days of
-                <span className="block italic text-[#A77B73]">
-                  choosing you.
-                </span>
-              </h2>
-
-              <div className="mt-7 grid grid-cols-3 text-center md:mt-9">
                 <div>
-                  <p className="font-serif text-2xl sm:text-3xl">
-                    {dayNumber}
+                  <p className="font-serif text-2xl text-[#211C19]">
+                    {completedCount}
+                    <span className="text-[#B79B95]">
+                      /{commitments.length}
+                    </span>
                   </p>
 
-                  <p className="mt-2 text-[9px] tracking-[0.14em] text-[#8C7770] md:text-[6px] md:tracking-[0.2em]">
-                    CURRENT
-                  </p>
-                </div>
-
-                <div className="border-x border-[#DED0CB]">
-                  <p className="font-serif text-2xl sm:text-3xl">
-                    {dayComplete ? "1" : "0"}
-                  </p>
-
-                  <p className="mt-2 text-[9px] tracking-[0.14em] text-[#8C7770] md:text-[6px] md:tracking-[0.2em]">
+                  <p className="mt-1 text-[7px] tracking-[0.2em] text-[#9D6F67]">
                     COMPLETE
                   </p>
                 </div>
-
-                <div>
-                  <p className="font-serif text-2xl sm:text-3xl">
-                    {dayComplete ? "1" : "0"}
-                  </p>
-
-                  <p className="mt-2 text-[9px] tracking-[0.14em] text-[#8C7770] md:text-[6px] md:tracking-[0.2em]">
-                    STREAK
-                  </p>
-                </div>
               </div>
+            </div>
+
+            <div className="mt-6 h-[3px] overflow-hidden rounded-full bg-[#E7DAD6]">
+              <div
+                className="h-full rounded-full bg-[#A77B73] transition-all duration-500"
+                style={{
+                  width: `${percentage}%`,
+                }}
+              />
+            </div>
+
+            <div className="mt-3 flex items-center justify-between gap-4">
+              <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
+                {dayComplete
+                  ? "ALL SEVEN COMPLETE ♡"
+                  : `${commitments.length - completedCount} ${
+                      commitments.length - completedCount === 1
+                        ? "COMMITMENT"
+                        : "COMMITMENTS"
+                    } LEFT TODAY`}
+              </p>
 
               <Link
                 href="/dashboard/journey"
-                className="mt-7 block w-full rounded-full border border-[#CBA9A2] py-3.5 text-center text-[10px] tracking-[0.22em] transition hover:bg-[#EAD8D3] md:mt-9 md:py-3 md:text-[7px] md:tracking-[0.3em]"
+                className="flex shrink-0 items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
               >
-                VIEW JOURNEY
+                <span>VIEW JOURNEY</span>
+                <span className="font-serif text-sm">→</span>
               </Link>
             </div>
-          </div>
+          </section>
 
           {/* COMMITMENTS */}
           <section className="mt-10 md:mt-12">
-            <div className="flex items-end justify-between">
+            <div className="flex items-end justify-between gap-5 border-b border-[#DED0CB] pb-4">
               <div>
-                <p className="text-[10px] tracking-[0.28em] text-[#9D6F67] md:text-[8px] md:tracking-[0.35em]">
-                  DAY {dayNumber}
+                <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
+                  DAILY PRACTICE
                 </p>
 
-                <h2 className="mt-3 font-serif text-3xl sm:text-4xl md:text-5xl">
-                  Today&apos;s commitments
+                <h2 className="mt-2 font-serif text-3xl leading-none sm:text-4xl">
+                  Today&apos;s{" "}
+                  <span className="italic text-[#A77B73]">
+                    commitments.
+                  </span>
                 </h2>
               </div>
 
-              <p className="font-serif text-sm italic text-[#A77B73] sm:text-xl">
-                {isLoadingProgress
-                  ? "loading... ♡"
-                  : `${completedCount}/${commitments.length} complete ♡`}
-              </p>
+              <div className="shrink-0 text-right">
+                <p className="font-serif text-lg italic text-[#A77B73]">
+                  {completedCount}/{commitments.length}
+                </p>
+
+                <p className="mt-0.5 text-[7px] tracking-[0.18em] text-[#9D6F67]">
+                  COMPLETE
+                </p>
+              </div>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:mt-8 lg:grid-cols-2">
+            <div className="mt-5 grid gap-2.5 lg:grid-cols-2">
               {commitments.map((item) => {
                 const isComplete = progress[item.column];
 
+                {/* HYDRATE */}
                 if (item.column === "hydrate") {
                   return (
                     <div
                       key={item.number}
-                      className={`rounded-2xl border p-4 transition duration-300 sm:p-5 lg:col-span-2 ${
+                      className={`rounded-[1.25rem] border px-4 py-4 transition duration-300 lg:col-span-2 ${
                         isComplete
                           ? "border-[#CBA9A2] bg-[#EAD8D3]"
                           : "border-[#DED0CB] bg-[#FBF8F6]"
                       }`}
                     >
-                      <div className="flex items-center gap-4 sm:gap-5">
+                      <div className="flex items-center gap-3.5">
                         <button
                           type="button"
                           disabled={isLoadingProgress}
                           onClick={() =>
-                            updateWaterBottles(isComplete ? 0 : 8)
+                            updateWaterBottles(
+                              isComplete ? 0 : 8
+                            )
                           }
                           aria-label={
                             isComplete
                               ? "Clear hydration progress"
                               : "Complete hydration goal"
                           }
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-serif transition duration-300 ${
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-[11px] transition ${
                             isLoadingProgress
                               ? "cursor-wait opacity-70"
                               : "cursor-pointer hover:-translate-y-0.5"
                           } ${
                             isComplete
-                              ? "border-[#A77B73] bg-[#DDB5AE] text-[#211C19]"
-                              : "border-[#CBA9A2] text-[#A77B73] hover:bg-[#F1E6E2]"
+                              ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
+                              : "border-[#CBA9A2] text-[#A77B73]"
                           }`}
                         >
                           {isComplete ? "✓" : item.number}
                         </button>
 
-                        <div className="flex-1">
-                          <p className="text-[11px] tracking-[0.18em] text-[#211C19]">
-                            HYDRATE
-                          </p>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="text-[9px] tracking-[0.18em]">
+                                HYDRATE
+                              </p>
 
-                          <p className="mt-2 text-sm leading-5 text-[#8C7770]">
-                            {waterBottles}/8 bottles • 1 gallon
-                          </p>
+                              <p className="mt-1 text-[12px] text-[#8C7770]">
+                                1 gallon goal
+                              </p>
+                            </div>
+
+                            <p className="font-serif text-sm italic text-[#A77B73]">
+                              {waterBottles}/8 bottles
+                            </p>
+                          </div>
                         </div>
-
-                        <span className="font-serif text-xl italic text-[#A77B73]">
-                          {isComplete ? "done ♡" : `${waterBottles}/8`}
-                        </span>
                       </div>
 
-                      <div className="mt-5 grid grid-cols-4 gap-2 sm:grid-cols-8">
-                        {Array.from({ length: 8 }).map((_, index) => {
-                          const filled = index < waterBottles;
+                      <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8">
+                        {Array.from({ length: 8 }).map(
+                          (_, index) => {
+                            const filled =
+                              index < waterBottles;
 
-                          return (
-                            <button
-                              key={index}
-                              type="button"
-                              disabled={isLoadingProgress}
-                              onClick={() =>
-                                updateWaterBottles(
-                                  filled && index === waterBottles - 1
-                                    ? index
-                                    : index + 1
-                                )
-                              }
-                              aria-label={`Bottle ${index + 1} ${
-                                filled ? "complete" : "incomplete"
-                              }`}
-                              className={`flex h-11 items-center justify-center rounded-xl border text-lg transition hover:-translate-y-0.5 sm:h-12 ${
-                                filled
-                                  ? "border-[#A77B73] bg-[#DDB5AE]"
-                                  : "border-[#D6C3BD] bg-[#F7F1ED]"
-                              }`}
-                            >
-                              <span
-                                className={`text-xl transition ${
-                                  filled ? "opacity-100" : "opacity-30"
+                            return (
+                              <button
+                                key={index}
+                                type="button"
+                                disabled={isLoadingProgress}
+                                onClick={() =>
+                                  updateWaterBottles(
+                                    filled &&
+                                      index ===
+                                        waterBottles - 1
+                                      ? index
+                                      : index + 1
+                                  )
+                                }
+                                aria-label={`Bottle ${
+                                  index + 1
+                                } ${
+                                  filled
+                                    ? "complete"
+                                    : "incomplete"
                                 }`}
-                                aria-hidden="true"
+                                className={`flex h-9 items-center justify-center rounded-lg border transition hover:-translate-y-0.5 ${
+                                  filled
+                                    ? "border-[#C69C94] bg-[#E6C8C2]"
+                                    : "border-[#E1D3CE] bg-[#F7F1ED]"
+                                }`}
                               >
-                                💧
-                              </span>
-                            </button>
-                          );
-                        })}
+                                <WaterDrop
+                                  filled={filled}
+                                />
+                              </button>
+                            );
+                          }
+                        )}
                       </div>
 
-                      <p className="mt-3 text-[10px] tracking-[0.12em] text-[#9D6F67] sm:tracking-[0.14em]">
+                      <p className="mt-2.5 text-[7px] tracking-[0.17em] text-[#9D6F67]">
                         TAP AS YOU GO • EACH = 16 OZ
                       </p>
                     </div>
                   );
                 }
 
+                {/* MOVE */}
+                if (item.column === "move") {
+                  return (
+                    <div
+                      key={item.number}
+                      className={`rounded-[1.25rem] border px-4 py-4 transition duration-300 ${
+                        isComplete
+                          ? "border-[#CBA9A2] bg-[#EAD8D3]"
+                          : "border-[#DED0CB] bg-[#FBF8F6]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <button
+                          type="button"
+                          disabled={isLoadingProgress}
+                          onClick={() =>
+                            toggleCommitment("move")
+                          }
+                          aria-label={
+                            isComplete
+                              ? "Mark Move incomplete"
+                              : "Mark Move complete"
+                          }
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-[11px] transition ${
+                            isComplete
+                              ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
+                              : "border-[#CBA9A2] text-[#A77B73] hover:bg-[#F1E6E2]"
+                          }`}
+                        >
+                          {isComplete ? "✓" : item.number}
+                        </button>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-[9px] tracking-[0.18em]">
+                                MOVE
+                              </p>
+
+                              <p className="mt-1 text-[12px] text-[#8C7770]">
+                                45 min movement
+                              </p>
+                            </div>
+
+                            {isComplete && (
+                              <span className="font-serif text-xs italic text-[#A77B73]">
+                                done ♡
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <Link
+                        href="/dashboard/resources/workouts"
+                        className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
+                      >
+                        <span>FIND A WORKOUT</span>
+
+                        <span className="font-serif text-sm">
+                          →
+                        </span>
+                      </Link>
+                    </div>
+                  );
+                }
+
+                {/* STANDARD COMMITMENTS */}
                 return (
-                  <div
+                  <button
                     key={item.number}
-                    onClick={() => toggleCommitment(item.column)}
-                    className={`group flex items-center gap-4 rounded-2xl border p-4 transition duration-300 sm:gap-5 sm:p-5 ${
+                    type="button"
+                    disabled={isLoadingProgress}
+                    onClick={() =>
+                      toggleCommitment(item.column)
+                    }
+                    className={`group flex w-full items-center gap-3.5 rounded-[1.25rem] border px-4 py-4 text-left transition duration-300 ${
                       isLoadingProgress
                         ? "cursor-wait opacity-70"
                         : "cursor-pointer"
                     } ${
                       isComplete
                         ? "border-[#CBA9A2] bg-[#EAD8D3]"
-                        : "border-[#DED0CB] bg-[#FBF8F6] hover:-translate-y-0.5 hover:border-[#CBA9A2]"
+                        : "border-[#DED0CB] bg-[#FBF8F6] hover:border-[#CBA9A2]"
                     }`}
                   >
-                    <div
-                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-serif transition ${
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-[11px] transition ${
                         isComplete
-                          ? "border-[#A77B73] bg-[#DDB5AE] text-[#211C19]"
+                          ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
                           : "border-[#CBA9A2] text-[#A77B73]"
                       }`}
                     >
-                      {item.number}
-                    </div>
+                      {isComplete ? "✓" : item.number}
+                    </span>
 
-                    <div className="flex-1">
-                      <p
-                        className={`text-[11px] tracking-[0.18em] ${
+                    <span className="min-w-0 flex-1">
+                      <span
+                        className={`block text-[9px] tracking-[0.18em] ${
                           isComplete
                             ? "text-[#6F514B]"
                             : "text-[#211C19]"
                         }`}
                       >
                         {item.title}
-                      </p>
+                      </span>
 
-                      <p className="mt-2 text-sm leading-5 text-[#8C7770]">
+                      <span className="mt-1 block text-[12px] leading-4 text-[#8C7770]">
                         {item.description}
-                      </p>
-                    </div>
+                      </span>
+                    </span>
 
-                    <button
-                      type="button"
-                      disabled={isLoadingProgress}
-                      aria-label={`Mark ${item.title} ${
-                        isComplete ? "incomplete" : "complete"
-                      }`}
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs transition ${
+                    <span
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[9px] transition ${
                         isComplete
                           ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
-                          : "border-[#BFA39D] group-hover:bg-[#F1E6E2]"
+                          : "border-[#C9ADA7] group-hover:bg-[#F1E6E2]"
                       }`}
                     >
                       {isComplete ? "✓" : ""}
-                    </button>
-                  </div>
+                    </span>
+                  </button>
                 );
               })}
             </div>
@@ -698,35 +805,43 @@ export default function DashboardPage() {
 
           {/* COMPLETION MESSAGE */}
           {dayComplete && (
-            <section className="mt-8 rounded-[1.75rem] border border-[#D4B0A8] bg-[#FBF8F6] px-5 py-8 text-center sm:px-8 sm:py-10 md:rounded-[2rem]">
-              <p className="text-[10px] tracking-[0.3em] text-[#9D6F67] md:text-[8px] md:tracking-[0.4em]">
+            <section className="mt-8 border-y border-[#D4B0A8] py-8 text-center">
+              <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
                 DAY {dayNumber} COMPLETE
               </p>
 
-              <p className="mt-5 font-serif text-3xl italic text-[#A77B73] sm:text-4xl md:text-5xl">
+              <p className="mt-3 font-serif text-2xl italic text-[#A77B73] sm:text-3xl">
                 You kept your promise to yourself. ♡
               </p>
 
-              <p className="mx-auto mt-5 max-w-lg text-xs leading-6 text-[#806E68]">
-                One day down. Keep choosing yourself, one day at a time.
+              <p className="mx-auto mt-3 max-w-lg text-xs leading-5 text-[#806E68]">
+                One day down. Keep choosing yourself,
+                one day at a time.
               </p>
             </section>
           )}
 
           {/* DAILY NOTE */}
-          <section className="mt-10 rounded-[1.75rem] bg-[#EAD8D3] px-6 py-8 sm:px-8 sm:py-10 md:mt-12 md:rounded-[2rem] md:px-10">
-            <p className="text-[10px] tracking-[0.28em] text-[#8F655E] md:text-[8px] md:tracking-[0.35em]">
-              A NOTE FOR TODAY
-            </p>
+          <section className="mb-6 mt-10 border-t border-[#DED0CB] pt-7">
+            <div className="grid gap-3 md:grid-cols-[130px_1fr] md:gap-8">
+              <div>
+                <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
+                  A NOTE FOR TODAY
+                </p>
+              </div>
 
-            <p className="mt-5 max-w-3xl font-serif text-[1.75rem] italic leading-snug sm:text-3xl md:text-4xl">
-              You don&apos;t have to have the whole journey figured out.
-              You just have to show up for today.
-            </p>
+              <div>
+                <p className="max-w-3xl font-serif text-xl italic leading-snug text-[#A77B73] sm:text-2xl md:text-3xl">
+                  You don&apos;t have to have the whole
+                  journey figured out. You just have to
+                  show up for today.
+                </p>
 
-            <p className="mt-6 text-[10px] tracking-[0.22em] text-[#8F655E] md:text-[8px] md:tracking-[0.3em]">
-              ONE DAY AT A TIME ♡
-            </p>
+                <p className="mt-4 text-[7px] tracking-[0.2em] text-[#8F655E]">
+                  ONE DAY AT A TIME ♡
+                </p>
+              </div>
+            </div>
           </section>
         </section>
       </div>

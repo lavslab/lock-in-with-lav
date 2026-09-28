@@ -93,40 +93,64 @@ export default function LowerBodyMobilityPage() {
           isLoadingUser={isLoadingUser}
         />
 
-        <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
+        <section className="min-w-0 flex-1 px-5 py-8 sm:px-6 md:px-10 lg:px-14">
+          {/* HEADER */}
+
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
                 LOCK IN WITH LAV
               </p>
-              <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                get ready to move. ♡
+
+              <p className="mt-2 font-serif text-lg italic text-[#A77B73] sm:text-xl">
+                make space to move. ♡
               </p>
             </div>
 
             <Link
               href="/dashboard/resources/recovery"
-              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
+              className="shrink-0 rounded-full border border-[#CBA9A2] px-4 py-2.5 text-[7px] tracking-[0.2em] transition hover:bg-[#EAD8D3] sm:px-5 sm:py-3 sm:text-[8px]"
             >
               ← RECOVERY
             </Link>
           </header>
 
-          <section className="mt-10 rounded-[2rem] bg-[#211C19] px-8 py-10 text-[#F7F1ED] md:px-10 md:py-12">
-            <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
-              MOBILITY • LOWER BODY
-            </p>
+          {/* MOBILITY INTRO */}
 
-            <h1 className="mt-5 max-w-4xl font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
-              Lower-Body Mobility
-              <span className="block italic text-[#DDB5AE]">Warm-Up. ♡</span>
+          <section className="mx-auto max-w-5xl pb-12 pt-16 text-center md:pb-16 md:pt-24">
+            <div className="flex items-center justify-center gap-4">
+              <span className="h-px w-10 bg-[#CBA9A2]" />
+
+              <p className="text-[8px] tracking-[0.38em] text-[#9D6F67]">
+                MOBILITY • LOWER BODY
+              </p>
+
+              <span className="h-px w-10 bg-[#CBA9A2]" />
+            </div>
+
+            <h1 className="mx-auto mt-6 max-w-4xl font-serif text-5xl leading-[0.95] sm:text-6xl md:text-7xl lg:text-[5.5rem]">
+              Lower-Body
+              <span className="block italic text-[#A77B73]">
+                Mobility. ♡
+              </span>
             </h1>
 
-            <div className="mt-8 flex flex-wrap gap-2">
-              {["8–10 MIN", "6 MOVES", "NO EQUIPMENT", "HOME + GYM"].map((tag) => (
+            <p className="mx-auto mt-7 max-w-xl text-xs leading-6 text-[#75635D]">
+              Slow, controlled movement for your hips, inner
+              thighs and ankles. Explore the range you have today
+              without forcing your body into more.
+            </p>
+
+            <div className="mt-7 flex flex-wrap justify-center gap-x-5 gap-y-3">
+              {[
+                "8–10 MIN",
+                "6 MOVES",
+                "NO EQUIPMENT",
+                "HOME + GYM",
+              ].map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full border border-[#6E5A55] px-4 py-2 text-[7px] tracking-[0.18em] text-[#DDB5AE]"
+                  className="text-[7px] tracking-[0.2em] text-[#9D6F67]"
                 >
                   {tag}
                 </span>
@@ -134,76 +158,166 @@ export default function LowerBodyMobilityPage() {
             </div>
           </section>
 
-          <section className="py-10">
-            <div className="mb-7 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+          {/* MOBILITY FOCUS */}
+
+          <section className="mx-auto max-w-6xl pb-14">
+            <div className="rounded-[2rem] border border-[#DCCAC5] bg-[#EAD8D3]/45 px-6 py-7 sm:px-8 md:px-10 md:py-9">
+              <div className="grid gap-7 md:grid-cols-[0.65fr_1.35fr] md:items-center">
+                <div>
+                  <p className="text-[8px] tracking-[0.32em] text-[#8F655E]">
+                    MOBILITY FOCUS
+                  </p>
+
+                  <p className="mt-3 font-serif text-2xl italic text-[#A77B73] md:text-3xl">
+                    explore, don&apos;t force. ♡
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 border-t border-[#D9C2BC] pt-6 md:border-l md:border-t-0 md:pl-8 md:pt-0">
+                  <div>
+                    <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                      01
+                    </p>
+                    <p className="mt-2 font-serif text-base">
+                      Hips
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                      02
+                    </p>
+                    <p className="mt-2 font-serif text-base">
+                      Adductors
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                      03
+                    </p>
+                    <p className="mt-2 font-serif text-base">
+                      Ankles
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ROUTINE INTRO */}
+
+          <section className="mx-auto max-w-6xl pb-7">
+            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
               <div>
                 <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                  THE ROUTINE
+                  YOUR FLOW
                 </p>
+
                 <h2 className="mt-3 font-serif text-3xl md:text-4xl">
                   Move slowly.{" "}
-                  <span className="italic text-[#A77B73]">find your range. ♡</span>
+                  <span className="italic text-[#A77B73]">
+                    find your range. ♡
+                  </span>
                 </h2>
               </div>
 
-              <p className="text-[8px] tracking-[0.18em] text-[#8C7770]">
+              <p className="text-[7px] tracking-[0.2em] text-[#927D76]">
                 SLOW + CONTROLLED • NO FORCING
               </p>
             </div>
+          </section>
 
-            <div className="space-y-3">
-              {exercises.map((exercise) => (
+          {/* MOVEMENT FLOW */}
+
+          <section className="mx-auto max-w-6xl">
+            <div className="space-y-4">
+              {exercises.map((exercise, index) => (
                 <article
                   key={exercise.number}
-                  className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-7"
+                  className={`overflow-hidden rounded-[1.75rem] border border-[#DED0CB] ${
+                    index % 2 === 0
+                      ? "bg-[#FBF8F6]"
+                      : "bg-[#F1E5E1]/55"
+                  }`}
                 >
-                  <div className="grid gap-5 md:grid-cols-[70px_1fr_auto] md:items-start">
-                    <span className="font-serif text-4xl text-[#D2B0A9]">
-                      {exercise.number}
-                    </span>
+                  <div className="grid md:grid-cols-[135px_1fr]">
+                    {/* NUMBER */}
 
-                    <div>
-                      <h3 className="font-serif text-2xl md:text-3xl">
+                    <div className="flex items-center justify-between border-b border-[#DED0CB] px-6 py-5 md:flex-col md:items-start md:justify-between md:border-b-0 md:border-r md:px-7 md:py-7">
+                      <span className="font-serif text-4xl italic text-[#C39A92] md:text-5xl">
+                        {exercise.number}
+                      </span>
+
+                      <span className="rounded-full border border-[#CBA9A2] px-3.5 py-2 text-[7px] tracking-[0.18em] text-[#8F655E]">
+                        {exercise.time}
+                      </span>
+                    </div>
+
+                    {/* CONTENT */}
+
+                    <div className="px-6 py-6 md:px-8 md:py-7">
+                      <h3 className="font-serif text-2xl leading-tight md:text-3xl">
                         {exercise.name}
                       </h3>
 
-                      <p className="mt-4 max-w-3xl text-sm leading-6 text-[#6F5F59]">
+                      <p className="mt-4 max-w-3xl text-xs leading-6 text-[#6F5F59] sm:text-sm sm:leading-7">
                         {exercise.cue}
                       </p>
 
-                      <p className="mt-3 text-xs leading-5 text-[#9D6F67]">
-                        <span className="tracking-[0.12em]">MAKE IT EASIER:</span>{" "}
-                        {exercise.easier}
-                      </p>
+                      <div className="mt-6 border-t border-[#DED0CB] pt-4">
+                        <p className="text-[10px] leading-5 text-[#927D76] sm:text-xs">
+                          <span className="mr-3 text-[7px] tracking-[0.18em] text-[#9D6F67]">
+                            MODIFY
+                          </span>
+                          {exercise.easier}
+                        </p>
+                      </div>
                     </div>
-
-                    <span className="w-fit rounded-full bg-[#EAD8D3] px-4 py-2 text-[8px] tracking-[0.18em] text-[#8F655E]">
-                      {exercise.time}
-                    </span>
                   </div>
                 </article>
               ))}
             </div>
           </section>
 
-          <section className="border-t border-[#DED0CB] py-7">
-            <p className="max-w-4xl text-xs leading-5 text-[#8C7770]">
-              Mobility work should feel controlled and comfortable, not forced. Move
-              within your available range and stop if a movement causes sharp
+          {/* REMINDER */}
+
+          <section className="mx-auto max-w-6xl py-12 md:py-16">
+            <div className="border-y border-[#DED0CB] py-8 text-center md:py-10">
+              <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
+                REMEMBER
+              </p>
+
+              <p className="mx-auto mt-3 max-w-2xl font-serif text-2xl italic leading-relaxed text-[#A77B73] md:text-3xl">
+                mobility is about owning the range you have,
+                not forcing the range you don&apos;t. ♡
+              </p>
+            </div>
+          </section>
+
+          {/* SAFETY */}
+
+          <section className="mx-auto max-w-6xl pb-8">
+            <p className="max-w-4xl text-[9px] leading-5 text-[#927D76]">
+              Movement note: Mobility work should feel controlled
+              and comfortable, not forced. Move within your
+              available range and stop if a movement causes sharp
               pain, numbness, dizziness or worsening symptoms.
             </p>
           </section>
 
-          <section className="pb-14 text-center">
+          {/* END */}
+
+          <section className="mx-auto max-w-6xl pb-14 pt-5 text-center">
             <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-              hips open. ankles moving. body ready. ♡
+              take your time. own your range. ♡
             </p>
 
             <Link
               href="/dashboard/resources/recovery"
-              className="mt-7 inline-block rounded-full bg-[#211C19] px-8 py-3.5 text-[8px] tracking-[0.25em] text-[#F7F1ED] transition hover:-translate-y-0.5"
+              className="mt-7 inline-block rounded-full border border-[#CBA9A2] px-7 py-3.5 text-[8px] tracking-[0.23em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
             >
-              BACK TO MOBILITY + RECOVERY
+              ← BACK TO MOBILITY + RECOVERY
             </Link>
           </section>
         </section>
