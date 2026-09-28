@@ -7,12 +7,133 @@ type DashboardMobileNavProps = {
   initial: string;
 };
 
+type IconProps = {
+  className?: string;
+};
+
+function TodayIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" />
+    </svg>
+  );
+}
+
+function JourneyIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5v5l3.25 2" />
+    </svg>
+  );
+}
+
+function GuideIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M5.5 4.5h9a2 2 0 0 1 2 2v13h-9a2 2 0 0 1-2-2v-13Z" />
+      <path d="M16.5 6.5h2a1.5 1.5 0 0 1 1.5 1.5v11.5h-3.5" />
+      <path d="M8.5 8.5h5" />
+      <path d="M8.5 12h5" />
+    </svg>
+  );
+}
+
+function ResourcesIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M5 7.5h14" />
+      <path d="M5 12h14" />
+      <path d="M5 16.5h14" />
+      <circle cx="7" cy="7.5" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+      <circle cx="17" cy="16.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+function ProgressIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M5 19V13" />
+      <path d="M12 19V9" />
+      <path d="M19 19V5" />
+      <path d="M4 19.5h16" />
+    </svg>
+  );
+}
+
 const navigation = [
-  { label: "TODAY", href: "/dashboard", icon: "♡" },
-  { label: "JOURNEY", href: "/dashboard/journey", icon: "○" },
-  { label: "GUIDE", href: "/dashboard/guide", icon: "□" },
-  { label: "RESOURCES", href: "/dashboard/resources", icon: "⌁" },
-  { label: "PROGRESS", href: "/dashboard/progress", icon: "◇" },
+  {
+    label: "TODAY",
+    href: "/dashboard",
+    icon: TodayIcon,
+  },
+  {
+    label: "JOURNEY",
+    href: "/dashboard/journey",
+    icon: JourneyIcon,
+  },
+  {
+    label: "GUIDE",
+    href: "/dashboard/guide",
+    icon: GuideIcon,
+  },
+  {
+    label: "RESOURCES",
+    href: "/dashboard/resources",
+    icon: ResourcesIcon,
+  },
+  {
+    label: "PROGRESS",
+    href: "/dashboard/progress",
+    icon: ProgressIcon,
+  },
 ];
 
 function getParentHref(pathname: string) {
@@ -93,19 +214,20 @@ export default function DashboardMobileNav({
                 : pathname === item.href ||
                   pathname.startsWith(`${item.href}/`);
 
+            const Icon = item.icon;
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                aria-label={item.label}
                 className={`flex min-w-0 flex-col items-center justify-center rounded-2xl px-1 py-2 transition ${
                   isActive
                     ? "bg-[#EAD8D3] text-[#211C19]"
                     : "text-[#8C7770] hover:bg-[#F1E6E2]"
                 }`}
               >
-                <span className="font-serif text-xl leading-none">
-                  {item.icon}
-                </span>
+                <Icon className="h-[21px] w-[21px]" />
 
                 <span className="mt-1.5 max-w-full truncate text-[8px] tracking-[0.06em]">
                   {item.label}
