@@ -222,13 +222,13 @@ export default function AuthPage() {
 
           <div className="my-auto max-w-xl">
             <p className="text-[8px] tracking-[0.4em] text-[#DDB5AE]">
-              JANUARY 01 — MARCH 16, 2027
+              YOUR JOURNEY • YOUR TIMELINE
             </p>
 
             <h1 className="mt-8 font-serif text-7xl leading-[0.88] xl:text-8xl">
-              Your 75 days
+              Your journey
               <span className="block italic text-[#DDB5AE]">
-                start here.
+                starts here.
               </span>
             </h1>
 
@@ -241,7 +241,7 @@ export default function AuthPage() {
 
           <div className="flex items-center justify-between border-t border-[#493D39] pt-6">
             <p className="text-[7px] tracking-[0.25em] text-[#9F8D87]">
-              75 DAYS • ONE DAY AT A TIME
+              SHOW UP • ONE DAY AT A TIME
             </p>
 
             <span className="font-serif text-xl text-[#DDB5AE]">
@@ -299,7 +299,7 @@ export default function AuthPage() {
 
             <p className="mt-5 font-serif text-xl italic text-[#8F7C76]">
               {mode === "signup"
-                ? "your 75 days are waiting. ♡"
+                ? "your next chapter starts here. ♡"
                 : mode === "login"
                 ? "pick up where you left off."
                 : "we'll send a reset link to your inbox. ♡"}

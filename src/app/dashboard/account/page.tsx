@@ -527,7 +527,7 @@ export default function AccountPage() {
                   </h2>
 
                   <p className="mt-2 text-sm leading-6 text-[#806E68]">
-                    Start your 75 days over and choose a new start
+                    Start your challenge over and choose a new start
                     date. Your account and personalized plan will
                     stay with you.
                   </p>
@@ -640,7 +640,7 @@ export default function AccountPage() {
               id="reset-challenge-title"
               className="mt-4 font-serif text-4xl"
             >
-              Reset your 75 days?
+              Reset your challenge?
             </h2>
 
             <p className="mt-4 text-sm leading-7 text-[#806E68]">
