@@ -10,8 +10,8 @@ type IconProps = {
 };
 
 /* ---------------------------------
-   RECIPE ICONS
---------------------------------- */
+ * RECIPE ICONS
+ * --------------------------------- */
 
 function PancakeIcon({ className = "" }: IconProps) {
   return (
@@ -74,7 +74,6 @@ function BowlIcon({ className = "" }: IconProps) {
   );
 }
 
-/* CHICKEN — PLATED CHICKEN BREAST */
 function ChickenIcon({ className = "" }: IconProps) {
   return (
     <svg
@@ -97,7 +96,6 @@ function ChickenIcon({ className = "" }: IconProps) {
   );
 }
 
-/* TURKEY — SIMPLE PROTEIN MEAL */
 function TurkeyMealIcon({ className = "" }: IconProps) {
   return (
     <svg
@@ -120,7 +118,6 @@ function TurkeyMealIcon({ className = "" }: IconProps) {
   );
 }
 
-/* PASTA — BOWL + NOODLES + FORK */
 function PastaIcon({ className = "" }: IconProps) {
   return (
     <svg
@@ -345,8 +342,8 @@ function SearchIcon({ className = "" }: IconProps) {
 }
 
 /* ---------------------------------
-   RECIPE DATA
---------------------------------- */
+ * RECIPE DATA
+ * --------------------------------- */
 
 const recipes = [
   {
@@ -585,13 +582,31 @@ const goalTypes = [
   "Post-Workout",
 ];
 
-/* ---------------------------------
-   PAGE
---------------------------------- */
+type SelectedRecipe = {
+  id: string;
+  title: string;
+  meal: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  time: string;
+};
+
+function formatDateForStorage(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
 
 export default function RecipesPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  const [userId, setUserId] = useState<string | null>(null);
+  const [selectedRecipe, setSelectedRecipe] =
+    useState<SelectedRecipe | null>(null);
 
   const [meal, setMeal] = useState("All");
   const [goal, setGoal] = useState("All");
@@ -608,6 +623,26 @@ export default function RecipesPage() {
         return;
       }
 
+      setUserId(user.id);
+
+      const todayKey = formatDateForStorage(new Date());
+      const selectedRecipeKey = `selected-recipe-${user.id}-${todayKey}`;
+      const savedSelectedRecipe =
+        localStorage.getItem(selectedRecipeKey);
+
+      if (savedSelectedRecipe) {
+        try {
+          const parsedRecipe =
+            JSON.parse(savedSelectedRecipe) as SelectedRecipe;
+
+          if (parsedRecipe?.id && parsedRecipe?.title) {
+            setSelectedRecipe(parsedRecipe);
+          }
+        } catch {
+          localStorage.removeItem(selectedRecipeKey);
+        }
+      }
+
       const savedName = user.user_metadata?.name;
 
       if (savedName) {
@@ -621,6 +656,32 @@ export default function RecipesPage() {
 
     getUser();
   }, []);
+
+  const chooseRecipeForToday = (
+    recipe: (typeof recipes)[number]
+  ) => {
+    if (!userId) return;
+
+    const selected: SelectedRecipe = {
+      id: recipe.id,
+      title: recipe.title,
+      meal: recipe.meal,
+      calories: recipe.calories,
+      protein: recipe.protein,
+      carbs: recipe.carbs,
+      time: recipe.time,
+    };
+
+    const todayKey = formatDateForStorage(new Date());
+    const selectedRecipeKey = `selected-recipe-${userId}-${todayKey}`;
+
+    localStorage.setItem(
+      selectedRecipeKey,
+      JSON.stringify(selected)
+    );
+
+    setSelectedRecipe(selected);
+  };
 
   const initial =
     !isLoadingUser && firstName !== "there"
@@ -647,7 +708,8 @@ export default function RecipesPage() {
         .toLowerCase();
 
       const searchMatch =
-        searchTerm === "" || searchableText.includes(searchTerm);
+        searchTerm === "" ||
+        searchableText.includes(searchTerm);
 
       return mealMatch && goalMatch && searchMatch;
     });
@@ -676,7 +738,9 @@ export default function RecipesPage() {
   );
 
   const hasActiveFilters =
-    search.trim() !== "" || meal !== "All" || goal !== "All";
+    search.trim() !== "" ||
+    meal !== "All" ||
+    goal !== "All";
 
   const clearFilters = () => {
     setSearch("");
@@ -694,7 +758,6 @@ export default function RecipesPage() {
         />
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
-          {/* HEADER */}
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
@@ -714,10 +777,8 @@ export default function RecipesPage() {
             </Link>
           </header>
 
-          {/* SEARCH + FILTERS */}
           <section className="pb-10 pt-10">
             <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-              {/* SEARCH */}
               <div>
                 <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
                   LOOKING FOR SOMETHING?
@@ -729,7 +790,9 @@ export default function RecipesPage() {
                   <input
                     type="search"
                     value={search}
-                    onChange={(event) => setSearch(event.target.value)}
+                    onChange={(event) =>
+                      setSearch(event.target.value)
+                    }
                     placeholder="Search recipes..."
                     aria-label="Search recipes"
                     className="w-full rounded-2xl border border-[#D6C3BD] bg-[#F7F1ED] py-4 pl-14 pr-12 text-sm text-[#211C19] outline-none transition placeholder:text-[#A18A83] focus:border-[#A77B73]"
@@ -748,13 +811,13 @@ export default function RecipesPage() {
                 </div>
 
                 <p className="mt-3 text-[8px] leading-4 tracking-[0.12em] text-[#A18A83]">
-                  TRY “SALMON”, “TURKEY”, “QUICK” OR “HIGH PROTEIN”
+                  TRY “SALMON”, “TURKEY”, “QUICK” OR “HIGH
+                  PROTEIN”
                 </p>
               </div>
 
               <div className="my-7 border-t border-[#E1D3CE]" />
 
-              {/* FILTERS */}
               <div className="grid gap-8 xl:grid-cols-2">
                 <div>
                   <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
@@ -805,7 +868,6 @@ export default function RecipesPage() {
             </div>
           </section>
 
-          {/* RECIPE LIBRARY */}
           <section className="pb-12">
             <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
               <div>
@@ -820,7 +882,6 @@ export default function RecipesPage() {
                   </span>
                 </h1>
 
-                {/* MEAL PLAN QUICK ACTION */}
                 <div className="mt-4 flex flex-wrap items-center gap-3">
                   <span className="font-serif text-sm italic text-[#A18A83]">
                     or
@@ -852,18 +913,17 @@ export default function RecipesPage() {
               <div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {filteredRecipes.map((recipe) => {
                   const Icon = recipe.icon;
+
                   const originalIndex = recipes.findIndex(
                     (item) => item.id === recipe.id
                   );
 
                   return (
-                    <Link
+                    <article
                       key={recipe.id}
-                      href={`/dashboard/resources/recipes/${recipe.id}`}
                       className="group flex min-h-[330px] flex-col justify-between rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:border-[#CBA9A2] hover:shadow-sm"
                     >
                       <div>
-                        {/* ICON + NUMBER + MEAL */}
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-center gap-3">
                             <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#EAD8D3] text-[#9D6F67] transition duration-300 group-hover:bg-[#E3CCC6]">
@@ -871,7 +931,9 @@ export default function RecipesPage() {
                             </div>
 
                             <span className="font-serif text-sm text-[#C6A29A]">
-                              {String(originalIndex + 1).padStart(2, "0")}
+                              {String(
+                                originalIndex + 1
+                              ).padStart(2, "0")}
                             </span>
                           </div>
 
@@ -880,7 +942,6 @@ export default function RecipesPage() {
                           </span>
                         </div>
 
-                        {/* TITLE */}
                         <h2 className="mt-7 font-serif text-3xl leading-tight">
                           {recipe.title}
                         </h2>
@@ -889,7 +950,6 @@ export default function RecipesPage() {
                           {recipe.subtitle}
                         </p>
 
-                        {/* GOALS */}
                         <div className="mt-5 flex flex-wrap gap-2">
                           {recipe.goals.map((tag) => (
                             <span
@@ -903,7 +963,6 @@ export default function RecipesPage() {
                       </div>
 
                       <div className="mt-8">
-                        {/* MACROS */}
                         <div className="grid grid-cols-4 gap-2 border-t border-[#E1D3CE] pt-4 text-center">
                           <div>
                             <p className="font-serif text-lg">
@@ -946,18 +1005,41 @@ export default function RecipesPage() {
                           </div>
                         </div>
 
-                        {/* VIEW RECIPE */}
-                        <div className="mt-5 flex items-center justify-between">
-                          <span className="text-[7px] tracking-[0.25em] text-[#9D6F67]">
-                            VIEW RECIPE
-                          </span>
+                        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                          <Link
+                            href={`/dashboard/resources/recipes/${recipe.id}`}
+                            className="flex items-center gap-3 text-[7px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
+                          >
+                            <span>VIEW RECIPE</span>
 
-                          <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition group-hover:bg-[#EAD8D3]">
-                            →
-                          </span>
+                            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition group-hover:bg-[#EAD8D3]">
+                              →
+                            </span>
+                          </Link>
+
+                          <button
+                            type="button"
+                            disabled={!userId}
+                            onClick={() =>
+                              chooseRecipeForToday(recipe)
+                            }
+                            className={`rounded-full border px-4 py-2.5 text-[7px] tracking-[0.18em] transition ${
+                              selectedRecipe?.id === recipe.id
+                                ? "border-[#A77B73] bg-[#EAD8D3] text-[#6F514B]"
+                                : "border-[#CBA9A2] bg-[#F7F1ED] text-[#8F655E] hover:bg-[#EAD8D3]"
+                            } ${
+                              !userId
+                                ? "cursor-wait opacity-60"
+                                : ""
+                            }`}
+                          >
+                            {selectedRecipe?.id === recipe.id
+                              ? "CHOSEN FOR TODAY ✓"
+                              : "CHOOSE FOR TODAY"}
+                          </button>
                         </div>
                       </div>
-                    </Link>
+                    </article>
                   );
                 })}
               </div>
@@ -968,8 +1050,8 @@ export default function RecipesPage() {
                 </p>
 
                 <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#806E68]">
-                  Try another search or clear your filters to see the full
-                  recipe library.
+                  Try another search or clear your filters to
+                  see the full recipe library.
                 </p>
 
                 <button
@@ -983,7 +1065,6 @@ export default function RecipesPage() {
             )}
           </section>
 
-          {/* BACK */}
           <section className="border-t border-[#DED0CB] py-14 text-center">
             <Link
               href="/dashboard/resources"

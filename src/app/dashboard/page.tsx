@@ -51,7 +51,8 @@ const commitments = [
   },
 ] as const;
 
-type CommitmentColumn = (typeof commitments)[number]["column"];
+type CommitmentColumn =
+  (typeof commitments)[number]["column"];
 
 type DailyProgress = {
   move: boolean;
@@ -73,6 +74,16 @@ type SelectedWorkout = {
   exercises: string;
 };
 
+type SelectedRecipe = {
+  id: string;
+  title: string;
+  meal: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  time: string;
+};
+
 const emptyProgress: DailyProgress = {
   move: false,
   get_outside: false,
@@ -85,7 +96,10 @@ const emptyProgress: DailyProgress = {
 
 function formatDateForDatabase(date: Date) {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(
+    2,
+    "0"
+  );
   const day = String(date.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
@@ -111,18 +125,28 @@ export default function DashboardPage() {
     useState<DailyProgress>(emptyProgress);
 
   const [firstName, setFirstName] = useState("there");
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [isLoadingUser, setIsLoadingUser] =
+    useState(true);
+  const [isLoadingProgress, setIsLoadingProgress] =
+    useState(true);
+
+  const [userId, setUserId] = useState<string | null>(
+    null
+  );
+
   const [waterBottles, setWaterBottles] = useState(0);
+
   const [selectedWorkout, setSelectedWorkout] =
     useState<SelectedWorkout | null>(null);
 
-  const [challengeStartDate, setChallengeStartDate] = useState<
-    string | null
-  >(null);
+  const [selectedRecipe, setSelectedRecipe] =
+    useState<SelectedRecipe | null>(null);
 
-  const [challengeLength, setChallengeLength] = useState(75);
+  const [challengeStartDate, setChallengeStartDate] =
+    useState<string | null>(null);
+
+  const [challengeLength, setChallengeLength] =
+    useState(75);
 
   const today = new Date();
 
@@ -171,7 +195,10 @@ export default function DashboardPage() {
       } = await supabase.auth.getUser();
 
       if (userError) {
-        console.error("Could not load user:", userError);
+        console.error(
+          "Could not load user:",
+          userError
+        );
       }
 
       if (!user) {
@@ -190,33 +217,78 @@ export default function DashboardPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
-      const todayKey = formatDateForDatabase(new Date());
+      const todayKey =
+        formatDateForDatabase(new Date());
+
       const selectedWorkoutKey =
         `selected-workout-${user.id}-${todayKey}`;
+
       const savedSelectedWorkout =
         localStorage.getItem(selectedWorkoutKey);
 
       if (savedSelectedWorkout) {
         try {
           const parsedWorkout =
-            JSON.parse(savedSelectedWorkout) as SelectedWorkout;
+            JSON.parse(
+              savedSelectedWorkout
+            ) as SelectedWorkout;
 
-          if (parsedWorkout?.id && parsedWorkout?.title) {
+          if (
+            parsedWorkout?.id &&
+            parsedWorkout?.title
+          ) {
             setSelectedWorkout(parsedWorkout);
           }
         } catch {
-          localStorage.removeItem(selectedWorkoutKey);
+          localStorage.removeItem(
+            selectedWorkoutKey
+          );
         }
       }
 
-      const { data: profile, error: profileError } = await supabase
+      const selectedRecipeKey =
+        `selected-recipe-${user.id}-${todayKey}`;
+
+      const savedSelectedRecipe =
+        localStorage.getItem(selectedRecipeKey);
+
+      if (savedSelectedRecipe) {
+        try {
+          const parsedRecipe =
+            JSON.parse(
+              savedSelectedRecipe
+            ) as SelectedRecipe;
+
+          if (
+            parsedRecipe?.id &&
+            parsedRecipe?.title
+          ) {
+            setSelectedRecipe(parsedRecipe);
+          }
+        } catch {
+          localStorage.removeItem(
+            selectedRecipeKey
+          );
+        }
+      }
+
+      const {
+        data: profile,
+        error: profileError,
+      } = await supabase
         .from("profiles")
-        .select("challenge_start_date, challenge_length")
+        .select(
+          "challenge_start_date, challenge_length"
+        )
         .eq("id", user.id)
         .single();
 
       if (profileError) {
-        console.error("Could not load profile:", profileError);
+        console.error(
+          "Could not load profile:",
+          profileError
+        );
+
         setIsLoadingUser(false);
         setIsLoadingProgress(false);
         return;
@@ -231,13 +303,19 @@ export default function DashboardPage() {
       const profileChallengeLength =
         profile.challenge_length ?? 75;
 
-      setChallengeStartDate(profile.challenge_start_date);
-      setChallengeLength(profileChallengeLength);
+      setChallengeStartDate(
+        profile.challenge_start_date
+      );
 
-      const calculatedDay = getCurrentChallengeDay(
-        profile.challenge_start_date,
+      setChallengeLength(
         profileChallengeLength
       );
+
+      const calculatedDay =
+        getCurrentChallengeDay(
+          profile.challenge_start_date,
+          profileChallengeLength
+        );
 
       const savedWaterBottles = Number(
         localStorage.getItem(
@@ -246,18 +324,26 @@ export default function DashboardPage() {
       );
 
       setWaterBottles(
-        Math.min(Math.max(savedWaterBottles, 0), 8)
+        Math.min(
+          Math.max(savedWaterBottles, 0),
+          8
+        )
       );
 
-      const { data: savedProgress, error: progressError } =
-        await supabase
-          .from("daily_progress")
-          .select(
-            "move, get_outside, hydrate, read, nourish, document, no_alcohol"
-          )
-          .eq("user_id", user.id)
-          .eq("challenge_day", calculatedDay)
-          .maybeSingle();
+      const {
+        data: savedProgress,
+        error: progressError,
+      } = await supabase
+        .from("daily_progress")
+        .select(
+          "move, get_outside, hydrate, read, nourish, document, no_alcohol"
+        )
+        .eq("user_id", user.id)
+        .eq(
+          "challenge_day",
+          calculatedDay
+        )
+        .maybeSingle();
 
       if (progressError) {
         console.error(
@@ -281,12 +367,14 @@ export default function DashboardPage() {
 
         setProgress({
           move: savedProgress.move,
-          get_outside: savedProgress.get_outside,
+          get_outside:
+            savedProgress.get_outside,
           hydrate: savedProgress.hydrate,
           read: savedProgress.read,
           nourish: savedProgress.nourish,
           document: savedProgress.document,
-          no_alcohol: savedProgress.no_alcohol ?? false,
+          no_alcohol:
+            savedProgress.no_alcohol ?? false,
         });
       }
 
@@ -317,7 +405,8 @@ export default function DashboardPage() {
 
     setProgress(updatedProgress);
 
-    const progressDate = formatDateForDatabase(today);
+    const progressDate =
+      formatDateForDatabase(today);
 
     const { error } = await supabase
       .from("daily_progress")
@@ -327,16 +416,21 @@ export default function DashboardPage() {
           challenge_day: currentDay,
           progress_date: progressDate,
           move: updatedProgress.move,
-          get_outside: updatedProgress.get_outside,
+          get_outside:
+            updatedProgress.get_outside,
           hydrate: updatedProgress.hydrate,
           read: updatedProgress.read,
           nourish: updatedProgress.nourish,
-          document: updatedProgress.document,
-          no_alcohol: updatedProgress.no_alcohol,
-          updated_at: new Date().toISOString(),
+          document:
+            updatedProgress.document,
+          no_alcohol:
+            updatedProgress.no_alcohol,
+          updated_at:
+            new Date().toISOString(),
         },
         {
-          onConflict: "user_id,challenge_day",
+          onConflict:
+            "user_id,challenge_day",
         }
       );
 
@@ -350,7 +444,9 @@ export default function DashboardPage() {
     }
   };
 
-  const updateWaterBottles = async (nextCount: number) => {
+  const updateWaterBottles = async (
+    nextCount: number
+  ) => {
     if (
       !userId ||
       !challengeStartDate ||
@@ -364,7 +460,8 @@ export default function DashboardPage() {
       8
     );
 
-    const hydrateComplete = clampedCount === 8;
+    const hydrateComplete =
+      clampedCount === 8;
 
     setWaterBottles(clampedCount);
 
@@ -380,7 +477,8 @@ export default function DashboardPage() {
 
     setProgress(updatedProgress);
 
-    const progressDate = formatDateForDatabase(today);
+    const progressDate =
+      formatDateForDatabase(today);
 
     const { error } = await supabase
       .from("daily_progress")
@@ -390,16 +488,21 @@ export default function DashboardPage() {
           challenge_day: currentDay,
           progress_date: progressDate,
           move: updatedProgress.move,
-          get_outside: updatedProgress.get_outside,
+          get_outside:
+            updatedProgress.get_outside,
           hydrate: updatedProgress.hydrate,
           read: updatedProgress.read,
           nourish: updatedProgress.nourish,
-          document: updatedProgress.document,
-          no_alcohol: updatedProgress.no_alcohol,
-          updated_at: new Date().toISOString(),
+          document:
+            updatedProgress.document,
+          no_alcohol:
+            updatedProgress.no_alcohol,
+          updated_at:
+            new Date().toISOString(),
         },
         {
-          onConflict: "user_id,challenge_day",
+          onConflict:
+            "user_id,challenge_day",
         }
       );
 
@@ -411,18 +514,25 @@ export default function DashboardPage() {
     }
   };
 
-  const completedCount = commitments.filter(
-    (item) => progress[item.column]
-  ).length;
+  const completedCount =
+    commitments.filter(
+      (item) => progress[item.column]
+    ).length;
 
   const percentage = Math.round(
-    (completedCount / commitments.length) * 100
+    (completedCount /
+      commitments.length) *
+      100
   );
 
   const dayComplete =
-    completedCount === commitments.length;
+    completedCount ===
+    commitments.length;
 
-  if (isLoadingUser || isLoadingProgress) {
+  if (
+    isLoadingUser ||
+    isLoadingProgress
+  ) {
     return (
       <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
         <div className="flex min-h-screen">
@@ -462,7 +572,6 @@ export default function DashboardPage() {
         />
 
         <section className="min-w-0 flex-1 px-5 py-6 sm:px-6 md:px-10 lg:px-14">
-          {/* HEADER */}
           <header className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
@@ -486,7 +595,6 @@ export default function DashboardPage() {
             </Link>
           </header>
 
-          {/* TODAY SUMMARY */}
           <section className="mt-7 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6 sm:px-7 sm:py-7 md:px-8">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -498,14 +606,13 @@ export default function DashboardPage() {
                   <span className="h-px w-7 bg-[#CBA9A2]" />
 
                   <p className="text-[8px] tracking-[0.22em] text-[#9D6F67]">
-                    DAY {dayNumber} OF {challengeLength}
+                    DAY {dayNumber} OF{" "}
+                    {challengeLength}
                   </p>
                 </div>
 
                 <h2 className="mt-3 font-serif text-4xl leading-none sm:text-5xl">
                   Day {dayNumber}
-                  <span className="ml-2 italic text-[#A77B73]">
-                  </span>
                 </h2>
 
                 <p className="mt-3 font-serif text-base italic text-[#A77B73]">
@@ -552,8 +659,13 @@ export default function DashboardPage() {
               <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
                 {dayComplete
                   ? "ALL SEVEN COMPLETE ♡"
-                  : `${commitments.length - completedCount} ${
-                      commitments.length - completedCount === 1
+                  : `${
+                      commitments.length -
+                      completedCount
+                    } ${
+                      commitments.length -
+                        completedCount ===
+                      1
                         ? "COMMITMENT"
                         : "COMMITMENTS"
                     } LEFT TODAY`}
@@ -564,12 +676,13 @@ export default function DashboardPage() {
                 className="flex shrink-0 items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
               >
                 <span>VIEW JOURNEY</span>
-                <span className="font-serif text-sm">→</span>
+                <span className="font-serif text-sm">
+                  →
+                </span>
               </Link>
             </div>
           </section>
 
-          {/* COMMITMENTS */}
           <section className="mt-10 md:mt-12">
             <div className="flex items-end justify-between gap-5 border-b border-[#DED0CB] pb-4">
               <div>
@@ -587,7 +700,8 @@ export default function DashboardPage() {
 
               <div className="shrink-0 text-right">
                 <p className="font-serif text-lg italic text-[#A77B73]">
-                  {completedCount}/{commitments.length}
+                  {completedCount}/
+                  {commitments.length}
                 </p>
 
                 <p className="mt-0.5 text-[7px] tracking-[0.18em] text-[#9D6F67]">
@@ -598,10 +712,12 @@ export default function DashboardPage() {
 
             <div className="mt-5 grid gap-2.5 lg:grid-cols-2">
               {commitments.map((item) => {
-                const isComplete = progress[item.column];
+                const isComplete =
+                  progress[item.column];
 
-                /* HYDRATE */
-                if (item.column === "hydrate") {
+                if (
+                  item.column === "hydrate"
+                ) {
                   return (
                     <div
                       key={item.number}
@@ -614,10 +730,14 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-3.5">
                         <button
                           type="button"
-                          disabled={isLoadingProgress}
+                          disabled={
+                            isLoadingProgress
+                          }
                           onClick={() =>
                             updateWaterBottles(
-                              isComplete ? 0 : 8
+                              isComplete
+                                ? 0
+                                : 8
                             )
                           }
                           aria-label={
@@ -635,7 +755,9 @@ export default function DashboardPage() {
                               : "border-[#CBA9A2] text-[#A77B73]"
                           }`}
                         >
-                          {isComplete ? "✓" : item.number}
+                          {isComplete
+                            ? "✓"
+                            : item.number}
                         </button>
 
                         <div className="min-w-0 flex-1">
@@ -651,30 +773,38 @@ export default function DashboardPage() {
                             </div>
 
                             <p className="font-serif text-sm italic text-[#A77B73]">
-                              {waterBottles}/8 bottles
+                              {waterBottles}/8
+                              bottles
                             </p>
                           </div>
                         </div>
                       </div>
 
                       <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8">
-                        {Array.from({ length: 8 }).map(
+                        {Array.from({
+                          length: 8,
+                        }).map(
                           (_, index) => {
                             const filled =
-                              index < waterBottles;
+                              index <
+                              waterBottles;
 
                             return (
                               <button
                                 key={index}
                                 type="button"
-                                disabled={isLoadingProgress}
+                                disabled={
+                                  isLoadingProgress
+                                }
                                 onClick={() =>
                                   updateWaterBottles(
                                     filled &&
                                       index ===
-                                        waterBottles - 1
+                                        waterBottles -
+                                          1
                                       ? index
-                                      : index + 1
+                                      : index +
+                                          1
                                   )
                                 }
                                 aria-label={`Bottle ${
@@ -691,7 +821,9 @@ export default function DashboardPage() {
                                 }`}
                               >
                                 <WaterDrop
-                                  filled={filled}
+                                  filled={
+                                    filled
+                                  }
                                 />
                               </button>
                             );
@@ -700,14 +832,16 @@ export default function DashboardPage() {
                       </div>
 
                       <p className="mt-2.5 text-[7px] tracking-[0.17em] text-[#9D6F67]">
-                        TAP AS YOU GO • EACH = 16 OZ
+                        TAP AS YOU GO • EACH =
+                        16 OZ
                       </p>
                     </div>
                   );
                 }
 
-                /* MOVE */
-                if (item.column === "move") {
+                if (
+                  item.column === "move"
+                ) {
                   return (
                     <div
                       key={item.number}
@@ -720,9 +854,13 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-3.5">
                         <button
                           type="button"
-                          disabled={isLoadingProgress}
+                          disabled={
+                            isLoadingProgress
+                          }
                           onClick={() =>
-                            toggleCommitment("move")
+                            toggleCommitment(
+                              "move"
+                            )
                           }
                           aria-label={
                             isComplete
@@ -735,7 +873,9 @@ export default function DashboardPage() {
                               : "border-[#CBA9A2] text-[#A77B73] hover:bg-[#F1E6E2]"
                           }`}
                         >
-                          {isComplete ? "✓" : item.number}
+                          {isComplete
+                            ? "✓"
+                            : item.number}
                         </button>
 
                         <div className="min-w-0 flex-1">
@@ -767,17 +907,17 @@ export default function DashboardPage() {
                             <span>
                               {selectedWorkout.type.toUpperCase()}
                             </span>
-
                             <span>•</span>
-
                             <span>
-                              {selectedWorkout.time}
+                              {
+                                selectedWorkout.time
+                              }
                             </span>
-
                             <span>•</span>
-
                             <span>
-                              {selectedWorkout.exercises}
+                              {
+                                selectedWorkout.exercises
+                              }
                             </span>
                           </div>
 
@@ -786,7 +926,11 @@ export default function DashboardPage() {
                               href={`/dashboard/resources/workouts/${selectedWorkout.id}`}
                               className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
                             >
-                              <span>OPEN TODAY&apos;S WORKOUT</span>
+                              <span>
+                                OPEN TODAY&apos;S
+                                WORKOUT
+                              </span>
+
                               <span className="font-serif text-sm">
                                 →
                               </span>
@@ -805,7 +949,9 @@ export default function DashboardPage() {
                           href="/dashboard/resources/workouts"
                           className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
                         >
-                          <span>FIND A WORKOUT</span>
+                          <span>
+                            FIND A WORKOUT
+                          </span>
 
                           <span className="font-serif text-sm">
                             →
@@ -816,14 +962,154 @@ export default function DashboardPage() {
                   );
                 }
 
-                /* STANDARD COMMITMENTS */
+                if (
+                  item.column === "nourish"
+                ) {
+                  return (
+                    <div
+                      key={item.number}
+                      className={`rounded-[1.25rem] border px-4 py-4 transition duration-300 ${
+                        isComplete
+                          ? "border-[#CBA9A2] bg-[#EAD8D3]"
+                          : "border-[#DED0CB] bg-[#FBF8F6]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <button
+                          type="button"
+                          disabled={
+                            isLoadingProgress
+                          }
+                          onClick={() =>
+                            toggleCommitment(
+                              "nourish"
+                            )
+                          }
+                          aria-label={
+                            isComplete
+                              ? "Mark Nourish incomplete"
+                              : "Mark Nourish complete"
+                          }
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-[11px] transition ${
+                            isComplete
+                              ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
+                              : "border-[#CBA9A2] text-[#A77B73] hover:bg-[#F1E6E2]"
+                          }`}
+                        >
+                          {isComplete
+                            ? "✓"
+                            : item.number}
+                        </button>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-[9px] tracking-[0.18em]">
+                                NOURISH
+                              </p>
+
+                              <p className="mt-1 text-[12px] text-[#8C7770]">
+                                {selectedRecipe
+                                  ? selectedRecipe.title
+                                  : "Eat with intention"}
+                              </p>
+                            </div>
+
+                            {isComplete && (
+                              <span className="shrink-0 font-serif text-xs italic text-[#A77B73]">
+                                done ♡
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {selectedRecipe ? (
+                        <div className="ml-[46px] mt-3 border-t border-[#E1D3CE] pt-3">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[7px] tracking-[0.15em] text-[#9D6F67]">
+                            <span>
+                              {selectedRecipe.meal.toUpperCase()}
+                            </span>
+
+                            <span>•</span>
+
+                            <span>
+                              {
+                                selectedRecipe.calories
+                              }{" "}
+                              CAL
+                            </span>
+
+                            <span>•</span>
+
+                            <span>
+                              {
+                                selectedRecipe.protein
+                              }
+                              G PROTEIN
+                            </span>
+
+                            <span>•</span>
+
+                            <span>
+                              {
+                                selectedRecipe.time
+                              }
+                            </span>
+                          </div>
+
+                          <div className="mt-3 flex items-center justify-between gap-4">
+                            <Link
+                              href={`/dashboard/resources/recipes/${selectedRecipe.id}`}
+                              className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
+                            >
+                              <span>
+                                OPEN TODAY&apos;S
+                                RECIPE
+                              </span>
+
+                              <span className="font-serif text-sm">
+                                →
+                              </span>
+                            </Link>
+
+                            <Link
+                              href="/dashboard/resources/recipes"
+                              className="shrink-0 text-[7px] tracking-[0.16em] text-[#9D6F67] transition hover:text-[#211C19]"
+                            >
+                              CHANGE
+                            </Link>
+                          </div>
+                        </div>
+                      ) : (
+                        <Link
+                          href="/dashboard/resources/recipes"
+                          className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
+                        >
+                          <span>
+                            CHOOSE A RECIPE
+                          </span>
+
+                          <span className="font-serif text-sm">
+                            →
+                          </span>
+                        </Link>
+                      )}
+                    </div>
+                  );
+                }
+
                 return (
                   <button
                     key={item.number}
                     type="button"
-                    disabled={isLoadingProgress}
+                    disabled={
+                      isLoadingProgress
+                    }
                     onClick={() =>
-                      toggleCommitment(item.column)
+                      toggleCommitment(
+                        item.column
+                      )
                     }
                     className={`group flex w-full items-center gap-3.5 rounded-[1.25rem] border px-4 py-4 text-left transition duration-300 ${
                       isLoadingProgress
@@ -842,7 +1128,9 @@ export default function DashboardPage() {
                           : "border-[#CBA9A2] text-[#A77B73]"
                       }`}
                     >
-                      {isComplete ? "✓" : item.number}
+                      {isComplete
+                        ? "✓"
+                        : item.number}
                     </span>
 
                     <span className="min-w-0 flex-1">
@@ -876,7 +1164,6 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          {/* COMPLETION MESSAGE */}
           {dayComplete && (
             <section className="mt-8 border-y border-[#D4B0A8] py-8 text-center">
               <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
@@ -884,17 +1171,17 @@ export default function DashboardPage() {
               </p>
 
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73] sm:text-3xl">
-                You kept your promise to yourself. ♡
+                You kept your promise to
+                yourself. ♡
               </p>
 
               <p className="mx-auto mt-3 max-w-lg text-xs leading-5 text-[#806E68]">
-                One day down. Keep choosing yourself,
-                one day at a time.
+                One day down. Keep choosing
+                yourself, one day at a time.
               </p>
             </section>
           )}
 
-          {/* DAILY NOTE */}
           <section className="mb-6 mt-10 border-t border-[#DED0CB] pt-7">
             <div className="grid gap-3 md:grid-cols-[130px_1fr] md:gap-8">
               <div>
@@ -905,9 +1192,10 @@ export default function DashboardPage() {
 
               <div>
                 <p className="max-w-3xl font-serif text-xl italic leading-snug text-[#A77B73] sm:text-2xl md:text-3xl">
-                  You don&apos;t have to have the whole
-                  journey figured out. You just have to
-                  show up for today.
+                  You don&apos;t have to have
+                  the whole journey figured
+                  out. You just have to show
+                  up for today.
                 </p>
 
                 <p className="mt-4 text-[7px] tracking-[0.2em] text-[#8F655E]">
