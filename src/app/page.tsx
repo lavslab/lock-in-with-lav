@@ -99,7 +99,38 @@ export default function Home() {
           YOUR JOURNEY • YOUR TIMELINE
         </p>
 
-        <div className="mb-5 text-2xl">♡</div>
+        {/* LOCK ICON */}
+        <div className="mb-5 flex items-center justify-center text-[#211C19]">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            aria-hidden="true"
+          >
+            <path
+              d="M7.5 10V7.5C7.5 5.01472 9.51472 3 12 3C14.4853 3 16.5 5.01472 16.5 7.5V10"
+              stroke="currentColor"
+              strokeWidth="1.35"
+              strokeLinecap="round"
+            />
+            <rect
+              x="5"
+              y="10"
+              width="14"
+              height="11"
+              rx="3"
+              stroke="currentColor"
+              strokeWidth="1.35"
+            />
+            <path
+              d="M12 14V17"
+              stroke="currentColor"
+              strokeWidth="1.35"
+              strokeLinecap="round"
+            />
+          </svg>
+        </div>
 
         <h1 className="font-serif text-[clamp(5rem,14vw,11rem)] leading-[0.72] tracking-[-0.065em]">
           LOCK IN
@@ -252,11 +283,9 @@ export default function Home() {
             <div>
               <h2 className="font-serif text-5xl leading-[0.95] md:text-7xl">
                 Choose your timeline.
-
                 <span className="block italic text-[#A77B73]">
                   Then take it
                 </span>
-
                 <span className="block italic text-[#A77B73]">
                   one day at a time.
                 </span>
