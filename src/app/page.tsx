@@ -40,7 +40,7 @@ export default function Home() {
 
   const weekDays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-  /*
+  /**
    * January 1, 2027 falls on a Friday.
    * Five blank cells place Day 01 in the correct calendar position.
    */
@@ -94,7 +94,7 @@ export default function Home() {
       </nav>
 
       {/* HERO */}
-      <section className="mx-auto flex min-h-[82vh] max-w-7xl flex-col items-center justify-center px-6 pb-20 pt-10 text-center">
+      <section className="mx-auto flex max-w-7xl flex-col items-center px-6 pb-20 pt-20 text-center md:min-h-[82vh] md:justify-center md:pt-10">
         <p className="mb-7 text-[10px] tracking-[0.45em] text-[#9D6F67] md:text-xs">
           YOUR JOURNEY • YOUR TIMELINE
         </p>
@@ -170,7 +170,6 @@ export default function Home() {
 
                   <div className="text-right">
                     <p className="text-[8px] tracking-[0.3em] text-[#9D7770]">
-                      
                     </p>
 
                     <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
@@ -253,9 +252,11 @@ export default function Home() {
             <div>
               <h2 className="font-serif text-5xl leading-[0.95] md:text-7xl">
                 Choose your timeline.
+
                 <span className="block italic text-[#A77B73]">
                   Then take it
                 </span>
+
                 <span className="block italic text-[#A77B73]">
                   one day at a time.
                 </span>
