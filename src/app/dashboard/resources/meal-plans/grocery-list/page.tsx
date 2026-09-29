@@ -459,11 +459,9 @@ export default function GroceryListPage() {
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingMeals, setIsLoadingMeals] = useState(true);
 
-  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>(
-    {}
-  );
-
+  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const getUserAndMeals = async () => {
@@ -477,6 +475,8 @@ export default function GroceryListPage() {
         return;
       }
 
+      setUserId(user.id);
+
       const savedName = user.user_metadata?.name;
 
       if (savedName) {
@@ -486,6 +486,20 @@ export default function GroceryListPage() {
       }
 
       setIsLoadingUser(false);
+
+      const { data: checklistData, error: checklistError } = await supabase
+        .from("grocery_checklist_state")
+        .select("checked_items")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (checklistError) {
+        console.error("Error loading grocery checklist:", checklistError);
+      } else if (checklistData?.checked_items) {
+        setCheckedItems(
+          checklistData.checked_items as Record<string, boolean>
+        );
+      }
 
       const { data, error } = await supabase
         .from("meal_plan_selections")
@@ -544,9 +558,7 @@ export default function GroceryListPage() {
   const plannedItems = useMemo(() => {
     const items = selectedRecipes.flatMap((recipe) => recipe.items);
 
-    return Array.from(new Set(items)).sort((a, b) =>
-      a.localeCompare(b)
-    );
+    return Array.from(new Set(items)).sort((a, b) => a.localeCompare(b));
   }, [selectedRecipes]);
 
   const hasPlannedMeals = selectedRecipes.length > 0;
@@ -555,14 +567,44 @@ export default function GroceryListPage() {
      CHECKLIST
   --------------------------------- */
 
-  const toggleItem = (key: string) => {
-    setCheckedItems((current) => ({
-      ...current,
-      [key]: !current[key],
-    }));
+  const saveCheckedItems = async (nextItems: Record<string, boolean>) => {
+    if (!userId) return;
+
+    const { error } = await supabase.from("grocery_checklist_state").upsert(
+      {
+        user_id: userId,
+        checked_items: nextItems,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id",
+      }
+    );
+
+    if (error) {
+      console.error("Error saving grocery checklist:", error);
+    }
   };
 
-  const clearList = () => setCheckedItems({});
+  const toggleItem = (key: string) => {
+    setCheckedItems((current) => {
+      const nextItems = {
+        ...current,
+        [key]: !current[key],
+      };
+
+      void saveCheckedItems(nextItems);
+
+      return nextItems;
+    });
+  };
+
+  const clearList = () => {
+    const nextItems: Record<string, boolean> = {};
+
+    setCheckedItems(nextItems);
+    void saveCheckedItems(nextItems);
+  };
 
   const masterTotalItems = grocerySections.reduce(
     (total, section) => total + section.items.length,
@@ -621,8 +663,8 @@ export default function GroceryListPage() {
                 </h1>
 
                 <p className="mt-4 max-w-xl text-[11px] leading-6 text-[#7C6963]">
-                  Start with the meals you planned, check what you already
-                  have, then use the full list for anything else you need.
+                  Start with the meals you planned, check what you already have,
+                  then use the full list for anything else you need.
                 </p>
               </div>
 
@@ -778,8 +820,7 @@ export default function GroceryListPage() {
                   </p>
 
                   <p className="mt-3 max-w-3xl font-serif text-xl italic text-[#A77B73] md:text-2xl">
-                    Check what you already have, then check off what you need.
-                    ♡
+                    Check what you already have, then check off what you need. ♡
                   </p>
                 </div>
 
@@ -808,8 +849,8 @@ export default function GroceryListPage() {
               </h2>
 
               <p className="mt-3 max-w-xl text-[10px] leading-5 text-[#8C7770]">
-                Everything stays here whether you build a meal plan or not.
-                Use whatever fits your week.
+                Everything stays here whether you build a meal plan or not. Use
+                whatever fits your week.
               </p>
             </div>
 
