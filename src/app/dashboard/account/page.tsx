@@ -132,7 +132,14 @@ export default function AccountPage() {
       updates.email = cleanEmail;
     }
 
-    const { error } = await supabase.auth.updateUser(updates);
+    const { error } = await supabase.auth.updateUser(
+      updates,
+      cleanEmail !== currentEmail
+        ? {
+            emailRedirectTo: `${window.location.origin}/auth?email_changed=true`,
+          }
+        : undefined
+    );
 
     if (error) {
       console.error("Could not update profile:", error);

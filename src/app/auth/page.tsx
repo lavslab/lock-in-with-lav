@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -20,6 +20,49 @@ export default function AuthPage() {
 
   const [resending, setResending] = useState(false);
   const [confirmationSent, setConfirmationSent] = useState(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+
+    const emailChanged = searchParams.get("email_changed");
+    const emailChange = searchParams.get("email_change");
+    const authError = searchParams.get("error");
+
+    if (emailChanged === "true") {
+      setMode("login");
+      setError("");
+      setMessage(
+        "Email updated successfully. Sign in with your new email to continue. ♡"
+      );
+      return;
+    }
+
+    if (emailChange === "continue") {
+      setMode("login");
+      setError("");
+      setMessage(
+        "Your email change is almost complete. If you've confirmed both emails, sign in with your new email to continue. ♡"
+      );
+      return;
+    }
+
+    if (authError === "confirmation_failed") {
+      setMode("login");
+      setMessage("");
+      setError(
+        "That confirmation link couldn't be completed. Please try again or request a new link."
+      );
+      return;
+    }
+
+    if (authError === "missing_confirmation_code") {
+      setMode("login");
+      setMessage("");
+      setError(
+        "That confirmation link is incomplete. Please try the newest email we sent you."
+      );
+    }
+  }, []);
 
   async function sendUserToNextStep(userId: string) {
     const { data: profile, error: profileError } = await supabase
@@ -232,7 +275,7 @@ export default function AuthPage() {
             <h2 className="mt-4 font-serif text-5xl leading-none md:text-6xl">
               {mode === "signup" ? (
                 <>
-                  Let's
+                  Let&apos;s
                   <span className="italic text-[#A77B73]">
                     {" "}lock in.
                   </span>
@@ -246,7 +289,7 @@ export default function AuthPage() {
                 </>
               ) : (
                 <>
-                  Let's get you
+                  Let&apos;s get you
                   <span className="block italic text-[#A77B73]">
                     back in.
                   </span>
@@ -397,7 +440,7 @@ export default function AuthPage() {
                     message.includes("Check your email") && (
                       <div className="mt-3 border-t border-[#D8C7C1] pt-3">
                         <p className="text-[7px] tracking-[0.14em] text-[#927D76]">
-                          DIDN'T GET IT?
+                          DIDN&apos;T GET IT?
                         </p>
 
                         <button
