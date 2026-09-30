@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 import { getCurrentChallengeDay } from "@/lib/challenge";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -121,6 +121,8 @@ function WaterDrop({ filled }: { filled: boolean }) {
 }
 
 export default function DashboardPage() {
+  const supabase = createClient();
+
   const [progress, setProgress] =
     useState<DailyProgress>(emptyProgress);
 
@@ -683,7 +685,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="mt-10 md:mt-12">
+                    <section className="mt-10 md:mt-12">
             <div className="flex items-end justify-between gap-5 border-b border-[#DED0CB] pb-4">
               <div>
                 <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
@@ -700,8 +702,7 @@ export default function DashboardPage() {
 
               <div className="shrink-0 text-right">
                 <p className="font-serif text-lg italic text-[#A77B73]">
-                  {completedCount}/
-                  {commitments.length}
+                  {completedCount}/{commitments.length}
                 </p>
 
                 <p className="mt-0.5 text-[7px] tracking-[0.18em] text-[#9D6F67]">
@@ -715,9 +716,7 @@ export default function DashboardPage() {
                 const isComplete =
                   progress[item.column];
 
-                if (
-                  item.column === "hydrate"
-                ) {
+                if (item.column === "hydrate") {
                   return (
                     <div
                       key={item.number}
@@ -730,14 +729,10 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-3.5">
                         <button
                           type="button"
-                          disabled={
-                            isLoadingProgress
-                          }
+                          disabled={isLoadingProgress}
                           onClick={() =>
                             updateWaterBottles(
-                              isComplete
-                                ? 0
-                                : 8
+                              isComplete ? 0 : 8
                             )
                           }
                           aria-label={
@@ -773,8 +768,7 @@ export default function DashboardPage() {
                             </div>
 
                             <p className="font-serif text-sm italic text-[#A77B73]">
-                              {waterBottles}/8
-                              bottles
+                              {waterBottles}/8 bottles
                             </p>
                           </div>
                         </div>
@@ -783,65 +777,56 @@ export default function DashboardPage() {
                       <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8">
                         {Array.from({
                           length: 8,
-                        }).map(
-                          (_, index) => {
-                            const filled =
-                              index <
-                              waterBottles;
+                        }).map((_, index) => {
+                          const filled =
+                            index < waterBottles;
 
-                            return (
-                              <button
-                                key={index}
-                                type="button"
-                                disabled={
-                                  isLoadingProgress
-                                }
-                                onClick={() =>
-                                  updateWaterBottles(
-                                    filled &&
-                                      index ===
-                                        waterBottles -
-                                          1
-                                      ? index
-                                      : index +
-                                          1
-                                  )
-                                }
-                                aria-label={`Bottle ${
-                                  index + 1
-                                } ${
-                                  filled
-                                    ? "complete"
-                                    : "incomplete"
-                                }`}
-                                className={`flex h-9 items-center justify-center rounded-lg border transition hover:-translate-y-0.5 ${
-                                  filled
-                                    ? "border-[#C69C94] bg-[#E6C8C2]"
-                                    : "border-[#E1D3CE] bg-[#F7F1ED]"
-                                }`}
-                              >
-                                <WaterDrop
-                                  filled={
-                                    filled
-                                  }
-                                />
-                              </button>
-                            );
-                          }
-                        )}
+                          return (
+                            <button
+                              key={index}
+                              type="button"
+                              disabled={
+                                isLoadingProgress
+                              }
+                              onClick={() =>
+                                updateWaterBottles(
+                                  filled &&
+                                    index ===
+                                      waterBottles -
+                                        1
+                                    ? index
+                                    : index + 1
+                                )
+                              }
+                              aria-label={`Bottle ${
+                                index + 1
+                              } ${
+                                filled
+                                  ? "complete"
+                                  : "incomplete"
+                              }`}
+                              className={`flex h-9 items-center justify-center rounded-lg border transition hover:-translate-y-0.5 ${
+                                filled
+                                  ? "border-[#C69C94] bg-[#E6C8C2]"
+                                  : "border-[#E1D3CE] bg-[#F7F1ED]"
+                              }`}
+                            >
+                              <WaterDrop
+                                filled={filled}
+                              />
+                            </button>
+                          );
+                        })}
                       </div>
 
                       <p className="mt-2.5 text-[7px] tracking-[0.17em] text-[#9D6F67]">
-                        TAP AS YOU GO • EACH =
-                        16 OZ
+                        TAP AS YOU GO • EACH = 16 OZ
                       </p>
                     </div>
                   );
                 }
 
-                if (
-                  item.column === "move"
-                ) {
+                if (item.column === "move") {
                   return (
                     <div
                       key={item.number}
@@ -854,13 +839,9 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-3.5">
                         <button
                           type="button"
-                          disabled={
-                            isLoadingProgress
-                          }
+                          disabled={isLoadingProgress}
                           onClick={() =>
-                            toggleCommitment(
-                              "move"
-                            )
+                            toggleCommitment("move")
                           }
                           aria-label={
                             isComplete
@@ -909,15 +890,11 @@ export default function DashboardPage() {
                             </span>
                             <span>•</span>
                             <span>
-                              {
-                                selectedWorkout.time
-                              }
+                              {selectedWorkout.time}
                             </span>
                             <span>•</span>
                             <span>
-                              {
-                                selectedWorkout.exercises
-                              }
+                              {selectedWorkout.exercises}
                             </span>
                           </div>
 
@@ -927,10 +904,8 @@ export default function DashboardPage() {
                               className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
                             >
                               <span>
-                                OPEN TODAY&apos;S
-                                WORKOUT
+                                OPEN TODAY&apos;S WORKOUT
                               </span>
-
                               <span className="font-serif text-sm">
                                 →
                               </span>
@@ -952,7 +927,6 @@ export default function DashboardPage() {
                           <span>
                             FIND A WORKOUT
                           </span>
-
                           <span className="font-serif text-sm">
                             →
                           </span>
@@ -962,9 +936,7 @@ export default function DashboardPage() {
                   );
                 }
 
-                if (
-                  item.column === "nourish"
-                ) {
+                if (item.column === "nourish") {
                   return (
                     <div
                       key={item.number}
@@ -977,9 +949,7 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-3.5">
                         <button
                           type="button"
-                          disabled={
-                            isLoadingProgress
-                          }
+                          disabled={isLoadingProgress}
                           onClick={() =>
                             toggleCommitment(
                               "nourish"
@@ -1030,31 +1000,19 @@ export default function DashboardPage() {
                             <span>
                               {selectedRecipe.meal.toUpperCase()}
                             </span>
-
                             <span>•</span>
-
                             <span>
-                              {
-                                selectedRecipe.calories
-                              }{" "}
+                              {selectedRecipe.calories}{" "}
                               CAL
                             </span>
-
                             <span>•</span>
-
                             <span>
-                              {
-                                selectedRecipe.protein
-                              }
-                              G PROTEIN
+                              {selectedRecipe.protein}G{" "}
+                              PROTEIN
                             </span>
-
                             <span>•</span>
-
                             <span>
-                              {
-                                selectedRecipe.time
-                              }
+                              {selectedRecipe.time}
                             </span>
                           </div>
 
@@ -1064,10 +1022,8 @@ export default function DashboardPage() {
                               className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
                             >
                               <span>
-                                OPEN TODAY&apos;S
-                                RECIPE
+                                OPEN TODAY&apos;S RECIPE
                               </span>
-
                               <span className="font-serif text-sm">
                                 →
                               </span>
@@ -1089,7 +1045,6 @@ export default function DashboardPage() {
                           <span>
                             CHOOSE A RECIPE
                           </span>
-
                           <span className="font-serif text-sm">
                             →
                           </span>
@@ -1103,9 +1058,7 @@ export default function DashboardPage() {
                   <button
                     key={item.number}
                     type="button"
-                    disabled={
-                      isLoadingProgress
-                    }
+                    disabled={isLoadingProgress}
                     onClick={() =>
                       toggleCommitment(
                         item.column
@@ -1171,13 +1124,12 @@ export default function DashboardPage() {
               </p>
 
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73] sm:text-3xl">
-                You kept your promise to
-                yourself. ♡
+                You kept your promise to yourself. ♡
               </p>
 
               <p className="mx-auto mt-3 max-w-lg text-xs leading-5 text-[#806E68]">
-                One day down. Keep choosing
-                yourself, one day at a time.
+                One day down. Keep choosing yourself,
+                one day at a time.
               </p>
             </section>
           )}
@@ -1192,10 +1144,9 @@ export default function DashboardPage() {
 
               <div>
                 <p className="max-w-3xl font-serif text-xl italic leading-snug text-[#A77B73] sm:text-2xl md:text-3xl">
-                  You don&apos;t have to have
-                  the whole journey figured
-                  out. You just have to show
-                  up for today.
+                  You don&apos;t have to have the whole
+                  journey figured out. You just have to
+                  show up for today.
                 </p>
 
                 <p className="mt-4 text-[7px] tracking-[0.2em] text-[#8F655E]">
