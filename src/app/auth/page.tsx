@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthPage() {
+  const router = useRouter();
   const supabase = createClient();
 
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("signup");
@@ -93,28 +95,6 @@ export default function AuthPage() {
     }
   }
 
-  async function sendUserToNextStep(userId: string) {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("challenge_start_date")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (profileError) {
-      console.error("Could not load profile:", profileError);
-      setError("We couldn't load your challenge profile. Please try again.");
-      return false;
-    }
-
-    const destination = profile?.challenge_start_date
-      ? "/dashboard"
-      : "/onboarding";
-
-    window.location.replace(destination);
-
-    return true;
-  }
-
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -138,6 +118,7 @@ export default function AuthPage() {
         setMessage(
           "Check your inbox. We sent you a link to reset your password. ♡"
         );
+
         return;
       }
 
@@ -170,7 +151,7 @@ export default function AuthPage() {
             return;
           }
 
-          window.location.replace("/onboarding");
+          router.replace("/onboarding");
           return;
         }
 
@@ -197,8 +178,8 @@ export default function AuthPage() {
         return;
       }
 
-      // Keep the native Capacitor session and the server-side Supabase
-      // cookie session in sync before entering the protected dashboard.
+      // Keep the native Capacitor session and the server-side
+      // Supabase cookie session in sync before entering the app.
       const restored = await restoreServerSession(
         data.session.access_token,
         data.session.refresh_token
@@ -209,7 +190,9 @@ export default function AuthPage() {
         return;
       }
 
-      await sendUserToNextStep(data.user.id);
+      // The dashboard layout will determine whether this user
+      // belongs on the dashboard or needs to finish onboarding.
+      router.replace("/dashboard");
     } catch (err) {
       console.error("Authentication error:", err);
       setError("Something went wrong. Please try again.");
@@ -320,8 +303,8 @@ export default function AuthPage() {
               {mode === "signup"
                 ? "JOIN THE CHALLENGE"
                 : mode === "login"
-                ? "WELCOME BACK"
-                : "PASSWORD RESET"}
+                  ? "WELCOME BACK"
+                  : "PASSWORD RESET"}
             </p>
 
             <h2 className="mt-4 font-serif text-5xl leading-none md:text-6xl">
@@ -353,8 +336,8 @@ export default function AuthPage() {
               {mode === "signup"
                 ? "your next chapter starts here. ♡"
                 : mode === "login"
-                ? "pick up where you left off."
-                : "we'll send a reset link to your inbox. ♡"}
+                  ? "pick up where you left off."
+                  : "we'll send a reset link to your inbox. ♡"}
             </p>
 
             {mode !== "forgot" && (
@@ -506,8 +489,8 @@ export default function AuthPage() {
                           {resending
                             ? "Sending..."
                             : confirmationSent
-                            ? "Email sent again ♡"
-                            : "Resend confirmation email"}
+                              ? "Email sent again ♡"
+                              : "Resend confirmation email"}
                         </button>
                       </div>
                     )}
@@ -520,12 +503,16 @@ export default function AuthPage() {
                 className="w-full rounded-full bg-[#211C19] px-8 py-4 text-[8px] tracking-[0.28em] text-[#F7F1ED] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading
-                  ? "ONE SEC..."
+                  ? mode === "login"
+                    ? "LOGGING IN..."
+                    : mode === "signup"
+                      ? "CREATING ACCOUNT..."
+                      : "SENDING..."
                   : mode === "signup"
-                  ? "CREATE MY ACCOUNT →"
-                  : mode === "login"
-                  ? "LOG IN →"
-                  : "SEND RESET LINK →"}
+                    ? "CREATE MY ACCOUNT →"
+                    : mode === "login"
+                      ? "LOG IN →"
+                      : "SEND RESET LINK →"}
               </button>
 
               {mode === "forgot" && (
