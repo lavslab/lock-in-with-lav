@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("signup");
@@ -77,13 +75,18 @@ export default function AuthPage() {
       return false;
     }
 
-    if (profile?.challenge_start_date) {
-      router.push("/dashboard");
-    } else {
-      router.push("/onboarding");
-    }
+    const destination = profile?.challenge_start_date
+      ? "/dashboard"
+      : "/onboarding";
 
-    router.refresh();
+    /*
+     * Use a full navigation after authentication instead of router.push().
+     * This gives the newly-created Supabase session/cookies a clean request
+     * when entering the authenticated area, which is especially important
+     * inside the Capacitor iOS WebView.
+     */
+    window.location.replace(destination);
+
     return true;
   }
 
@@ -132,34 +135,42 @@ export default function AuthPage() {
         }
 
         if (data.session && data.user) {
-          router.push("/onboarding");
-          router.refresh();
+          window.location.replace("/onboarding");
           return;
         }
 
         setMessage(
           "Account created. Check your email to confirm your account. ♡"
         );
-      } else {
-        // LOG IN
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
 
-        if (error) {
-          setError(error.message);
-          return;
-        }
-
-        if (!data.user) {
-          setError("We couldn't load your account. Please try again.");
-          return;
-        }
-
-        await sendUserToNextStep(data.user.id);
+        return;
       }
-    } catch {
+
+      // LOG IN
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      if (!data.user || !data.session) {
+        setError("We couldn't load your account. Please try again.");
+        return;
+      }
+
+      /*
+       * Login succeeded.
+       * sendUserToNextStep() now performs a full page navigation so
+       * the authenticated session is available immediately on the
+       * destination page.
+       */
+      await sendUserToNextStep(data.user.id);
+    } catch (err) {
+      console.error("Authentication error:", err);
       setError("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
@@ -337,7 +348,9 @@ export default function AuthPage() {
             <form
               onSubmit={handleSubmit}
               className={
-                mode === "forgot" ? "mt-9 space-y-5" : "mt-8 space-y-5"
+                mode === "forgot"
+                  ? "mt-9 space-y-5"
+                  : "mt-8 space-y-5"
               }
             >
               {mode === "signup" && (
