@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("signup");
@@ -151,7 +149,7 @@ export default function AuthPage() {
             return;
           }
 
-          router.replace("/onboarding");
+          window.location.replace("/onboarding");
           return;
         }
 
@@ -190,8 +188,8 @@ export default function AuthPage() {
         return;
       }
 
-      // The dashboard layout will determine whether this user
-      // belongs on the dashboard or needs to finish onboarding.
+      // Use a full navigation so the dashboard receives a fresh
+      // authenticated request.
       window.location.replace("/dashboard");
     } catch (err) {
       console.error("Authentication error:", err);
@@ -503,11 +501,7 @@ export default function AuthPage() {
                 className="w-full rounded-full bg-[#211C19] px-8 py-4 text-[8px] tracking-[0.28em] text-[#F7F1ED] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading
-                  ? mode === "login"
-                    ? "LOGGING IN..."
-                    : mode === "signup"
-                      ? "CREATING ACCOUNT..."
-                      : "SENDING..."
+                  ? "ONE SEC..."
                   : mode === "signup"
                     ? "CREATE MY ACCOUNT →"
                     : mode === "login"
