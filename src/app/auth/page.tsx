@@ -62,6 +62,37 @@ export default function AuthPage() {
     }
   }, []);
 
+  async function restoreServerSession(
+    accessToken: string,
+    refreshToken: string
+  ) {
+    try {
+      const response = await fetch("/auth/restore", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(
+          "Could not restore server session:",
+          await response.text()
+        );
+        return false;
+      }
+
+      return true;
+    } catch (restoreError) {
+      console.error("Could not restore server session:", restoreError);
+      return false;
+    }
+  }
+
   async function sendUserToNextStep(userId: string) {
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
@@ -79,12 +110,6 @@ export default function AuthPage() {
       ? "/dashboard"
       : "/onboarding";
 
-    /*
-     * Use a full navigation after authentication instead of router.push().
-     * This gives the newly-created Supabase session/cookies a clean request
-     * when entering the authenticated area, which is especially important
-     * inside the Capacitor iOS WebView.
-     */
     window.location.replace(destination);
 
     return true;
@@ -135,6 +160,16 @@ export default function AuthPage() {
         }
 
         if (data.session && data.user) {
+          const restored = await restoreServerSession(
+            data.session.access_token,
+            data.session.refresh_token
+          );
+
+          if (!restored) {
+            setError("We couldn't keep you signed in. Please try again.");
+            return;
+          }
+
           window.location.replace("/onboarding");
           return;
         }
@@ -162,12 +197,18 @@ export default function AuthPage() {
         return;
       }
 
-      /*
-       * Login succeeded.
-       * sendUserToNextStep() now performs a full page navigation so
-       * the authenticated session is available immediately on the
-       * destination page.
-       */
+      // Keep the native Capacitor session and the server-side Supabase
+      // cookie session in sync before entering the protected dashboard.
+      const restored = await restoreServerSession(
+        data.session.access_token,
+        data.session.refresh_token
+      );
+
+      if (!restored) {
+        setError("We couldn't keep you signed in. Please try again.");
+        return;
+      }
+
       await sendUserToNextStep(data.user.id);
     } catch (err) {
       console.error("Authentication error:", err);

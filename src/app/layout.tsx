@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import "./globals.css";
+import AuthSessionBootstrap from "@/components/AuthSessionBootstrap";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -71,7 +72,10 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       className={`${cormorant.variable} ${dmSans.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <AuthSessionBootstrap />
+        {children}
+      </body>
     </html>
   );
 }
