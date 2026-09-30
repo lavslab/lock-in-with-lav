@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -8,13 +8,15 @@ export default function AuthSessionBootstrap() {
   const pathname = usePathname();
   const router = useRouter();
 
+  const [checking, setChecking] = useState(pathname === "/");
+
   useEffect(() => {
     let cancelled = false;
 
     async function restoreSession() {
-      // Only run the automatic redirect on the homepage.
-      // This keeps normal navigation and authentication pages untouched.
+      // Only run the automatic restore on the homepage.
       if (pathname !== "/") {
+        setChecking(false);
         return;
       }
 
@@ -32,11 +34,14 @@ export default function AuthSessionBootstrap() {
           "Could not check saved Supabase session:",
           error
         );
+
+        setChecking(false);
         return;
       }
 
-      // No saved session = normal logged-out visitor.
+      // No saved session means this is a normal visitor.
       if (!session) {
+        setChecking(false);
         return;
       }
 
@@ -53,9 +58,8 @@ export default function AuthSessionBootstrap() {
         });
 
         if (!response.ok) {
-          console.error(
-            "Could not restore server session."
-          );
+          console.error("Could not restore server session.");
+          setChecking(false);
           return;
         }
 
@@ -67,6 +71,10 @@ export default function AuthSessionBootstrap() {
           "Session restoration failed:",
           restoreError
         );
+
+        if (!cancelled) {
+          setChecking(false);
+        }
       }
     }
 
@@ -76,6 +84,33 @@ export default function AuthSessionBootstrap() {
       cancelled = true;
     };
   }, [pathname, router]);
+
+  // Don't cover other pages.
+  if (pathname !== "/") {
+    return null;
+  }
+
+  // Keep the homepage hidden while we determine whether
+  // there is a saved session to restore.
+  if (checking) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center bg-[#F7F1ED] text-[#211C19]">
+        <div className="text-center">
+          <p className="font-serif text-4xl tracking-[0.08em]">
+            LOCK IN
+          </p>
+
+          <p className="mt-1 text-[8px] tracking-[0.5em] text-[#A77B73]">
+            WITH LAV
+          </p>
+
+          <p className="mt-8 font-serif text-lg italic text-[#806E68]">
+            getting you back in... ♡
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return null;
 }
