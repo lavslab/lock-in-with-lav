@@ -192,7 +192,7 @@ export default function AuthPage() {
 
       // The dashboard layout will determine whether this user
       // belongs on the dashboard or needs to finish onboarding.
-      router.replace("/dashboard");
+      window.location.replace("/dashboard");
     } catch (err) {
       console.error("Authentication error:", err);
       setError("Something went wrong. Please try again.");
