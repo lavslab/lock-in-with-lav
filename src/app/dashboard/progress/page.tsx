@@ -810,7 +810,7 @@ export default function ProgressPage() {
             <input
               ref={photoInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
               onChange={handlePhotoUpload}
               className="hidden"
             />
