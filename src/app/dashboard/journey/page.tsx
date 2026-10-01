@@ -118,32 +118,37 @@ export default function JourneyPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("challenge_start_date, challenge_length")
-        .eq("id", user.id)
-        .single();
+      const [
+  { data: profile, error: profileError },
+  { data: progressRows, error: progressError },
+] = await Promise.all([
+  supabase
+    .from("profiles")
+    .select("challenge_start_date, challenge_length")
+    .eq("id", user.id)
+    .single(),
 
-      if (profileError) {
-        console.error("Could not load profile:", profileError);
-      } else if (profile) {
-        setChallengeStartDate(profile.challenge_start_date);
-        setChallengeLength(profile.challenge_length ?? 75);
-      }
+  supabase
+    .from("daily_progress")
+    .select(
+      "challenge_day, move, get_outside, hydrate, read, nourish, document, no_alcohol"
+    )
+    .eq("user_id", user.id)
+    .order("challenge_day", { ascending: true }),
+]);
 
-      const { data: progressRows, error: progressError } = await supabase
-        .from("daily_progress")
-        .select(
-          "challenge_day, move, get_outside, hydrate, read, nourish, document, no_alcohol"
-        )
-        .eq("user_id", user.id)
-        .order("challenge_day", { ascending: true });
+if (profileError) {
+  console.error("Could not load profile:", profileError);
+} else if (profile) {
+  setChallengeStartDate(profile.challenge_start_date);
+  setChallengeLength(profile.challenge_length ?? 75);
+}
 
-      if (progressError) {
-        console.error("Could not load daily progress:", progressError);
-      } else {
-        setDailyProgress(progressRows ?? []);
-      }
+if (progressError) {
+  console.error("Could not load daily progress:", progressError);
+} else {
+  setDailyProgress(progressRows ?? []);
+}
 
       setIsLoadingUser(false);
       setIsLoadingProgress(false);
