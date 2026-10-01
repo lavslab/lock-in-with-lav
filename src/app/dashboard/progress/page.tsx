@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-
 import { createClient } from "@/lib/supabase/client";
-
 import DashboardSidebar from "@/components/DashboardSidebar";
-
 import {
   getChallengeEndDate,
   getCurrentChallengeDay,
@@ -38,9 +35,6 @@ export default function ProgressPage() {
   const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
     null
   );
-
-  /* Duration selected during onboarding. */
-  const [challengeLength, setChallengeLength] = useState(75);
 
   const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
   const [photoPaths, setPhotoPaths] = useState<Record<number, string>>({});
@@ -75,7 +69,6 @@ export default function ProgressPage() {
   const [completedWins, setCompletedWins] = useState<Record<string, boolean>>(
     {}
   );
-
   const [isCustomWinModalOpen, setIsCustomWinModalOpen] = useState(false);
   const [customWin, setCustomWin] = useState("");
   const [isSavingCustomWin, setIsSavingCustomWin] = useState(false);
@@ -100,7 +93,6 @@ export default function ProgressPage() {
     proud_of: "",
     next_week_focus: "",
   });
-
   const [isSavingCheckin, setIsSavingCheckin] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
 
@@ -168,7 +160,7 @@ export default function ProgressPage() {
 
       const { data: profile, error } = await supabase
         .from("profiles")
-        .select("challenge_start_date, challenge_length")
+        .select("challenge_start_date")
         .eq("id", user.id)
         .single();
 
@@ -176,7 +168,6 @@ export default function ProgressPage() {
         console.error("Could not load profile:", error);
       } else if (profile) {
         setChallengeStartDate(profile.challenge_start_date);
-        setChallengeLength(profile.challenge_length ?? 75);
       }
 
       const { data: savedWins, error: winsLoadError } = await supabase
@@ -257,65 +248,22 @@ export default function ProgressPage() {
 
   if (challengeStartDate) {
     startDate = parseChallengeDate(challengeStartDate);
-
-    endDate = getChallengeEndDate(
-      challengeStartDate,
-      challengeLength
-    );
-
-    currentDay = getCurrentChallengeDay(
-      challengeStartDate,
-      challengeLength,
-      today
-    );
+    endDate = getChallengeEndDate(challengeStartDate);
+    currentDay = getCurrentChallengeDay(challengeStartDate, today);
   }
 
-  const safeCurrentDay = Math.max(
-    1,
-    Math.min(challengeLength, currentDay)
-  );
-
+  const safeCurrentDay = Math.max(1, Math.min(75, currentDay));
   const dayNumber = String(safeCurrentDay).padStart(2, "0");
 
   const startLabel = startDate ? formatShortDate(startDate) : "—";
   const endLabel = endDate ? formatShortDate(endDate) : "—";
 
-  /*
-   * A Lock In can end partway through a seven-day week.
-   *
-   * Examples:
-   * 21 days = 3 check-ins
-   * 30 days = 5 check-ins
-   * 60 days = 9 check-ins
-   * 75 days = 11 check-ins
-   *
-   * The final partial-week reflection unlocks on the final
-   * challenge day instead of requiring the member to wait
-   * until a day beyond their Lock In.
-   */
+  const currentWeek = Math.min(11, Math.max(1, Math.ceil(safeCurrentDay / 7)));
+  const currentWeekUnlockDay = currentWeek * 7;
+  const currentWeekUnlocked = safeCurrentDay >= currentWeekUnlockDay;
+  const currentWeekComplete = Boolean(weeklyCheckins[currentWeek]);
 
-  const totalCheckins = Math.ceil(challengeLength / 7);
-
-  const currentWeek = Math.min(
-    totalCheckins,
-    Math.max(1, Math.ceil(safeCurrentDay / 7))
-  );
-
-  const currentWeekUnlockDay = Math.min(
-    currentWeek * 7,
-    challengeLength
-  );
-
-  const currentWeekUnlocked =
-    safeCurrentDay >= currentWeekUnlockDay;
-
-  const currentWeekComplete = Boolean(
-    weeklyCheckins[currentWeek]
-  );
-
-  const completedCheckins = Object.keys(weeklyCheckins).filter(
-    (week) => Number(week) <= totalCheckins
-  ).length;
+  const completedCheckins = Object.keys(weeklyCheckins).length;
 
   const initial =
     !isLoadingUser && firstName !== "there"
@@ -367,125 +315,10 @@ export default function ProgressPage() {
     photoInputRef.current?.click();
   };
 
-  /*
-   * Normalize large phone-camera photos before uploading.
-   *
-   * Gallery uploads continue to use the exact same handler.
-   * Camera photos are resized to a maximum dimension of 2000px
-   * and converted to JPEG when the browser can decode them.
-   */
-  const prepareProgressPhoto = async (file: File): Promise<File> => {
-    if (!file.type.startsWith("image/")) {
-      throw new Error("Please choose an image file.");
-    }
-
-    const maxDimension = 2000;
-
-    try {
-      const objectUrl = URL.createObjectURL(file);
-
-      try {
-        const image = new Image();
-
-        await new Promise<void>((resolve, reject) => {
-          image.onload = () => resolve();
-          image.onerror = () =>
-            reject(
-              new Error(
-                "Could not read this photo on your device."
-              )
-            );
-          image.src = objectUrl;
-        });
-
-        const largestDimension = Math.max(
-          image.naturalWidth,
-          image.naturalHeight
-        );
-
-        const scale = Math.min(
-          1,
-          maxDimension / largestDimension
-        );
-
-        const width = Math.max(
-          1,
-          Math.round(image.naturalWidth * scale)
-        );
-
-        const height = Math.max(
-          1,
-          Math.round(image.naturalHeight * scale)
-        );
-
-        const canvas = document.createElement("canvas");
-
-        canvas.width = width;
-        canvas.height = height;
-
-        const context = canvas.getContext("2d");
-
-        if (!context) {
-          throw new Error(
-            "Could not prepare the photo for upload."
-          );
-        }
-
-        context.drawImage(
-          image,
-          0,
-          0,
-          width,
-          height
-        );
-
-        const blob = await new Promise<Blob | null>(
-          (resolve) => {
-            canvas.toBlob(
-              resolve,
-              "image/jpeg",
-              0.86
-            );
-          }
-        );
-
-        if (!blob) {
-          throw new Error(
-            "Could not prepare the photo for upload."
-          );
-        }
-
-        return new File(
-          [blob],
-          `progress-${Date.now()}.jpg`,
-          {
-            type: "image/jpeg",
-            lastModified: Date.now(),
-          }
-        );
-      } finally {
-        URL.revokeObjectURL(objectUrl);
-      }
-    } catch (error) {
-      /*
-       * Some devices may provide a format the browser cannot
-       * decode directly, such as HEIC. In that situation,
-       * upload the original file rather than crashing the page.
-       */
-      console.warn(
-        "Could not normalize progress photo; uploading the original file.",
-        error
-      );
-
-      return file;
-    }
-  };
-
   const handlePhotoUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
-
     if (!file) return;
 
     setIsUploadingPhoto(true);
@@ -503,102 +336,53 @@ export default function ProgressPage() {
         );
       }
 
-      const preparedFile =
-        await prepareProgressPhoto(file);
-
       const extension =
-        preparedFile.type === "image/jpeg"
-          ? "jpg"
-          : preparedFile.name
-              .split(".")
-              .pop()
-              ?.toLowerCase() || "jpg";
+        file.name.split(".").pop()?.toLowerCase() || "jpg";
 
-      const contentType =
-        preparedFile.type ||
-        file.type ||
-        "image/jpeg";
+      const day = String(photoTargetDay).padStart(2, "0");
+      const filePath = `${user.id}/day-${day}-${Date.now()}.${extension}`;
 
-      const day = String(photoTargetDay).padStart(
-        2,
-        "0"
-      );
-
-      const filePath =
-        `${user.id}/day-${day}-${Date.now()}.${extension}`;
-
-      const oldPath =
-        photoPaths[photoTargetDay];
+      const oldPath = photoPaths[photoTargetDay];
 
       if (oldPath) {
-        const { error: removeOldError } =
-          await supabase.storage
-            .from("progress-photos")
-            .remove([oldPath]);
+        const { error: removeOldError } = await supabase.storage
+          .from("progress-photos")
+          .remove([oldPath]);
 
-        if (removeOldError) {
-          throw removeOldError;
-        }
+        if (removeOldError) throw removeOldError;
       }
 
-      const { error: uploadError } =
+      const { error: uploadError } = await supabase.storage
+        .from("progress-photos")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: signedData, error: signedError } =
         await supabase.storage
           .from("progress-photos")
-          .upload(
-            filePath,
-            preparedFile,
-            {
-              cacheControl: "3600",
-              contentType,
-              upsert: false,
-            }
-          );
+          .createSignedUrl(filePath, 60 * 60);
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (signedError) throw signedError;
 
-      const {
-        data: signedData,
-        error: signedError,
-      } =
-        await supabase.storage
-          .from("progress-photos")
-          .createSignedUrl(
-            filePath,
-            60 * 60
-          );
-
-      if (
-        signedError ||
-        !signedData?.signedUrl
-      ) {
-        throw (
-          signedError ??
-          new Error(
-            "Could not create the photo preview."
-          )
+      const { error: photoRecordError } = await supabase
+        .from("progress_photos")
+        .upsert(
+          {
+            user_id: user.id,
+            challenge_day: photoTargetDay,
+            storage_path: filePath,
+            photo_type: "progress",
+            caption: null,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id,challenge_day,photo_type",
+          }
         );
-      }
-
-      const { error: photoRecordError } =
-        await supabase
-          .from("progress_photos")
-          .upsert(
-            {
-              user_id: user.id,
-              challenge_day: photoTargetDay,
-              storage_path: filePath,
-              photo_type: "progress",
-              caption: null,
-              updated_at:
-                new Date().toISOString(),
-            },
-            {
-              onConflict:
-                "user_id,challenge_day,photo_type",
-            }
-          );
 
       if (photoRecordError) {
         await supabase.storage
@@ -610,8 +394,7 @@ export default function ProgressPage() {
 
       setPhotoUrls((previous) => ({
         ...previous,
-        [photoTargetDay]:
-          signedData.signedUrl,
+        [photoTargetDay]: signedData.signedUrl,
       }));
 
       setPhotoPaths((previous) => ({
@@ -621,10 +404,7 @@ export default function ProgressPage() {
 
       setEditingPhotoDay(null);
     } catch (error) {
-      console.error(
-        "Could not upload progress photo:",
-        error
-      );
+      console.error("Could not upload progress photo:", error);
 
       setPhotoError(
         error instanceof Error
@@ -633,16 +413,12 @@ export default function ProgressPage() {
       );
     } finally {
       setIsUploadingPhoto(false);
-
       event.target.value = "";
     }
   };
 
-  const removeProgressPhoto = async (
-    day: number
-  ) => {
+  const removeProgressPhoto = async (day: number) => {
     const path = photoPaths[day];
-
     if (!path) return;
 
     setPhotoError(null);
@@ -668,13 +444,12 @@ export default function ProgressPage() {
       return;
     }
 
-    const { error: recordDeleteError } =
-      await supabase
-        .from("progress_photos")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("challenge_day", day)
-        .eq("photo_type", "progress");
+    const { error: recordDeleteError } = await supabase
+      .from("progress_photos")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("challenge_day", day)
+      .eq("photo_type", "progress");
 
     if (recordDeleteError) {
       console.error(
@@ -682,26 +457,19 @@ export default function ProgressPage() {
         recordDeleteError
       );
 
-      setPhotoError(
-        recordDeleteError.message
-      );
-
+      setPhotoError(recordDeleteError.message);
       return;
     }
 
     setPhotoUrls((previous) => {
       const next = { ...previous };
-
       delete next[day];
-
       return next;
     });
 
     setPhotoPaths((previous) => {
       const next = { ...previous };
-
       delete next[day];
-
       return next;
     });
 
@@ -712,18 +480,12 @@ export default function ProgressPage() {
     setMeasurementError(null);
 
     setMeasurementForm({
-      weight:
-        measurementRow?.weight?.toString() ?? "",
-      waist:
-        measurementRow?.waist?.toString() ?? "",
-      hips:
-        measurementRow?.hips?.toString() ?? "",
-      chest:
-        measurementRow?.chest?.toString() ?? "",
-      thigh:
-        measurementRow?.thigh?.toString() ?? "",
-      arm:
-        measurementRow?.arm?.toString() ?? "",
+      weight: measurementRow?.weight?.toString() ?? "",
+      waist: measurementRow?.waist?.toString() ?? "",
+      hips: measurementRow?.hips?.toString() ?? "",
+      chest: measurementRow?.chest?.toString() ?? "",
+      thigh: measurementRow?.thigh?.toString() ?? "",
+      arm: measurementRow?.arm?.toString() ?? "",
     });
 
     setIsMeasurementModalOpen(true);
@@ -746,31 +508,17 @@ export default function ProgressPage() {
       }
 
       const toNumber = (value: string) =>
-        value.trim() === ""
-          ? null
-          : Number(value);
+        value.trim() === "" ? null : Number(value);
 
       const payload = {
         user_id: user.id,
         challenge_day: safeCurrentDay,
-        weight: toNumber(
-          measurementForm.weight
-        ),
-        waist: toNumber(
-          measurementForm.waist
-        ),
-        hips: toNumber(
-          measurementForm.hips
-        ),
-        chest: toNumber(
-          measurementForm.chest
-        ),
-        thigh: toNumber(
-          measurementForm.thigh
-        ),
-        arm: toNumber(
-          measurementForm.arm
-        ),
+        weight: toNumber(measurementForm.weight),
+        waist: toNumber(measurementForm.waist),
+        hips: toNumber(measurementForm.hips),
+        chest: toNumber(measurementForm.chest),
+        thigh: toNumber(measurementForm.thigh),
+        arm: toNumber(measurementForm.arm),
       };
 
       const values = [
@@ -786,33 +534,26 @@ export default function ProgressPage() {
         values.some(
           (value) =>
             value !== null &&
-            (!Number.isFinite(value) ||
-              value < 0)
+            (!Number.isFinite(value) || value < 0)
         )
       ) {
-        throw new Error(
-          "Please enter valid positive numbers."
-        );
+        throw new Error("Please enter valid positive numbers.");
       }
 
-      const { data, error } =
-        await supabase
-          .from("measurements")
-          .insert(payload)
-          .select(
-            "weight, waist, hips, chest, thigh, arm, challenge_day"
-          )
-          .single();
+      const { data, error } = await supabase
+        .from("measurements")
+        .insert(payload)
+        .select(
+          "weight, waist, hips, chest, thigh, arm, challenge_day"
+        )
+        .single();
 
       if (error) throw error;
 
       setMeasurementRow(data);
       setIsMeasurementModalOpen(false);
     } catch (error) {
-      console.error(
-        "Could not save measurements:",
-        error
-      );
+      console.error("Could not save measurements:", error);
 
       setMeasurementError(
         error instanceof Error
@@ -824,9 +565,7 @@ export default function ProgressPage() {
     }
   };
 
-  const toggleWin = async (
-    win: string
-  ) => {
+  const toggleWin = async (win: string) => {
     const {
       data: { user },
       error: userError,
@@ -834,46 +573,36 @@ export default function ProgressPage() {
 
     if (userError || !user) return;
 
-    const isCompleted =
-      !completedWins[win];
+    const isCompleted = !completedWins[win];
 
     setCompletedWins((previous) => ({
       ...previous,
       [win]: isCompleted,
     }));
 
-    const { error } =
-      await supabase
-        .from("little_wins")
-        .upsert(
-          {
-            user_id: user.id,
-            win_key: win,
-            label: win,
-            is_completed: isCompleted,
-            challenge_day: safeCurrentDay,
-            completed_at: isCompleted
-              ? new Date().toISOString()
-              : null,
-          },
-          {
-            onConflict:
-              "user_id,win_key,challenge_day",
-          }
-        );
+    const { error } = await supabase.from("little_wins").upsert(
+      {
+        user_id: user.id,
+        win_key: win,
+        label: win,
+        is_completed: isCompleted,
+        challenge_day: safeCurrentDay,
+        completed_at: isCompleted
+          ? new Date().toISOString()
+          : null,
+      },
+      {
+        onConflict: "user_id,win_key,challenge_day",
+      }
+    );
 
     if (error) {
-      console.error(
-        "Could not save little win:",
-        error
-      );
+      console.error("Could not save little win:", error);
 
-      setCompletedWins(
-        (previous) => ({
-          ...previous,
-          [win]: !isCompleted,
-        })
-      );
+      setCompletedWins((previous) => ({
+        ...previous,
+        [win]: !isCompleted,
+      }));
     }
   };
 
@@ -881,10 +610,7 @@ export default function ProgressPage() {
     const label = customWin.trim();
 
     if (!label) {
-      setCustomWinError(
-        "Write your win first. ♡"
-      );
-
+      setCustomWinError("Write your win first. ♡");
       return;
     }
 
@@ -898,53 +624,39 @@ export default function ProgressPage() {
       } = await supabase.auth.getUser();
 
       if (userError || !user) {
-        throw new Error(
-          "You need to be signed in to add a win."
-        );
+        throw new Error("You need to be signed in to add a win.");
       }
 
-      const winKey =
-        `custom:${label
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "")}`;
+      const winKey = `custom:${label
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")}`;
 
-      const { error } =
-        await supabase
-          .from("little_wins")
-          .upsert(
-            {
-              user_id: user.id,
-              win_key: winKey,
-              label,
-              is_completed: true,
-              challenge_day:
-                safeCurrentDay,
-              completed_at:
-                new Date().toISOString(),
-            },
-            {
-              onConflict:
-                "user_id,win_key,challenge_day",
-            }
-          );
+      const { error } = await supabase.from("little_wins").upsert(
+        {
+          user_id: user.id,
+          win_key: winKey,
+          label,
+          is_completed: true,
+          challenge_day: safeCurrentDay,
+          completed_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,win_key,challenge_day",
+        }
+      );
 
       if (error) throw error;
 
-      setCompletedWins(
-        (previous) => ({
-          ...previous,
-          [winKey]: true,
-        })
-      );
+      setCompletedWins((previous) => ({
+        ...previous,
+        [winKey]: true,
+      }));
 
       setCustomWin("");
       setIsCustomWinModalOpen(false);
     } catch (error) {
-      console.error(
-        "Could not save custom win:",
-        error
-      );
+      console.error("Could not save custom win:", error);
 
       setCustomWinError(
         error instanceof Error
@@ -956,11 +668,8 @@ export default function ProgressPage() {
     }
   };
 
-  const openWeeklyCheckin = (
-    week: number
-  ) => {
-    const saved =
-      weeklyCheckins[week];
+  const openWeeklyCheckin = (week: number) => {
+    const saved = weeklyCheckins[week];
 
     setCheckinError(null);
 
@@ -976,70 +685,61 @@ export default function ProgressPage() {
     setCheckinWeek(week);
   };
 
-  const saveWeeklyCheckin =
-    async () => {
-      if (checkinWeek === null) return;
+  const saveWeeklyCheckin = async () => {
+    if (checkinWeek === null) return;
 
-      setIsSavingCheckin(true);
-      setCheckinError(null);
+    setIsSavingCheckin(true);
+    setCheckinError(null);
 
-      try {
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-        if (userError || !user) {
-          throw new Error(
-            "You need to be signed in to save a check-in."
-          );
-        }
-
-        const payload = {
-          user_id: user.id,
-          week_number: checkinWeek,
-          ...checkinForm,
-          updated_at:
-            new Date().toISOString(),
-        };
-
-        const { data, error } =
-          await supabase
-            .from("weekly_checkins")
-            .upsert(payload, {
-              onConflict:
-                "user_id,week_number",
-            })
-            .select(
-              "week_number, went_well, felt_hard, proud_of, next_week_focus"
-            )
-            .single();
-
-        if (error) throw error;
-
-        setWeeklyCheckins(
-          (previous) => ({
-            ...previous,
-            [checkinWeek]: data,
-          })
+      if (userError || !user) {
+        throw new Error(
+          "You need to be signed in to save a check-in."
         );
-
-        setCheckinWeek(null);
-      } catch (error) {
-        console.error(
-          "Could not save weekly check-in:",
-          error
-        );
-
-        setCheckinError(
-          error instanceof Error
-            ? error.message
-            : "Could not save check-in. Please try again."
-        );
-      } finally {
-        setIsSavingCheckin(false);
       }
-    };
+
+      const payload = {
+        user_id: user.id,
+        week_number: checkinWeek,
+        ...checkinForm,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabase
+        .from("weekly_checkins")
+        .upsert(payload, {
+          onConflict: "user_id,week_number",
+        })
+        .select(
+          "week_number, went_well, felt_hard, proud_of, next_week_focus"
+        )
+        .single();
+
+      if (error) throw error;
+
+      setWeeklyCheckins((previous) => ({
+        ...previous,
+        [checkinWeek]: data,
+      }));
+
+      setCheckinWeek(null);
+    } catch (error) {
+      console.error("Could not save weekly check-in:", error);
+
+      setCheckinError(
+        error instanceof Error
+          ? error.message
+          : "Could not save check-in. Please try again."
+      );
+    } finally {
+      setIsSavingCheckin(false);
+    }
+  };
 
   if (isLoadingUser) {
     return (
@@ -1048,9 +748,7 @@ export default function ProgressPage() {
           <DashboardSidebar
             firstName={firstName}
             initial={initial}
-            isLoadingUser={
-              isLoadingUser
-            }
+            isLoadingUser={isLoadingUser}
           />
 
           <section className="flex flex-1 items-center justify-center px-6 py-8">
@@ -1079,14 +777,11 @@ export default function ProgressPage() {
         <DashboardSidebar
           firstName={firstName}
           initial={initial}
-          isLoadingUser={
-            isLoadingUser
-          }
+          isLoadingUser={isLoadingUser}
         />
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
           {/* INTRO + PROGRESS PHOTOS */}
-
           <section className="pb-10">
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
@@ -1115,21 +810,18 @@ export default function ProgressPage() {
             <input
               ref={photoInputRef}
               type="file"
-              accept="image/*"
-              capture="environment"
+              accept="image/jpeg,image/png,image/webp"
               onChange={handlePhotoUpload}
               className="hidden"
             />
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
               {/* DAY 01 */}
-
               <div className="group overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
                 <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#EEE3DF]">
                   {photoUrls[1] ? (
                     <>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-
                       <img
                         src={photoUrls[1]}
                         alt="Day 1 progress"
@@ -1140,9 +832,7 @@ export default function ProgressPage() {
                         type="button"
                         onClick={() =>
                           setEditingPhotoDay(
-                            editingPhotoDay === 1
-                              ? null
-                              : 1
+                            editingPhotoDay === 1 ? null : 1
                           )
                         }
                         className="absolute right-4 top-4 z-10 rounded-full bg-[#211C19]/90 px-4 py-2 text-[10px] tracking-[0.2em] text-[#F7F1ED]"
@@ -1154,9 +844,7 @@ export default function ProgressPage() {
                         <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
                           <button
                             type="button"
-                            onClick={() =>
-                              openPhotoPicker(1)
-                            }
+                            onClick={() => openPhotoPicker(1)}
                             className="block w-full px-4 py-3 text-left text-[12px] tracking-[0.15em] hover:bg-[#EADCD7]"
                           >
                             REPLACE PHOTO
@@ -1164,11 +852,7 @@ export default function ProgressPage() {
 
                           <button
                             type="button"
-                            onClick={() =>
-                              removeProgressPhoto(
-                                1
-                              )
-                            }
+                            onClick={() => removeProgressPhoto(1)}
                             className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[12px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]"
                           >
                             REMOVE PHOTO
@@ -1179,12 +863,8 @@ export default function ProgressPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() =>
-                        openPhotoPicker(1)
-                      }
-                      disabled={
-                        isUploadingPhoto
-                      }
+                      onClick={() => openPhotoPicker(1)}
+                      disabled={isUploadingPhoto}
                       className="flex flex-col items-center disabled:opacity-50"
                     >
                       <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-2xl text-[#A77B73] transition group-hover:bg-[#EAD8D3]">
@@ -1192,8 +872,7 @@ export default function ProgressPage() {
                       </span>
 
                       <span className="mt-3 text-[12px] tracking-[0.2em] text-[#8F655E]">
-                        {isUploadingPhoto &&
-                        photoTargetDay === 1
+                        {isUploadingPhoto && photoTargetDay === 1
                           ? "UPLOADING..."
                           : "ADD PHOTO"}
                       </span>
@@ -1201,12 +880,11 @@ export default function ProgressPage() {
                   )}
                 </div>
 
-                {photoError &&
-                  photoTargetDay === 1 && (
-                    <p className="px-5 pt-3 text-[12px] text-[#9D6F67]">
-                      {photoError}
-                    </p>
-                  )}
+                {photoError && photoTargetDay === 1 && (
+                  <p className="px-5 pt-3 text-[12px] text-[#9D6F67]">
+                    {photoError}
+                  </p>
+                )}
 
                 <div className="flex items-center justify-between p-5">
                   <div>
@@ -1226,7 +904,6 @@ export default function ProgressPage() {
               </div>
 
               {/* CURRENT / NEXT PHOTO */}
-
               <div
                 className={`group overflow-hidden rounded-[1.75rem] border bg-[#FBF8F6] ${
                   safeCurrentDay > 1
@@ -1247,18 +924,11 @@ export default function ProgressPage() {
                         CURRENT
                       </span>
 
-                      {photoUrls[
-                        safeCurrentDay
-                      ] ? (
+                      {photoUrls[safeCurrentDay] ? (
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-
                           <img
-                            src={
-                              photoUrls[
-                                safeCurrentDay
-                              ]
-                            }
+                            src={photoUrls[safeCurrentDay]}
                             alt={`Day ${safeCurrentDay} progress`}
                             className="h-full w-full object-cover"
                           />
@@ -1267,8 +937,7 @@ export default function ProgressPage() {
                             type="button"
                             onClick={() =>
                               setEditingPhotoDay(
-                                editingPhotoDay ===
-                                  safeCurrentDay
+                                editingPhotoDay === safeCurrentDay
                                   ? null
                                   : safeCurrentDay
                               )
@@ -1278,15 +947,12 @@ export default function ProgressPage() {
                             EDIT PHOTO
                           </button>
 
-                          {editingPhotoDay ===
-                            safeCurrentDay && (
+                          {editingPhotoDay === safeCurrentDay && (
                             <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
                               <button
                                 type="button"
                                 onClick={() =>
-                                  openPhotoPicker(
-                                    safeCurrentDay
-                                  )
+                                  openPhotoPicker(safeCurrentDay)
                                 }
                                 className="block w-full px-4 py-3 text-left text-[12px] tracking-[0.15em] hover:bg-[#EADCD7]"
                               >
@@ -1296,9 +962,7 @@ export default function ProgressPage() {
                               <button
                                 type="button"
                                 onClick={() =>
-                                  removeProgressPhoto(
-                                    safeCurrentDay
-                                  )
+                                  removeProgressPhoto(safeCurrentDay)
                                 }
                                 className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[12px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]"
                               >
@@ -1311,13 +975,9 @@ export default function ProgressPage() {
                         <button
                           type="button"
                           onClick={() =>
-                            openPhotoPicker(
-                              safeCurrentDay
-                            )
+                            openPhotoPicker(safeCurrentDay)
                           }
-                          disabled={
-                            isUploadingPhoto
-                          }
+                          disabled={isUploadingPhoto}
                           className="flex flex-col items-center disabled:opacity-50"
                         >
                           <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#B48A82] font-serif text-2xl text-[#9D6F67] transition group-hover:bg-[#DFC7C1]">
@@ -1326,8 +986,7 @@ export default function ProgressPage() {
 
                           <span className="mt-3 text-[12px] tracking-[0.2em] text-[#8F655E]">
                             {isUploadingPhoto &&
-                            photoTargetDay ===
-                              safeCurrentDay
+                            photoTargetDay === safeCurrentDay
                               ? "UPLOADING..."
                               : "ADD PHOTO"}
                           </span>
@@ -1350,49 +1009,35 @@ export default function ProgressPage() {
                 <div className="flex items-center justify-between p-5">
                   <div>
                     <p className="text-[12px] tracking-[0.25em]">
-                      {safeCurrentDay ===
-                      1
+                      {safeCurrentDay === 1
                         ? "YOUR NEXT PHOTO"
                         : `DAY ${dayNumber}`}
                     </p>
 
                     <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                      {safeCurrentDay ===
-                      1
+                      {safeCurrentDay === 1
                         ? "currently."
                         : "right now."}
                     </p>
                   </div>
 
                   <span className="text-[12px] text-[#927D76]">
-                    {safeCurrentDay ===
-                    1
-                      ? "LOCKED"
-                      : "TODAY"}
+                    {safeCurrentDay === 1 ? "LOCKED" : "TODAY"}
                   </span>
                 </div>
               </div>
 
-              {/* FINAL DAY */}
-
+              {/* DAY 75 */}
               <div className="overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
                 <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#F1EAE7]">
-                  {safeCurrentDay >=
-                  challengeLength ? (
+                  {safeCurrentDay >= 75 ? (
                     <>
-                      {photoUrls[
-                        challengeLength
-                      ] ? (
+                      {photoUrls[75] ? (
                         <>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-
                           <img
-                            src={
-                              photoUrls[
-                                challengeLength
-                              ]
-                            }
-                            alt={`Day ${challengeLength} progress`}
+                            src={photoUrls[75]}
+                            alt="Day 75 progress"
                             className="h-full w-full object-cover"
                           />
 
@@ -1400,10 +1045,7 @@ export default function ProgressPage() {
                             type="button"
                             onClick={() =>
                               setEditingPhotoDay(
-                                editingPhotoDay ===
-                                  challengeLength
-                                  ? null
-                                  : challengeLength
+                                editingPhotoDay === 75 ? null : 75
                               )
                             }
                             className="absolute right-4 top-4 z-10 rounded-full bg-[#211C19]/90 px-4 py-2 text-[10px] tracking-[0.2em] text-[#F7F1ED]"
@@ -1411,16 +1053,11 @@ export default function ProgressPage() {
                             EDIT PHOTO
                           </button>
 
-                          {editingPhotoDay ===
-                            challengeLength && (
+                          {editingPhotoDay === 75 && (
                             <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
                               <button
                                 type="button"
-                                onClick={() =>
-                                  openPhotoPicker(
-                                    challengeLength
-                                  )
-                                }
+                                onClick={() => openPhotoPicker(75)}
                                 className="block w-full px-4 py-3 text-left text-[12px] tracking-[0.15em] hover:bg-[#EADCD7]"
                               >
                                 REPLACE PHOTO
@@ -1428,11 +1065,7 @@ export default function ProgressPage() {
 
                               <button
                                 type="button"
-                                onClick={() =>
-                                  removeProgressPhoto(
-                                    challengeLength
-                                  )
-                                }
+                                onClick={() => removeProgressPhoto(75)}
                                 className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[12px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]"
                               >
                                 REMOVE PHOTO
@@ -1443,14 +1076,8 @@ export default function ProgressPage() {
                       ) : (
                         <button
                           type="button"
-                          onClick={() =>
-                            openPhotoPicker(
-                              challengeLength
-                            )
-                          }
-                          disabled={
-                            isUploadingPhoto
-                          }
+                          onClick={() => openPhotoPicker(75)}
+                          disabled={isUploadingPhoto}
                           className="flex flex-col items-center disabled:opacity-50"
                         >
                           <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-2xl text-[#A77B73] transition hover:bg-[#EAD8D3]">
@@ -1459,8 +1086,7 @@ export default function ProgressPage() {
 
                           <span className="mt-3 text-[12px] tracking-[0.2em] text-[#8F655E]">
                             {isUploadingPhoto &&
-                            photoTargetDay ===
-                              challengeLength
+                            photoTargetDay === 75
                               ? "UPLOADING..."
                               : "ADD PHOTO"}
                           </span>
@@ -1474,8 +1100,7 @@ export default function ProgressPage() {
                       </span>
 
                       <p className="mt-3 text-[12px] tracking-[0.2em] text-[#A7938D]">
-                        SEE YOU ON DAY{" "}
-                        {challengeLength}
+                        SEE YOU ON DAY 75
                       </p>
                     </div>
                   )}
@@ -1484,10 +1109,7 @@ export default function ProgressPage() {
                 <div className="flex items-center justify-between p-5">
                   <div>
                     <p className="text-[12px] tracking-[0.25em]">
-                      DAY{" "}
-                      {String(
-                        challengeLength
-                      ).padStart(2, "0")}
+                      DAY 75
                     </p>
 
                     <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
@@ -1502,19 +1124,16 @@ export default function ProgressPage() {
               </div>
             </div>
 
-            {photoError &&
-              photoTargetDay !== 1 && (
-                <p className="mt-4 text-[12px] text-[#9D6F67]">
-                  {photoError}
-                </p>
-              )}
+            {photoError && photoTargetDay !== 1 && (
+              <p className="mt-4 text-[12px] text-[#9D6F67]">
+                {photoError}
+              </p>
+            )}
           </section>
 
           {/* MEASUREMENTS + LITTLE WINS */}
-
           <section className="grid gap-5 border-t border-[#DED0CB] py-10 lg:grid-cols-2">
             {/* MEASUREMENTS */}
-
             <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-8">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -1529,9 +1148,7 @@ export default function ProgressPage() {
 
                 <button
                   type="button"
-                  onClick={
-                    openMeasurementModal
-                  }
+                  onClick={openMeasurementModal}
                   className="rounded-full border border-[#CBA9A2] px-4 py-2 text-[10px] tracking-[0.2em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
                 >
                   + UPDATE
@@ -1539,22 +1156,20 @@ export default function ProgressPage() {
               </div>
 
               <div className="mt-7">
-                {measurementDisplay.map(
-                  ([label, value]) => (
-                    <div
-                      key={label}
-                      className="flex items-center justify-between border-t border-[#E1D3CE] py-4"
-                    >
-                      <span className="text-[12px] tracking-[0.2em] text-[#806E68]">
-                        {label}
-                      </span>
+                {measurementDisplay.map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="flex items-center justify-between border-t border-[#E1D3CE] py-4"
+                  >
+                    <span className="text-[12px] tracking-[0.2em] text-[#806E68]">
+                      {label}
+                    </span>
 
-                      <span className="font-serif text-xl text-[#A77B73]">
-                        {value}
-                      </span>
-                    </div>
-                  )
-                )}
+                    <span className="font-serif text-xl text-[#A77B73]">
+                      {value}
+                    </span>
+                  </div>
+                ))}
               </div>
 
               <p className="mt-2 text-[12px] italic text-[#9A8780]">
@@ -1563,7 +1178,6 @@ export default function ProgressPage() {
             </div>
 
             {/* LITTLE WINS */}
-
             <div className="rounded-[2rem] bg-[#EAD8D3] p-7 md:p-8">
               <div>
                 <p className="text-[12px] tracking-[0.35em] text-[#8F655E]">
@@ -1584,9 +1198,7 @@ export default function ProgressPage() {
                   <button
                     key={win}
                     type="button"
-                    onClick={() =>
-                      toggleWin(win)
-                    }
+                    onClick={() => toggleWin(win)}
                     className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition hover:bg-[#F1E2DE] ${
                       completedWins[win]
                         ? "bg-[#F1E2DE]"
@@ -1600,9 +1212,7 @@ export default function ProgressPage() {
                           : ""
                       }`}
                     >
-                      {completedWins[win]
-                        ? "✓"
-                        : "♡"}
+                      {completedWins[win] ? "✓" : "♡"}
                     </span>
 
                     <span className="font-serif text-lg italic">
@@ -1614,38 +1224,32 @@ export default function ProgressPage() {
 
               {customWins.length > 0 && (
                 <div className="mt-3 space-y-3">
-                  {customWins.map(
-                    ({ key, label }) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() =>
-                          toggleWin(key)
-                        }
-                        className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition hover:bg-[#F1E2DE] ${
+                  {customWins.map(({ key, label }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => toggleWin(key)}
+                      className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition hover:bg-[#F1E2DE] ${
+                        completedWins[key]
+                          ? "bg-[#F1E2DE]"
+                          : "bg-[#F1E2DE]/50"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] text-[#9D6F67] ${
                           completedWins[key]
-                            ? "bg-[#F1E2DE]"
-                            : "bg-[#F1E2DE]/50"
+                            ? "bg-[#211C19] text-[#F7F1ED]"
+                            : ""
                         }`}
                       >
-                        <span
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] text-[#9D6F67] ${
-                            completedWins[key]
-                              ? "bg-[#211C19] text-[#F7F1ED]"
-                              : ""
-                          }`}
-                        >
-                          {completedWins[key]
-                            ? "✓"
-                            : "♡"}
-                        </span>
+                        {completedWins[key] ? "✓" : "♡"}
+                      </span>
 
-                        <span className="font-serif text-lg italic">
-                          {label}
-                        </span>
-                      </button>
-                    )
-                  )}
+                      <span className="font-serif text-lg italic">
+                        {label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               )}
 
@@ -1654,9 +1258,7 @@ export default function ProgressPage() {
                 onClick={() => {
                   setCustomWin("");
                   setCustomWinError(null);
-                  setIsCustomWinModalOpen(
-                    true
-                  );
+                  setIsCustomWinModalOpen(true);
                 }}
                 className="mt-6 rounded-full border border-[#B9948C] px-5 py-3 text-[11px] tracking-[0.2em] text-[#8F655E] transition hover:bg-[#F1E2DE]"
               >
@@ -1666,7 +1268,6 @@ export default function ProgressPage() {
           </section>
 
           {/* WEEKLY CHECK-IN */}
-
           <section className="border-t border-[#DED0CB] py-10">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
@@ -1683,8 +1284,7 @@ export default function ProgressPage() {
               </div>
 
               <p className="text-[11px] tracking-[0.18em] text-[#927D76]">
-                {completedCheckins} OF{" "}
-                {totalCheckins} COMPLETE
+                {completedCheckins} OF 11 COMPLETE
               </p>
             </div>
 
@@ -1692,18 +1292,13 @@ export default function ProgressPage() {
               <div className="flex flex-col gap-7 p-7 md:p-8 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-start gap-5">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#EAD8D3] font-serif text-xl text-[#A77B73]">
-                    {String(
-                      currentWeek
-                    ).padStart(2, "0")}
+                    {String(currentWeek).padStart(2, "0")}
                   </div>
 
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
                       <p className="text-[12px] tracking-[0.25em] text-[#806E68]">
-                        WEEK{" "}
-                        {String(
-                          currentWeek
-                        ).padStart(2, "0")}
+                        WEEK {String(currentWeek).padStart(2, "0")}
                       </p>
 
                       <span
@@ -1730,10 +1325,7 @@ export default function ProgressPage() {
                           ? "how are you feeling?"
                           : `opens on day ${String(
                               currentWeekUnlockDay
-                            ).padStart(
-                              2,
-                              "0"
-                            )}.`}
+                            ).padStart(2, "0")}.`}
                     </p>
 
                     <p className="mt-3 max-w-xl text-sm leading-6 text-[#806E68]">
@@ -1749,11 +1341,7 @@ export default function ProgressPage() {
                 {currentWeekUnlocked ? (
                   <button
                     type="button"
-                    onClick={() =>
-                      openWeeklyCheckin(
-                        currentWeek
-                      )
-                    }
+                    onClick={() => openWeeklyCheckin(currentWeek)}
                     className="shrink-0 rounded-full bg-[#211C19] px-7 py-3.5 text-[11px] tracking-[0.22em] text-[#F7F1ED] transition hover:-translate-y-0.5"
                   >
                     {currentWeekComplete
@@ -1762,10 +1350,7 @@ export default function ProgressPage() {
                   </button>
                 ) : (
                   <div className="shrink-0 rounded-full border border-[#D8C7C1] px-6 py-3 text-[10px] tracking-[0.2em] text-[#A7938D]">
-                    DAY{" "}
-                    {String(
-                      currentWeekUnlockDay
-                    ).padStart(2, "0")}
+                    DAY {String(currentWeekUnlockDay).padStart(2, "0")}
                   </div>
                 )}
               </div>
@@ -1779,12 +1364,9 @@ export default function ProgressPage() {
                         ? "YOUR REFLECTION IS READY"
                         : `${Math.max(
                             0,
-                            currentWeekUnlockDay -
-                              safeCurrentDay
+                            currentWeekUnlockDay - safeCurrentDay
                           )} ${
-                            currentWeekUnlockDay -
-                              safeCurrentDay ===
-                            1
+                            currentWeekUnlockDay - safeCurrentDay === 1
                               ? "DAY"
                               : "DAYS"
                           } UNTIL CHECK-IN`}
@@ -1807,21 +1389,14 @@ export default function ProgressPage() {
       </div>
 
       {/* MEASUREMENTS MODAL */}
-
       {isMeasurementModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
-          onClick={() =>
-            setIsMeasurementModalOpen(
-              false
-            )
-          }
+          onClick={() => setIsMeasurementModalOpen(false)}
         >
           <div
             className="w-full max-w-xl rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8"
-            onClick={(event) =>
-              event.stopPropagation()
-            }
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -1840,11 +1415,7 @@ export default function ProgressPage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  setIsMeasurementModalOpen(
-                    false
-                  )
-                }
+                onClick={() => setIsMeasurementModalOpen(false)}
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
               >
                 ×
@@ -1859,41 +1430,36 @@ export default function ProgressPage() {
                 ["chest", "CHEST", "in"],
                 ["thigh", "THIGH", "in"],
                 ["arm", "ARM", "in"],
-              ].map(
-                ([field, label, unit]) => (
-                  <label
-                    key={field}
-                    className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
-                  >
-                    <span className="text-[10px] tracking-[0.2em] text-[#806E68]">
-                      {label} ({unit})
-                    </span>
+              ].map(([field, label, unit]) => (
+                <label
+                  key={field}
+                  className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
+                >
+                  <span className="text-[10px] tracking-[0.2em] text-[#806E68]">
+                    {label} ({unit})
+                  </span>
 
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      inputMode="decimal"
-                      value={
-                        measurementForm[
-                          field as keyof typeof measurementForm
-                        ]
-                      }
-                      onChange={(event) =>
-                        setMeasurementForm(
-                          (previous) => ({
-                            ...previous,
-                            [field]:
-                              event.target.value,
-                          })
-                        )
-                      }
-                      className="mt-2 w-full bg-transparent font-serif text-2xl text-[#A77B73] outline-none"
-                      placeholder="—"
-                    />
-                  </label>
-                )
-              )}
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    inputMode="decimal"
+                    value={
+                      measurementForm[
+                        field as keyof typeof measurementForm
+                      ]
+                    }
+                    onChange={(event) =>
+                      setMeasurementForm((previous) => ({
+                        ...previous,
+                        [field]: event.target.value,
+                      }))
+                    }
+                    className="mt-2 w-full bg-transparent font-serif text-2xl text-[#A77B73] outline-none"
+                    placeholder="—"
+                  />
+                </label>
+              ))}
             </div>
 
             {measurementError && (
@@ -1904,12 +1470,8 @@ export default function ProgressPage() {
 
             <button
               type="button"
-              onClick={
-                saveMeasurements
-              }
-              disabled={
-                isSavingMeasurements
-              }
+              onClick={saveMeasurements}
+              disabled={isSavingMeasurements}
               className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[12px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
             >
               {isSavingMeasurements
@@ -1921,21 +1483,14 @@ export default function ProgressPage() {
       )}
 
       {/* LITTLE WIN MODAL */}
-
       {isCustomWinModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
-          onClick={() =>
-            setIsCustomWinModalOpen(
-              false
-            )
-          }
+          onClick={() => setIsCustomWinModalOpen(false)}
         >
           <div
             className="w-full max-w-lg rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8"
-            onClick={(event) =>
-              event.stopPropagation()
-            }
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -1954,11 +1509,7 @@ export default function ProgressPage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  setIsCustomWinModalOpen(
-                    false
-                  )
-                }
+                onClick={() => setIsCustomWinModalOpen(false)}
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
               >
                 ×
@@ -1974,9 +1525,7 @@ export default function ProgressPage() {
                 type="text"
                 value={customWin}
                 onChange={(event) => {
-                  setCustomWin(
-                    event.target.value
-                  );
+                  setCustomWin(event.target.value);
                   setCustomWinError(null);
                 }}
                 onKeyDown={(event) => {
@@ -2002,13 +1551,8 @@ export default function ProgressPage() {
 
             <button
               type="button"
-              onClick={
-                saveCustomWin
-              }
-              disabled={
-                isSavingCustomWin ||
-                !customWin.trim()
-              }
+              onClick={saveCustomWin}
+              disabled={isSavingCustomWin || !customWin.trim()}
               className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[12px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
             >
               {isSavingCustomWin
@@ -2020,31 +1564,19 @@ export default function ProgressPage() {
       )}
 
       {/* WEEKLY CHECK-IN MODAL */}
-
       {checkinWeek !== null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
-          onClick={() =>
-            setCheckinWeek(null)
-          }
+          onClick={() => setCheckinWeek(null)}
         >
           <div
             className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8"
-            onClick={(event) =>
-              event.stopPropagation()
-            }
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[12px] tracking-[0.35em] text-[#9D6F67]">
-                  WEEK{" "}
-                  {String(
-                    checkinWeek
-                  ).padStart(
-                    2,
-                    "0"
-                  )}{" "}
-                  CHECK-IN
+                  WEEK {String(checkinWeek).padStart(2, "0")} CHECK-IN
                 </p>
 
                 <h2 className="mt-2 font-serif text-3xl">
@@ -2054,9 +1586,7 @@ export default function ProgressPage() {
 
               <button
                 type="button"
-                onClick={() =>
-                  setCheckinWeek(null)
-                }
+                onClick={() => setCheckinWeek(null)}
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
               >
                 ×
@@ -2065,54 +1595,40 @@ export default function ProgressPage() {
 
             <div className="mt-7 space-y-3">
               {[
-                [
-                  "went_well",
-                  "What went well?",
-                ],
-                [
-                  "felt_hard",
-                  "What felt hard?",
-                ],
-                [
-                  "proud_of",
-                  "What are you proud of?",
-                ],
+                ["went_well", "What went well?"],
+                ["felt_hard", "What felt hard?"],
+                ["proud_of", "What are you proud of?"],
                 [
                   "next_week_focus",
                   "What do you want to focus on next week?",
                 ],
-              ].map(
-                ([field, label]) => (
-                  <label
-                    key={field}
-                    className="block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
-                  >
-                    <span className="text-[12px] tracking-[0.16em] text-[#806E68]">
-                      {label}
-                    </span>
+              ].map(([field, label]) => (
+                <label
+                  key={field}
+                  className="block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
+                >
+                  <span className="text-[12px] tracking-[0.16em] text-[#806E68]">
+                    {label}
+                  </span>
 
-                    <textarea
-                      rows={2}
-                      value={
-                        checkinForm[
-                          field as keyof typeof checkinForm
-                        ]
-                      }
-                      onChange={(event) =>
-                        setCheckinForm(
-                          (previous) => ({
-                            ...previous,
-                            [field]:
-                              event.target.value,
-                          })
-                        )
-                      }
-                      className="mt-2 w-full resize-none bg-transparent font-serif text-lg italic text-[#A77B73] outline-none"
-                      placeholder="write it here..."
-                    />
-                  </label>
-                )
-              )}
+                  <textarea
+                    rows={2}
+                    value={
+                      checkinForm[
+                        field as keyof typeof checkinForm
+                      ]
+                    }
+                    onChange={(event) =>
+                      setCheckinForm((previous) => ({
+                        ...previous,
+                        [field]: event.target.value,
+                      }))
+                    }
+                    className="mt-2 w-full resize-none bg-transparent font-serif text-lg italic text-[#A77B73] outline-none"
+                    placeholder="write it here..."
+                  />
+                </label>
+              ))}
             </div>
 
             {checkinError && (
@@ -2123,12 +1639,8 @@ export default function ProgressPage() {
 
             <button
               type="button"
-              onClick={
-                saveWeeklyCheckin
-              }
-              disabled={
-                isSavingCheckin
-              }
+              onClick={saveWeeklyCheckin}
+              disabled={isSavingCheckin}
               className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[12px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
             >
               {isSavingCheckin
