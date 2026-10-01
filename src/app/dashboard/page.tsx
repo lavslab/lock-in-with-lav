@@ -10,67 +10,53 @@ import { getCurrentChallengeDay } from "@/lib/challenge";
 
 import DashboardSidebar from "@/components/DashboardSidebar";
 
-
-
 const commitments = [
-
   {
     number: "01",
     title: "MOVE",
     description: "45 min movement",
     column: "move",
   },
-
   {
     number: "02",
     title: "GET OUTSIDE",
     description: "Fresh air + outdoor movement",
     column: "get_outside",
   },
-
   {
     number: "03",
     title: "HYDRATE",
     description: "Hit your water goal",
     column: "hydrate",
   },
-
   {
     number: "04",
     title: "READ",
     description: "10 pages",
     column: "read",
   },
-
   {
     number: "05",
     title: "NOURISH",
     description: "Eat with intention",
     column: "nourish",
   },
-
   {
     number: "06",
     title: "DOCUMENT",
     description: "Progress photo",
     column: "document",
   },
-
   {
     number: "07",
     title: "NO ALCOHOL",
     description: "Stay alcohol-free",
     column: "no_alcohol",
   },
-
 ] as const;
-
-
 
 type CommitmentColumn =
   (typeof commitments)[number]["column"];
-
-
 
 type DailyProgress = {
   move: boolean;
@@ -82,8 +68,6 @@ type DailyProgress = {
   no_alcohol: boolean;
 };
 
-
-
 type SelectedWorkout = {
   id: string;
   title: string;
@@ -94,8 +78,6 @@ type SelectedWorkout = {
   exercises: string;
 };
 
-
-
 const emptyProgress: DailyProgress = {
   move: false,
   get_outside: false,
@@ -105,8 +87,6 @@ const emptyProgress: DailyProgress = {
   document: false,
   no_alcohol: false,
 };
-
-
 
 function formatDateForDatabase(date: Date) {
   const year = date.getFullYear();
@@ -120,8 +100,6 @@ function formatDateForDatabase(date: Date) {
 
   return `${year}-${month}-${day}`;
 }
-
-
 
 function WaterDrop({ filled }: { filled: boolean }) {
   return (
@@ -138,61 +116,39 @@ function WaterDrop({ filled }: { filled: boolean }) {
   );
 }
 
-
-
 export default function DashboardPage() {
-
   const supabase = createClient();
-
-
 
   const [progress, setProgress] =
     useState<DailyProgress>(emptyProgress);
 
-
-
   const [firstName, setFirstName] = useState("there");
-
-
 
   const [isLoadingUser, setIsLoadingUser] =
     useState(true);
 
-
-
   const [isLoadingProgress, setIsLoadingProgress] =
     useState(true);
-
-
 
   const [userId, setUserId] = useState<string | null>(
     null
   );
 
-
-
   const [waterBottles, setWaterBottles] = useState(0);
-
-
 
   const [selectedWorkout, setSelectedWorkout] =
     useState<SelectedWorkout | null>(null);
 
-
+  const [selectedWorkouts, setSelectedWorkouts] =
+    useState<SelectedWorkout[]>([]);
 
   const [challengeStartDate, setChallengeStartDate] =
     useState<string | null>(null);
 
-
-
   const [challengeLength, setChallengeLength] =
     useState(75);
 
-
-
   const today = new Date();
-
-
 
   const formattedDate = today
     .toLocaleDateString("en-US", {
@@ -203,8 +159,6 @@ export default function DashboardPage() {
     })
     .toUpperCase();
 
-
-
   const currentDay = challengeStartDate
     ? getCurrentChallengeDay(
         challengeStartDate,
@@ -213,19 +167,11 @@ export default function DashboardPage() {
       )
     : 1;
 
-
-
   const dayNumber = String(currentDay).padStart(2, "0");
-
-
 
   const currentHour = today.getHours();
 
-
-
   let greeting = "good morning";
-
-
 
   if (currentHour >= 12 && currentHour < 17) {
     greeting = "good afternoon";
@@ -233,31 +179,20 @@ export default function DashboardPage() {
     greeting = "good evening";
   }
 
-
-
   const initial =
     !isLoadingUser && firstName !== "there"
       ? firstName.charAt(0).toUpperCase()
       : "♡";
 
-
-
   useEffect(() => {
-
     const loadDashboard = async () => {
-
       setIsLoadingUser(true);
-
       setIsLoadingProgress(true);
-
-
 
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
-
-
 
       if (userError) {
         console.error(
@@ -266,23 +201,15 @@ export default function DashboardPage() {
         );
       }
 
-
-
       if (!user) {
         setIsLoadingUser(false);
         setIsLoadingProgress(false);
         return;
       }
 
-
-
       setUserId(user.id);
 
-
-
       const savedName = user.user_metadata?.name;
-
-
 
       if (savedName) {
         setFirstName(savedName);
@@ -290,52 +217,53 @@ export default function DashboardPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
-
-
       const todayKey =
         formatDateForDatabase(new Date());
-
-
 
       const selectedWorkoutKey =
         `selected-workout-${user.id}-${todayKey}`;
 
-
-
       const savedSelectedWorkout =
         localStorage.getItem(selectedWorkoutKey);
 
-
-
       if (savedSelectedWorkout) {
-
         try {
-
           const parsedWorkout =
             JSON.parse(
               savedSelectedWorkout
-            ) as SelectedWorkout;
-
-
+            ) as SelectedWorkout & {
+              workouts?: SelectedWorkout[];
+            };
 
           if (
+            Array.isArray(parsedWorkout?.workouts) &&
+            parsedWorkout.workouts.length > 0
+          ) {
+            setSelectedWorkouts(
+              parsedWorkout.workouts
+            );
+
+            setSelectedWorkout(
+              parsedWorkout.workouts[0]
+            );
+          } else if (
             parsedWorkout?.id &&
             parsedWorkout?.title
           ) {
-            setSelectedWorkout(parsedWorkout);
+            setSelectedWorkouts([
+              parsedWorkout,
+            ]);
+
+            setSelectedWorkout(
+              parsedWorkout
+            );
           }
-
         } catch {
-
           localStorage.removeItem(
             selectedWorkoutKey
           );
-
         }
-
       }
-
-
 
       const {
         data: profile,
@@ -348,10 +276,7 @@ export default function DashboardPage() {
         .eq("id", user.id)
         .single();
 
-
-
       if (profileError) {
-
         console.error(
           "Could not load profile:",
           profileError
@@ -360,37 +285,24 @@ export default function DashboardPage() {
         setIsLoadingUser(false);
         setIsLoadingProgress(false);
         return;
-
       }
 
-
-
       if (!profile?.challenge_start_date) {
-
         setIsLoadingUser(false);
         setIsLoadingProgress(false);
         return;
-
       }
-
-
 
       const profileChallengeLength =
         profile.challenge_length ?? 75;
-
-
 
       setChallengeStartDate(
         profile.challenge_start_date
       );
 
-
-
       setChallengeLength(
         profileChallengeLength
       );
-
-
 
       const calculatedDay =
         getCurrentChallengeDay(
@@ -398,15 +310,11 @@ export default function DashboardPage() {
           profileChallengeLength
         );
 
-
-
       const savedWaterBottles = Number(
         localStorage.getItem(
           `water-bottles-${user.id}-${calculatedDay}`
         ) || "0"
       );
-
-
 
       setWaterBottles(
         Math.min(
@@ -414,8 +322,6 @@ export default function DashboardPage() {
           8
         )
       );
-
-
 
       const {
         data: savedProgress,
@@ -432,36 +338,25 @@ export default function DashboardPage() {
         )
         .maybeSingle();
 
-
-
       if (progressError) {
-
         console.error(
           "Could not load daily progress:",
           progressError
         );
-
       } else if (savedProgress) {
-
         if (
           savedProgress.hydrate &&
           !localStorage.getItem(
             `water-bottles-${user.id}-${calculatedDay}`
           )
         ) {
-
           setWaterBottles(8);
-
-
 
           localStorage.setItem(
             `water-bottles-${user.id}-${calculatedDay}`,
             "8"
           );
-
         }
-
-
 
         setProgress({
           move: savedProgress.move,
@@ -474,12 +369,9 @@ export default function DashboardPage() {
           no_alcohol:
             savedProgress.no_alcohol ?? false,
         });
-
       }
 
-
-
-      /*
+      /**
        * A progress photo now completes the DOCUMENT
        * commitment automatically.
        *
@@ -488,6 +380,7 @@ export default function DashboardPage() {
        * does not need the user to manually check off
        * the commitment after uploading their photo.
        */
+
       const {
         data: progressPhoto,
         error: progressPhotoError,
@@ -495,48 +388,35 @@ export default function DashboardPage() {
         .from("progress_photos")
         .select("challenge_day")
         .eq("user_id", user.id)
-        .eq("challenge_day", calculatedDay)
+        .eq(
+          "challenge_day",
+          calculatedDay
+        )
         .eq("photo_type", "progress")
         .maybeSingle();
 
-
-
       if (progressPhotoError) {
-
         console.error(
           "Could not load today's progress photo:",
           progressPhotoError
         );
-
       } else if (progressPhoto) {
-
         setProgress((previous) => ({
           ...previous,
           document: true,
         }));
-
       }
 
-
-
       setIsLoadingUser(false);
-
       setIsLoadingProgress(false);
-
     };
 
-
-
     loadDashboard();
-
   }, []);
-
-
 
   const toggleCommitment = async (
     column: CommitmentColumn
   ) => {
-
     if (
       !userId ||
       !challengeStartDate ||
@@ -545,27 +425,17 @@ export default function DashboardPage() {
       return;
     }
 
-
-
     const newValue = !progress[column];
-
-
 
     const updatedProgress = {
       ...progress,
       [column]: newValue,
     };
 
-
-
     setProgress(updatedProgress);
-
-
 
     const progressDate =
       formatDateForDatabase(today);
-
-
 
     const { error } = await supabase
       .from("daily_progress")
@@ -593,29 +463,19 @@ export default function DashboardPage() {
         }
       );
 
-
-
     if (error) {
-
       console.error(
         "Could not save daily progress:",
         error
       );
 
-
-
       setProgress(progress);
-
     }
-
   };
-
-
 
   const updateWaterBottles = async (
     nextCount: number
   ) => {
-
     if (
       !userId ||
       !challengeStartDate ||
@@ -624,46 +484,30 @@ export default function DashboardPage() {
       return;
     }
 
-
-
     const clampedCount = Math.min(
       Math.max(nextCount, 0),
       8
     );
 
-
-
     const hydrateComplete =
       clampedCount === 8;
 
-
-
     setWaterBottles(clampedCount);
-
-
 
     localStorage.setItem(
       `water-bottles-${userId}-${currentDay}`,
       String(clampedCount)
     );
 
-
-
     const updatedProgress = {
       ...progress,
       hydrate: hydrateComplete,
     };
 
-
-
     setProgress(updatedProgress);
-
-
 
     const progressDate =
       formatDateForDatabase(today);
-
-
 
     const { error } = await supabase
       .from("daily_progress")
@@ -691,27 +535,18 @@ export default function DashboardPage() {
         }
       );
 
-
-
     if (error) {
-
       console.error(
         "Could not save water progress:",
         error
       );
-
     }
-
   };
-
-
 
   const completedCount =
     commitments.filter(
       (item) => progress[item.column]
     ).length;
-
-
 
   const percentage = Math.round(
     (completedCount /
@@ -719,211 +554,130 @@ export default function DashboardPage() {
       100
   );
 
-
-
   const dayComplete =
     completedCount ===
     commitments.length;
-
-
 
   if (
     isLoadingUser ||
     isLoadingProgress
   ) {
-
     return (
       <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
-
         <div className="flex min-h-screen">
-
           <DashboardSidebar
             firstName={firstName}
             initial={initial}
             isLoadingUser={isLoadingUser}
           />
 
-
-
           <section className="flex flex-1 items-center justify-center px-6 py-8 md:px-10 lg:px-14">
-
             <div className="text-center">
-
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#D6C3BD] bg-[#FBF8F6] font-serif text-xl text-[#A77B73]">
                 ♡
               </div>
-
-
 
               <p className="mt-5 text-[8px] tracking-[0.32em] text-[#9D6F67]">
                 LOCKING IN
               </p>
 
-
-
               <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
                 loading your day... ♡
               </p>
-
             </div>
-
           </section>
-
         </div>
-
       </main>
     );
-
   }
 
-
-
   return (
-
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
-
       <div className="flex min-h-screen">
-
         <DashboardSidebar
           firstName={firstName}
           initial={initial}
           isLoadingUser={isLoadingUser}
         />
 
-
-
         <section className="min-w-0 flex-1 px-5 py-6 sm:px-6 md:px-10 lg:px-14">
-
           <header className="flex items-start justify-between gap-4">
-
             <div>
-
               <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
                 {formattedDate}
               </p>
 
-
-
               <h1 className="mt-2 font-serif text-3xl leading-none sm:text-4xl">
-
                 {greeting},{" "}
-
                 <span className="italic text-[#A77B73]">
-
                   {firstName}. ♡
-
                 </span>
-
               </h1>
-
             </div>
-
           </header>
 
-
-
           <section className="mt-7 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6 sm:px-7 sm:py-7 md:px-8">
-
             <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-
               <div>
-
                 <div className="flex flex-wrap items-center gap-3">
-
                   <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
                     TODAY
                   </p>
 
-
-
                   <span className="h-px w-7 bg-[#CBA9A2]" />
-
-
 
                   <p className="text-[8px] tracking-[0.22em] text-[#9D6F67]">
                     DAY {dayNumber} OF{" "}
                     {challengeLength}
                   </p>
-
                 </div>
-
-
 
                 <h2 className="mt-3 font-serif text-4xl leading-none sm:text-5xl">
                   Day {dayNumber}
                 </h2>
 
-
-
                 <p className="mt-3 font-serif text-base italic text-[#A77B73]">
                   keep showing up.
                 </p>
-
               </div>
 
-
-
               <div className="flex items-end gap-8 sm:gap-12">
-
                 <div>
-
                   <p className="font-serif text-2xl text-[#211C19]">
                     {percentage}%
                   </p>
 
-
-
                   <p className="mt-1 text-[7px] tracking-[0.2em] text-[#9D6F67]">
                     TODAY
                   </p>
-
                 </div>
 
-
-
                 <div>
-
                   <p className="font-serif text-2xl text-[#211C19]">
-
                     {completedCount}
-
                     <span className="text-[#B79B95]">
                       /{commitments.length}
                     </span>
-
                   </p>
-
-
 
                   <p className="mt-1 text-[7px] tracking-[0.2em] text-[#9D6F67]">
                     COMPLETE
                   </p>
-
                 </div>
-
               </div>
-
             </div>
 
-
-
             <div className="mt-6 h-[3px] overflow-hidden rounded-full bg-[#E7DAD6]">
-
               <div
                 className="h-full rounded-full bg-[#A77B73] transition-all duration-500"
                 style={{
                   width: `${percentage}%`,
                 }}
               />
-
             </div>
 
-
-
             <div className="mt-3 flex items-center justify-between gap-4">
-
               <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
-
                 {dayComplete
                   ? "ALL SEVEN COMPLETE ♡"
                   : `${
@@ -936,87 +690,55 @@ export default function DashboardPage() {
                         ? "COMMITMENT"
                         : "COMMITMENTS"
                     } LEFT TODAY`}
-
               </p>
-
-
 
               <Link
                 href="/dashboard/journey"
                 className="flex shrink-0 items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
               >
-
                 <span>VIEW JOURNEY</span>
 
                 <span className="font-serif text-sm">
                   →
                 </span>
-
               </Link>
-
             </div>
-
           </section>
 
-
-
           <section className="mt-10 md:mt-12">
-
             <div className="flex items-end justify-between gap-5 border-b border-[#DED0CB] pb-4">
-
               <div>
-
                 <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
                   DAILY PRACTICE
                 </p>
 
-
-
                 <h2 className="mt-2 font-serif text-3xl leading-none sm:text-4xl">
-
                   Today&apos;s{" "}
-
                   <span className="italic text-[#A77B73]">
                     commitments.
                   </span>
-
                 </h2>
-
               </div>
 
-
-
               <div className="shrink-0 text-right">
-
                 <p className="font-serif text-lg italic text-[#A77B73]">
-                  {completedCount}/{commitments.length}
+                  {completedCount}/
+                  {commitments.length}
                 </p>
-
-
 
                 <p className="mt-0.5 text-[7px] tracking-[0.18em] text-[#9D6F67]">
                   COMPLETE
                 </p>
-
               </div>
-
             </div>
 
-
-
             <div className="mt-5 grid gap-2.5 lg:grid-cols-2">
-
               {commitments.map((item) => {
-
                 const isComplete =
                   progress[item.column];
 
-
-
                 if (item.column === "hydrate") {
-
                   return (
-
                     <div
                       key={item.number}
                       className={`rounded-[1.25rem] border px-4 py-4 transition duration-300 lg:col-span-2 ${
@@ -1025,12 +747,12 @@ export default function DashboardPage() {
                           : "border-[#DED0CB] bg-[#FBF8F6]"
                       }`}
                     >
-
                       <div className="flex items-center gap-3.5">
-
                         <button
                           type="button"
-                          disabled={isLoadingProgress}
+                          disabled={
+                            isLoadingProgress
+                          }
                           onClick={() =>
                             updateWaterBottles(
                               isComplete ? 0 : 8
@@ -1051,60 +773,39 @@ export default function DashboardPage() {
                               : "border-[#CBA9A2] text-[#A77B73]"
                           }`}
                         >
-
                           {isComplete
                             ? "✓"
                             : item.number}
-
                         </button>
 
-
-
                         <div className="min-w-0 flex-1">
-
                           <div className="flex flex-wrap items-center justify-between gap-2">
-
                             <div>
-
                               <p className="text-[9px] tracking-[0.18em]">
                                 HYDRATE
                               </p>
 
-
-
                               <p className="mt-1 text-[12px] text-[#8C7770]">
                                 1 gallon goal
                               </p>
-
                             </div>
-
-
 
                             <p className="font-serif text-sm italic text-[#A77B73]">
                               {waterBottles}/8 bottles
                             </p>
-
                           </div>
-
                         </div>
-
                       </div>
 
-
-
                       <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8">
-
                         {Array.from({
                           length: 8,
                         }).map((_, index) => {
-
                           const filled =
-                            index < waterBottles;
-
-
+                            index <
+                            waterBottles;
 
                           return (
-
                             <button
                               key={index}
                               type="button"
@@ -1134,37 +835,23 @@ export default function DashboardPage() {
                                   : "border-[#E1D3CE] bg-[#F7F1ED]"
                               }`}
                             >
-
                               <WaterDrop
                                 filled={filled}
                               />
-
                             </button>
-
                           );
-
                         })}
-
                       </div>
-
-
 
                       <p className="mt-2.5 text-[7px] tracking-[0.17em] text-[#9D6F67]">
                         TAP AS YOU GO • EACH = 16 OZ
                       </p>
-
                     </div>
-
                   );
-
                 }
 
-
-
                 if (item.column === "move") {
-
                   return (
-
                     <div
                       key={item.number}
                       className={`rounded-[1.25rem] border px-4 py-4 transition duration-300 ${
@@ -1173,12 +860,12 @@ export default function DashboardPage() {
                           : "border-[#DED0CB] bg-[#FBF8F6]"
                       }`}
                     >
-
                       <div className="flex items-center gap-3.5">
-
                         <button
                           type="button"
-                          disabled={isLoadingProgress}
+                          disabled={
+                            isLoadingProgress
+                          }
                           onClick={() =>
                             toggleCommitment("move")
                           }
@@ -1193,109 +880,107 @@ export default function DashboardPage() {
                               : "border-[#CBA9A2] text-[#A77B73] hover:bg-[#F1E6E2]"
                           }`}
                         >
-
                           {isComplete
                             ? "✓"
                             : item.number}
-
                         </button>
 
-
-
                         <div className="min-w-0 flex-1">
-
                           <div className="flex items-center justify-between gap-3">
-
                             <div className="min-w-0">
-
                               <p className="text-[9px] tracking-[0.18em]">
                                 MOVE
                               </p>
 
-
-
                               <p className="mt-1 text-[12px] text-[#8C7770]">
-
-                                {selectedWorkout
-                                  ? selectedWorkout.title
+                                {selectedWorkouts.length >
+                                0
+                                  ? selectedWorkouts
+                                      .map(
+                                        (workout) =>
+                                          workout.title
+                                      )
+                                      .join(" + ")
                                   : "45 min movement"}
-
                               </p>
-
                             </div>
 
-
-
                             {isComplete && (
-
                               <span className="shrink-0 font-serif text-xs italic text-[#A77B73]">
                                 done ♡
                               </span>
-
                             )}
-
                           </div>
-
                         </div>
-
                       </div>
 
-
-
-                      {selectedWorkout ? (
-
+                      {selectedWorkouts.length >
+                      0 ? (
                         <div className="ml-[46px] mt-3 border-t border-[#E1D3CE] pt-3">
+                          {selectedWorkouts.map(
+                            (workout, index) => (
+                              <div
+                                key={workout.id}
+                                className={
+                                  index > 0
+                                    ? "mt-3 border-t border-[#E1D3CE] pt-3"
+                                    : ""
+                                }
+                              >
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[7px] tracking-[0.15em] text-[#9D6F67]">
+                                  <span>
+                                    {workout.type.toUpperCase()}
+                                  </span>
 
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[7px] tracking-[0.15em] text-[#9D6F67]">
+                                  <span>
+                                    •
+                                  </span>
 
-                            <span>
-                              {selectedWorkout.type.toUpperCase()}
-                            </span>
+                                  <span>
+                                    {workout.time}
+                                  </span>
 
+                                  <span>
+                                    •
+                                  </span>
 
+                                  <span>
+                                    {
+                                      workout.exercises
+                                    }
+                                  </span>
+                                </div>
 
-                            <span>•</span>
+                                <div className="mt-2 flex items-center justify-between gap-4">
+                                  <Link
+                                    href={`/dashboard/resources/workouts/${workout.id}`}
+                                    className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
+                                  >
+                                    <span>
+                                      OPEN{" "}
+                                      {workout.title.toUpperCase()}
+                                    </span>
 
-
-
-                            <span>
-                              {selectedWorkout.time}
-                            </span>
-
-
-
-                            <span>•</span>
-
-
-
-                            <span>
-                              {selectedWorkout.exercises}
-                            </span>
-
-                          </div>
-
-
+                                    <span className="font-serif text-sm">
+                                      →
+                                    </span>
+                                  </Link>
+                                </div>
+                              </div>
+                            )
+                          )}
 
                           <div className="mt-3 flex items-center justify-between gap-4">
-
-                            <Link
-                              href={`/dashboard/resources/workouts/${selectedWorkout.id}`}
-                              className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
-                            >
-
-                              <span>
-                                OPEN TODAY&apos;S WORKOUT
-                              </span>
-
-
-
-                              <span className="font-serif text-sm">
-                                →
-                              </span>
-
-                            </Link>
-
-
+                            <span className="font-serif text-xs italic text-[#A77B73]">
+                              {
+                                selectedWorkouts.length
+                              }{" "}
+                              {selectedWorkouts.length ===
+                              1
+                                ? "workout"
+                                : "workouts"}{" "}
+                              selected ♡
+                            </span>
 
                             <Link
                               href="/dashboard/resources/workouts"
@@ -1303,44 +988,28 @@ export default function DashboardPage() {
                             >
                               CHANGE
                             </Link>
-
                           </div>
-
                         </div>
-
                       ) : (
-
                         <Link
                           href="/dashboard/resources/workouts"
                           className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
                         >
-
                           <span>
                             FIND A WORKOUT
                           </span>
 
-
-
                           <span className="font-serif text-sm">
                             →
                           </span>
-
                         </Link>
-
                       )}
-
                     </div>
-
                   );
-
                 }
 
-
-
                 if (item.column === "nourish") {
-
                   return (
-
                     <div
                       key={item.number}
                       className={`rounded-[1.25rem] border px-4 py-4 transition duration-300 ${
@@ -1349,14 +1018,16 @@ export default function DashboardPage() {
                           : "border-[#DED0CB] bg-[#FBF8F6]"
                       }`}
                     >
-
                       <div className="flex items-center gap-3.5">
-
                         <button
                           type="button"
-                          disabled={isLoadingProgress}
+                          disabled={
+                            isLoadingProgress
+                          }
                           onClick={() =>
-                            toggleCommitment("nourish")
+                            toggleCommitment(
+                              "nourish"
+                            )
                           }
                           aria-label={
                             isComplete
@@ -1369,80 +1040,50 @@ export default function DashboardPage() {
                               : "border-[#CBA9A2] text-[#A77B73] hover:bg-[#F1E6E2]"
                           }`}
                         >
-
                           {isComplete
                             ? "✓"
                             : item.number}
-
                         </button>
 
-
-
                         <div className="min-w-0 flex-1">
-
                           <div className="flex items-center justify-between gap-3">
-
                             <div className="min-w-0">
-
                               <p className="text-[9px] tracking-[0.18em]">
                                 NOURISH
                               </p>
 
-
-
                               <p className="mt-1 text-[12px] text-[#8C7770]">
                                 Eat with intention
                               </p>
-
                             </div>
 
-
-
                             {isComplete && (
-
                               <span className="shrink-0 font-serif text-xs italic text-[#A77B73]">
                                 done ♡
                               </span>
-
                             )}
-
                           </div>
-
                         </div>
-
                       </div>
-
-
 
                       <Link
                         href="/dashboard/resources/meal-plans"
                         className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
                       >
-
                         <span>
                           GO TO MEAL PLAN
                         </span>
 
-
-
                         <span className="font-serif text-sm">
                           →
                         </span>
-
                       </Link>
-
                     </div>
-
                   );
-
                 }
 
-
-
                 if (item.column === "document") {
-
                   return (
-
                     <div
                       key={item.number}
                       className={`rounded-[1.25rem] border px-4 py-4 transition duration-300 ${
@@ -1451,9 +1092,7 @@ export default function DashboardPage() {
                           : "border-[#DED0CB] bg-[#FBF8F6]"
                       }`}
                     >
-
                       <div className="flex items-center gap-3.5">
-
                         <div
                           className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-[11px] ${
                             isComplete
@@ -1461,82 +1100,51 @@ export default function DashboardPage() {
                               : "border-[#CBA9A2] text-[#A77B73]"
                           }`}
                         >
-
                           {isComplete
                             ? "✓"
                             : item.number}
-
                         </div>
 
-
-
                         <div className="min-w-0 flex-1">
-
                           <div className="flex items-center justify-between gap-3">
-
                             <div className="min-w-0">
-
                               <p className="text-[9px] tracking-[0.18em]">
                                 DOCUMENT
                               </p>
 
-
-
                               <p className="mt-1 text-[12px] text-[#8C7770]">
                                 Progress photo
                               </p>
-
                             </div>
 
-
-
                             {isComplete && (
-
                               <span className="shrink-0 font-serif text-xs italic text-[#A77B73]">
                                 done ♡
                               </span>
-
                             )}
-
                           </div>
-
                         </div>
-
                       </div>
-
-
 
                       <Link
                         href="/dashboard/progress"
                         className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
                       >
-
                         <span>
-
                           {isComplete
                             ? "UPDATE PROGRESS PHOTO"
                             : "UPLOAD PROGRESS PHOTO"}
-
                         </span>
-
-
 
                         <span className="font-serif text-sm">
                           →
                         </span>
-
                       </Link>
-
                     </div>
-
                   );
-
                 }
 
-
-
                 return (
-
                   <button
                     key={item.number}
                     type="button"
@@ -1556,7 +1164,6 @@ export default function DashboardPage() {
                         : "border-[#DED0CB] bg-[#FBF8F6] hover:border-[#CBA9A2]"
                     }`}
                   >
-
                     <span
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-[11px] transition ${
                         isComplete
@@ -1564,17 +1171,12 @@ export default function DashboardPage() {
                           : "border-[#CBA9A2] text-[#A77B73]"
                       }`}
                     >
-
                       {isComplete
                         ? "✓"
                         : item.number}
-
                     </span>
 
-
-
                     <span className="min-w-0 flex-1">
-
                       <span
                         className={`block text-[9px] tracking-[0.18em] ${
                           isComplete
@@ -1582,20 +1184,13 @@ export default function DashboardPage() {
                             : "text-[#211C19]"
                         }`}
                       >
-
                         {item.title}
-
                       </span>
-
-
 
                       <span className="mt-1 block text-[12px] leading-4 text-[#8C7770]">
                         {item.description}
                       </span>
-
                     </span>
-
-
 
                     <span
                       className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[9px] transition ${
@@ -1604,92 +1199,54 @@ export default function DashboardPage() {
                           : "border-[#C9ADA7] group-hover:bg-[#F1E6E2]"
                       }`}
                     >
-
                       {isComplete ? "✓" : ""}
-
                     </span>
-
                   </button>
-
                 );
-
               })}
-
             </div>
-
           </section>
 
-
-
           {dayComplete && (
-
             <section className="mt-8 border-y border-[#D4B0A8] py-8 text-center">
-
               <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
                 DAY {dayNumber} COMPLETE
               </p>
-
-
 
               <p className="mt-3 font-serif text-2xl italic text-[#A77B73] sm:text-3xl">
                 You kept your promise to yourself. ♡
               </p>
 
-
-
               <p className="mx-auto mt-3 max-w-lg text-xs leading-5 text-[#806E68]">
                 One day down. Keep choosing yourself,
                 one day at a time.
               </p>
-
             </section>
-
           )}
 
-
-
           <section className="mb-6 mt-10 border-t border-[#DED0CB] pt-7">
-
             <div className="grid gap-3 md:grid-cols-[130px_1fr] md:gap-8">
-
               <div>
-
                 <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
                   A NOTE FOR TODAY
                 </p>
-
               </div>
 
-
-
               <div>
-
                 <p className="max-w-3xl font-serif text-xl italic leading-snug text-[#A77B73] sm:text-2xl md:text-3xl">
-
                   You don&apos;t have to have the whole
                   journey figured out. You just have to
                   show up for today.
-
                 </p>
-
-
 
                 <p className="mt-4 text-[7px] tracking-[0.2em] text-[#8F655E]">
                   ONE DAY AT A TIME ♡
                 </p>
-
               </div>
-
             </div>
-
           </section>
-
         </section>
-
       </div>
-
     </main>
-
   );
-
 }
