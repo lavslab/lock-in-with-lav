@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, DM_Sans } from "next/font/google";
 import "./globals.css";
+import AuthSessionBootstrap from "@/components/AuthSessionBootstrap";
 
 const cormorant = Cormorant_Garamond({
   variable: "--font-cormorant",
@@ -72,6 +73,7 @@ export default function RootLayout({
       className={`${cormorant.variable} ${dmSans.variable}`}
     >
       <body>
+        <AuthSessionBootstrap />
         {children}
       </body>
     </html>
