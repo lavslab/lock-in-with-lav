@@ -6,13 +6,55 @@ import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
 const trainingWeek = [
-  ["01", "LOWER BODY", "Glutes + Quads"],
-  ["02", "UPPER BODY", "Back + Arms + Posture"],
-  ["03", "CORE + MOBILITY", "Control + Stability"],
-  ["04", "LOWER BODY", "Glutes + Hamstrings"],
-  ["05", "FULL BODY", "Upper + Core"],
-  ["06", "CONDITIONING", "Low Impact + Core"],
-  ["07", "RECOVER", "Mobility + Walking"],
+  [
+    "01",
+    "LOWER BODY",
+    "Glutes + Quads",
+    "Lower Body Foundation",
+    "/dashboard/resources/workouts/lower-body-foundation",
+  ],
+  [
+    "02",
+    "UPPER BODY",
+    "Back + Arms + Posture",
+    "Upper Body Build",
+    "/dashboard/resources/workouts/upper-body-build",
+  ],
+  [
+    "03",
+    "CORE + MOBILITY",
+    "Control + Stability",
+    "Core Control",
+    "/dashboard/resources/workouts/core-control",
+  ],
+  [
+    "04",
+    "GLUTES",
+    "Build + Strength",
+    "Glute Builder",
+    "/dashboard/resources/workouts/glute-builder",
+  ],
+  [
+    "05",
+    "FULL BODY",
+    "Upper + Core",
+    "Full Body Reset",
+    "/dashboard/resources/workouts/full-body-reset",
+  ],
+  [
+    "06",
+    "CONDITIONING",
+    "Low Impact + Cardio",
+    "Cardio Lock In",
+    "/dashboard/resources/workouts/cardio-lock-in",
+  ],
+  [
+    "07",
+    "RECOVER",
+    "Mobility + Walking",
+    null,
+    null,
+  ],
 ];
 
 const trainingLevels = [
@@ -132,6 +174,7 @@ export default function GuidePage() {
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
           {/* HEADER */}
+
           <header className="flex items-start justify-between gap-6">
             <div>
               <p className="text-[9px] tracking-[0.36em] text-[#9D6F67]">
@@ -155,6 +198,7 @@ export default function GuidePage() {
           </header>
 
           {/* INTRO */}
+
           <section className="mt-9 border-y border-[#DED0CB] py-6">
             <div className="grid gap-4 md:grid-cols-[0.55fr_1.45fr] md:items-center">
               <p className="text-[9px] tracking-[0.32em] text-[#9D6F67]">
@@ -175,6 +219,7 @@ export default function GuidePage() {
           </section>
 
           {/* 01 — TRAINING SCHEDULE */}
+
           <section className="py-10">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
@@ -184,7 +229,10 @@ export default function GuidePage() {
 
                 <h2 className="mt-3 font-serif text-4xl md:text-5xl">
                   Your weekly
-                  <span className="italic text-[#A77B73]"> schedule.</span>
+                  <span className="italic text-[#A77B73]">
+                    {" "}
+                    schedule.
+                  </span>
                 </h2>
               </div>
 
@@ -195,30 +243,61 @@ export default function GuidePage() {
             </div>
 
             <div className="mt-7 overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
-              {trainingWeek.map(([day, title, focus], index) => (
-                <div
-                  key={day}
-                  className={`grid gap-2 px-5 py-4 sm:grid-cols-[48px_1fr_auto] sm:items-center sm:gap-4 md:px-7 ${
-                    index !== 0 ? "border-t border-[#E1D3CE]" : ""
-                  } ${day === "07" ? "bg-[#EAD8D3]/50" : ""}`}
-                >
-                  <span className="font-serif text-xl text-[#B48A82]">
-                    {day}
-                  </span>
+              {trainingWeek.map(
+                (
+                  [day, title, focus, workout, workoutHref],
+                  index
+                ) => (
+                  <div
+                    key={day}
+                    className={`grid gap-3 px-5 py-4 sm:grid-cols-[48px_1fr_auto] sm:items-center sm:gap-4 md:px-7 ${
+                      index !== 0
+                        ? "border-t border-[#E1D3CE]"
+                        : ""
+                    } ${
+                      day === "07"
+                        ? "bg-[#EAD8D3]/50"
+                        : ""
+                    }`}
+                  >
+                    <span className="font-serif text-xl text-[#B48A82]">
+                      {day}
+                    </span>
 
-                  <p className="text-[10px] tracking-[0.16em]">
-                    {title}
-                  </p>
+                    <p className="text-[10px] tracking-[0.16em]">
+                      {title}
+                    </p>
 
-                  <p className="font-serif text-base italic text-[#A77B73] sm:text-right">
-                    {focus}
-                  </p>
-                </div>
-              ))}
+                    <div className="text-left sm:text-right">
+                      <p className="font-serif text-base italic text-[#A77B73]">
+                        {focus}
+                      </p>
+
+                      {workout && workoutHref ? (
+                        <Link
+                          href={workoutHref}
+                          className="mt-2 inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-3 py-1.5 text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:bg-[#EAD8D3] hover:text-[#211C19]"
+                        >
+                          {workout.toUpperCase()}
+                          <span className="font-serif text-sm">
+                            →
+                          </span>
+                        </Link>
+                      ) : (
+                        <p className="mt-2 text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                          REST • WALK • MOBILITY
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )
+              )}
             </div>
 
             <div className="mt-4 flex items-start gap-3 px-1">
-              <span className="font-serif italic text-[#A77B73]">♡</span>
+              <span className="font-serif italic text-[#A77B73]">
+                ♡
+              </span>
 
               <p className="max-w-2xl text-[11px] leading-5 text-[#927D76]">
                 Use this as your rhythm, not a rulebook. Adjust when you need
@@ -228,6 +307,7 @@ export default function GuidePage() {
           </section>
 
           {/* 02 — HOW TO TRAIN */}
+
           <section className="border-t border-[#DED0CB] py-10">
             <div>
               <p className="text-[9px] tracking-[0.36em] text-[#9D6F67]">
@@ -281,6 +361,7 @@ export default function GuidePage() {
           </section>
 
           {/* 03 — THE BASICS */}
+
           <section className="border-t border-[#DED0CB] py-10">
             <div>
               <p className="text-[9px] tracking-[0.36em] text-[#9D6F67]">
@@ -289,7 +370,10 @@ export default function GuidePage() {
 
               <h2 className="mt-3 font-serif text-4xl md:text-5xl">
                 Keep it
-                <span className="italic text-[#A77B73]"> simple.</span>
+                <span className="italic text-[#A77B73]">
+                  {" "}
+                  simple.
+                </span>
               </h2>
             </div>
 
@@ -322,6 +406,7 @@ export default function GuidePage() {
           </section>
 
           {/* NOW GO USE IT */}
+
           <section className="border-t border-[#DED0CB] py-12">
             <div className="rounded-[1.75rem] bg-[#211C19] px-7 py-9 text-[#F7F1ED] md:px-10 md:py-10">
               <div className="flex flex-col justify-between gap-8 md:flex-row md:items-center">
@@ -365,6 +450,7 @@ export default function GuidePage() {
           </section>
 
           {/* SAFETY NOTE */}
+
           <section className="border-t border-[#DED0CB] py-7">
             <div className="grid gap-4 md:grid-cols-[0.45fr_1.55fr] md:gap-10">
               <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
