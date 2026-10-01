@@ -1,12 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthPage() {
-  const router = useRouter();
   const supabase = createClient();
 
   const [mode, setMode] = useState<"login" | "signup" | "forgot">("signup");
@@ -192,7 +190,7 @@ export default function AuthPage() {
 
       // Use a full navigation so the dashboard receives a fresh
       // authenticated request.
-      router.replace("/dashboard");
+      window.location.replace("/dashboard");
     } catch (err) {
       console.error("Authentication error:", err);
       setError("Something went wrong. Please try again.");
