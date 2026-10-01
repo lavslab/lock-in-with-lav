@@ -127,8 +127,10 @@ export default function DashboardPage() {
     useState<DailyProgress>(emptyProgress);
 
   const [firstName, setFirstName] = useState("there");
+
   const [isLoadingUser, setIsLoadingUser] =
     useState(true);
+
   const [isLoadingProgress, setIsLoadingProgress] =
     useState(true);
 
@@ -587,14 +589,6 @@ export default function DashboardPage() {
                 </span>
               </h1>
             </div>
-
-            <Link
-              href="/dashboard/account"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#CBA9A2] bg-[#FBF8F6] font-serif text-sm text-[#A77B73] transition hover:bg-[#EAD8D3] md:hidden"
-              aria-label="My account"
-            >
-              {initial}
-            </Link>
           </header>
 
           <section className="mt-7 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6 sm:px-7 sm:py-7 md:px-8">
@@ -685,7 +679,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-                    <section className="mt-10 md:mt-12">
+          <section className="mt-10 md:mt-12">
             <div className="flex items-end justify-between gap-5 border-b border-[#DED0CB] pb-4">
               <div>
                 <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
@@ -888,11 +882,15 @@ export default function DashboardPage() {
                             <span>
                               {selectedWorkout.type.toUpperCase()}
                             </span>
+
                             <span>•</span>
+
                             <span>
                               {selectedWorkout.time}
                             </span>
+
                             <span>•</span>
+
                             <span>
                               {selectedWorkout.exercises}
                             </span>
@@ -906,6 +904,7 @@ export default function DashboardPage() {
                               <span>
                                 OPEN TODAY&apos;S WORKOUT
                               </span>
+
                               <span className="font-serif text-sm">
                                 →
                               </span>
@@ -927,6 +926,7 @@ export default function DashboardPage() {
                           <span>
                             FIND A WORKOUT
                           </span>
+
                           <span className="font-serif text-sm">
                             →
                           </span>
@@ -1000,17 +1000,23 @@ export default function DashboardPage() {
                             <span>
                               {selectedRecipe.meal.toUpperCase()}
                             </span>
+
                             <span>•</span>
+
                             <span>
                               {selectedRecipe.calories}{" "}
                               CAL
                             </span>
+
                             <span>•</span>
+
                             <span>
                               {selectedRecipe.protein}G{" "}
                               PROTEIN
                             </span>
+
                             <span>•</span>
+
                             <span>
                               {selectedRecipe.time}
                             </span>
@@ -1024,6 +1030,7 @@ export default function DashboardPage() {
                               <span>
                                 OPEN TODAY&apos;S RECIPE
                               </span>
+
                               <span className="font-serif text-sm">
                                 →
                               </span>
@@ -1045,6 +1052,7 @@ export default function DashboardPage() {
                           <span>
                             CHOOSE A RECIPE
                           </span>
+
                           <span className="font-serif text-sm">
                             →
                           </span>
