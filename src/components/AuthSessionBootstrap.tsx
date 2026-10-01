@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Capacitor } from "@capacitor/core";
+import { SplashScreen } from "@capacitor/splash-screen";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthSessionBootstrap() {
@@ -35,11 +36,21 @@ export default function AuthSessionBootstrap() {
             "Could not check saved Supabase session:",
             error
           );
+
+          await SplashScreen.hide({
+            fadeOutDuration: 250,
+          });
+
           return;
         }
 
         // No saved session means the user is logged out.
+        // Let the normal homepage appear.
         if (!session) {
+          await SplashScreen.hide({
+            fadeOutDuration: 250,
+          });
+
           return;
         }
 
@@ -58,18 +69,31 @@ export default function AuthSessionBootstrap() {
         if (cancelled) return;
 
         if (!response.ok) {
-          console.error("Could not restore server session.");
+          console.error(
+            "Could not restore server session."
+          );
+
+          await SplashScreen.hide({
+            fadeOutDuration: 250,
+          });
+
           return;
         }
 
-        // Silently send an already-authenticated user
-        // back into the dashboard.
+        // Keep the native splash visible while the
+        // authenticated page loads.
         window.location.replace("/dashboard");
       } catch (error) {
         console.error(
           "Session restoration failed:",
           error
         );
+
+        if (!cancelled) {
+          await SplashScreen.hide({
+            fadeOutDuration: 250,
+          });
+        }
       }
     }
 
@@ -80,8 +104,5 @@ export default function AuthSessionBootstrap() {
     };
   }, [pathname]);
 
-  // IMPORTANT:
-  // This component intentionally renders nothing.
-  // There should be no React loading screen here.
   return null;
 }
