@@ -9,6 +9,18 @@ const config: CapacitorConfig = {
     url: "https://www.lockinwithlav.com",
     cleartext: false,
   },
+
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 1500,
+      launchAutoHide: true,
+      backgroundColor: "#F7F1ED",
+      showSpinner: false,
+      androidScaleType: "CENTER_CROP",
+      iosSpinnerStyle: "small",
+      launchFadeOutDuration: 250,
+    },
+  },
 };
 
 export default config;
