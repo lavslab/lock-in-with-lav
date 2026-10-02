@@ -1,12 +1,34 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+} from "react";
+
 import { supabase } from "@/lib/supabase";
+
 import DashboardSidebar from "@/components/DashboardSidebar";
 
 type IconProps = {
   className?: string;
+};
+
+type Workout = {
+  id: string;
+  title: string;
+  subtitle: string;
+  locations: string[];
+  level: string;
+  type: string;
+  types?: string[];
+  time: string;
+  equipment: string | string[];
+  exercises: string;
+  icon: ComponentType<IconProps>;
 };
 
 /* ---------------------------------
@@ -139,6 +161,134 @@ function CardioIcon({ className = "" }: IconProps) {
 }
 
 /* ---------------------------------
+ * EQUIPMENT ICONS
+ * --------------------------------- */
+
+function DumbbellIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M6.5 9v6" />
+      <path d="M3.5 10.5v3" />
+      <path d="M17.5 9v6" />
+      <path d="M20.5 10.5v3" />
+      <path d="M6.5 12h11" />
+    </svg>
+  );
+}
+
+function HouseholdIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="m3.5 11 8.5-7 8.5 7" />
+      <path d="M5.5 10.5V20h13v-9.5" />
+      <path d="M9.5 20v-5h5v5" />
+    </svg>
+  );
+}
+
+function MatIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M5 6h11a3 3 0 0 1 3 3v8H8a3 3 0 0 1-3-3V6Z" />
+      <path d="M8 17v2h11" />
+      <path d="M8 10h8" />
+    </svg>
+  );
+}
+
+function BodyweightIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="4.5" r="2" />
+      <path d="M12 6.5v5" />
+      <path d="M7 9.5 12 8l5 1.5" />
+      <path d="m12 11.5-3 7" />
+      <path d="m12 11.5 3 7" />
+      <path d="M7.5 21h3" />
+      <path d="M13.5 21h3" />
+    </svg>
+  );
+}
+
+function KettlebellIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M8.5 9V7a3.5 3.5 0 0 1 7 0v2" />
+      <path d="M6.5 9.5h11" />
+      <path d="M7 9.5c-1 1.2-1.5 2.7-1.5 4.5 0 3.5 2.7 6 6.5 6s6.5-2.5 6.5-6c0-1.8-.5-3.3-1.5-4.5" />
+      <path d="M9 7h6" />
+    </svg>
+  );
+}
+
+function getEquipmentIcon(
+  equipment: string,
+): ComponentType<IconProps> {
+  switch (equipment) {
+    case "HOUSEHOLD ITEMS":
+      return HouseholdIcon;
+
+    case "MAT":
+      return MatIcon;
+
+    case "BODYWEIGHT":
+      return BodyweightIcon;
+
+    case "GYM":
+      return KettlebellIcon;
+
+    case "DUMBBELLS":
+    default:
+      return DumbbellIcon;
+  }
+}
+
+/* ---------------------------------
  * WORKOUT DETAIL ICONS
  * --------------------------------- */
 
@@ -156,27 +306,6 @@ function ClockIcon({ className = "" }: IconProps) {
     >
       <circle cx="12" cy="12" r="8" />
       <path d="M12 7.5v5l3 2" />
-    </svg>
-  );
-}
-
-function EquipmentIcon({ className = "" }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M6.5 9v6" />
-      <path d="M3.5 10.5v3" />
-      <path d="M17.5 9v6" />
-      <path d="M20.5 10.5v3" />
-      <path d="M6.5 12h11" />
     </svg>
   );
 }
@@ -207,7 +336,7 @@ function ExerciseIcon({ className = "" }: IconProps) {
  * WORKOUT DATA
  * --------------------------------- */
 
-const workouts = [
+const workouts: Workout[] = [
   {
     id: "lower-body-foundation",
     title: "Lower Body Foundation",
@@ -220,6 +349,24 @@ const workouts = [
     exercises: "6 EXERCISES",
     icon: LowerBodyIcon,
   },
+
+  {
+    id: "home-glute-legs",
+    title: "Home Glute & Legs",
+    subtitle: "home. strong. locked in.",
+    locations: ["Home"],
+    level: "Beginner / Intermediate",
+    type: "Lower Body",
+    types: ["Lower Body", "Glutes"],
+    time: "35 MIN",
+    equipment: [
+      "DUMBBELLS",
+      "HOUSEHOLD ITEMS",
+    ],
+    exercises: "7 EXERCISES",
+    icon: GlutesIcon,
+  },
+
   {
     id: "glute-builder",
     title: "Glute Builder",
@@ -232,6 +379,7 @@ const workouts = [
     exercises: "7 EXERCISES",
     icon: GlutesIcon,
   },
+
   {
     id: "full-body-reset",
     title: "Full Body Reset",
@@ -244,6 +392,7 @@ const workouts = [
     exercises: "6 EXERCISES",
     icon: FullBodyIcon,
   },
+
   {
     id: "upper-body-build",
     title: "Upper Body Build",
@@ -256,6 +405,7 @@ const workouts = [
     exercises: "7 EXERCISES",
     icon: UpperBodyIcon,
   },
+
   {
     id: "core-control",
     title: "Core Control",
@@ -268,6 +418,7 @@ const workouts = [
     exercises: "6 EXERCISES",
     icon: CoreIcon,
   },
+
   {
     id: "cardio-lock-in",
     title: "Cardio Lock In",
@@ -282,13 +433,11 @@ const workouts = [
   },
 ];
 
-const locations = ["All", "Home", "Gym", "No Equipment"];
-
-const levels = [
+const locations = [
   "All",
-  "Beginner",
-  "Intermediate",
-  "Advanced",
+  "Home",
+  "Gym",
+  "No Equipment",
 ];
 
 const types = [
@@ -303,11 +452,14 @@ const types = [
 
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(
-    2,
-    "0"
-  );
-  const day = String(date.getDate()).padStart(2, "0");
+
+  const month = String(
+    date.getMonth() + 1,
+  ).padStart(2, "0");
+
+  const day = String(
+    date.getDate(),
+  ).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
 }
@@ -317,19 +469,23 @@ function formatLocalDate(date: Date) {
  * --------------------------------- */
 
 export default function WorkoutsPage() {
-  const [firstName, setFirstName] = useState("there");
+  const [firstName, setFirstName] =
+    useState("there");
+
   const [isLoadingUser, setIsLoadingUser] =
     useState(true);
-  const [userId, setUserId] = useState<string | null>(
-    null
-  );
+
+  const [userId, setUserId] =
+    useState<string | null>(null);
 
   const [selectedWorkoutIds, setSelectedWorkoutIds] =
     useState<string[]>([]);
 
-  const [location, setLocation] = useState("All");
-  const [level, setLevel] = useState("All");
-  const [type, setType] = useState("All");
+  const [location, setLocation] =
+    useState("All");
+
+  const [type, setType] =
+    useState("All");
 
   useEffect(() => {
     const getUser = async () => {
@@ -344,15 +500,19 @@ export default function WorkoutsPage() {
 
       setUserId(user.id);
 
-      const savedName = user.user_metadata?.name;
+      const savedName =
+        user.user_metadata?.name;
 
       if (savedName) {
         setFirstName(savedName);
       } else if (user.email) {
-        setFirstName(user.email.split("@")[0]);
+        setFirstName(
+          user.email.split("@")[0],
+        );
       }
 
-      const todayKey = formatLocalDate(new Date());
+      const todayKey =
+        formatLocalDate(new Date());
 
       const storageKey = `selected-workout-${user.id}-${todayKey}`;
 
@@ -361,35 +521,42 @@ export default function WorkoutsPage() {
 
       if (savedWorkout) {
         try {
-          const parsedWorkout = JSON.parse(
-            savedWorkout
-          );
+          const parsedWorkout =
+            JSON.parse(savedWorkout);
 
           if (
             Array.isArray(
-              parsedWorkout?.workouts
+              parsedWorkout?.workouts,
             )
           ) {
             setSelectedWorkoutIds(
               parsedWorkout.workouts
                 .map(
-                  (item: { id?: string }) =>
-                    item?.id
+                  (
+                    item: {
+                      id?: string;
+                    },
+                  ) => item?.id,
                 )
                 .filter(
                   (
-                    id: unknown
+                    id: unknown,
                   ): id is string =>
-                    typeof id === "string"
-                )
+                    typeof id ===
+                    "string",
+                ),
             );
-          } else if (parsedWorkout?.id) {
+          } else if (
+            parsedWorkout?.id
+          ) {
             setSelectedWorkoutIds([
               parsedWorkout.id,
             ]);
           }
         } catch {
-          localStorage.removeItem(storageKey);
+          localStorage.removeItem(
+            storageKey,
+          );
         }
       }
 
@@ -400,120 +567,148 @@ export default function WorkoutsPage() {
   }, []);
 
   const initial =
-    !isLoadingUser && firstName !== "there"
-      ? firstName.charAt(0).toUpperCase()
+    !isLoadingUser &&
+    firstName !== "there"
+      ? firstName
+          .charAt(0)
+          .toUpperCase()
       : "♡";
 
-  const filteredWorkouts = useMemo(() => {
-    return workouts.filter((workout) => {
-      const locationMatch =
-        location === "All" ||
-        workout.locations.includes(location);
+  const filteredWorkouts =
+    useMemo(() => {
+      return workouts.filter(
+        (workout) => {
+          const locationMatch =
+            location === "All" ||
+            workout.locations.includes(
+              location,
+            );
 
-      const levelMatch =
-        level === "All" ||
-        workout.level === level;
+          const workoutTypes =
+            workout.types ?? [
+              workout.type,
+            ];
 
-      const typeMatch =
-        type === "All" ||
-        workout.type === type;
+          const typeMatch =
+            type === "All" ||
+            workoutTypes.includes(type);
 
-      return (
-        locationMatch &&
-        levelMatch &&
-        typeMatch
+          return (
+            locationMatch &&
+            typeMatch
+          );
+        },
       );
-    });
-  }, [location, level, type]);
+    }, [location, type]);
 
   const saveSelectedWorkouts = (
-    workoutIds: string[]
+    workoutIds: string[],
   ) => {
     if (!userId) {
       return;
     }
 
-    const todayKey = formatLocalDate(new Date());
+    const todayKey =
+      formatLocalDate(new Date());
 
     const storageKey = `selected-workout-${userId}-${todayKey}`;
 
     if (workoutIds.length === 0) {
-      localStorage.removeItem(storageKey);
+      localStorage.removeItem(
+        storageKey,
+      );
+
       return;
     }
 
-    const selectedWorkouts = workoutIds
-      .map((id) =>
-        workouts.find(
-          (item) => item.id === id
+    const selectedWorkouts =
+      workoutIds
+        .map((id) =>
+          workouts.find(
+            (item) =>
+              item.id === id,
+          ),
         )
-      )
-      .filter(
-        (
-          item
-        ): item is (typeof workouts)[number] =>
-          Boolean(item)
-      )
-      .map((item) => ({
-        id: item.id,
-        title: item.title,
-        subtitle: item.subtitle,
-        type: item.type,
-        time: item.time,
-        equipment: item.equipment,
-        exercises: item.exercises,
-      }));
+        .filter(
+          (
+            item,
+          ): item is Workout =>
+            Boolean(item),
+        )
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          subtitle: item.subtitle,
+          type: item.type,
+          time: item.time,
+          equipment: item.equipment,
+          exercises: item.exercises,
+        }));
 
     localStorage.setItem(
       storageKey,
       JSON.stringify({
         ...selectedWorkouts[0],
-        workouts: selectedWorkouts,
-      })
+        workouts:
+          selectedWorkouts,
+      }),
     );
   };
 
   const chooseWorkoutForToday = (
-    workout: (typeof workouts)[number]
+    workout: Workout,
   ) => {
     if (!userId) {
       return;
     }
 
-    setSelectedWorkoutIds((current) => {
-      if (current.includes(workout.id)) {
-        return current;
-      }
+    setSelectedWorkoutIds(
+      (current) => {
+        if (
+          current.includes(
+            workout.id,
+          )
+        ) {
+          return current;
+        }
 
-      const nextIds = [
-        ...current,
-        workout.id,
-      ];
+        const nextIds = [
+          ...current,
+          workout.id,
+        ];
 
-      saveSelectedWorkouts(nextIds);
+        saveSelectedWorkouts(
+          nextIds,
+        );
 
-      return nextIds;
-    });
+        return nextIds;
+      },
+    );
   };
 
   const removeWorkoutForToday = (
-    workoutId?: string
+    workoutId?: string,
   ) => {
     if (!userId) {
       return;
     }
 
-    setSelectedWorkoutIds((current) => {
-      const nextIds = workoutId
-        ? current.filter(
-            (id) => id !== workoutId
-          )
-        : [];
+    setSelectedWorkoutIds(
+      (current) => {
+        const nextIds = workoutId
+          ? current.filter(
+              (id) =>
+                id !== workoutId,
+            )
+          : [];
 
-      saveSelectedWorkouts(nextIds);
+        saveSelectedWorkouts(
+          nextIds,
+        );
 
-      return nextIds;
-    });
+        return nextIds;
+      },
+    );
   };
 
   const FilterButton = ({
@@ -544,7 +739,9 @@ export default function WorkoutsPage() {
         <DashboardSidebar
           firstName={firstName}
           initial={initial}
-          isLoadingUser={isLoadingUser}
+          isLoadingUser={
+            isLoadingUser
+          }
         />
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
@@ -573,7 +770,7 @@ export default function WorkoutsPage() {
 
           <section className="pb-10 pt-10">
             <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-              <div className="grid gap-8 xl:grid-cols-3">
+              <div className="grid gap-8 md:grid-cols-2">
                 <div>
                   <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
                     WHERE ARE YOU TRAINING?
@@ -586,43 +783,23 @@ export default function WorkoutsPage() {
                           key={option}
                           label={option}
                           active={
-                            location === option
+                            location ===
+                            option
                           }
                           onClick={() =>
-                            setLocation(option)
+                            setLocation(
+                              option,
+                            )
                           }
                         />
-                      )
+                      ),
                     )}
                   </div>
                 </div>
 
                 <div>
                   <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
-                    YOUR LEVEL
-                  </p>
-
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {levels.map(
-                      (option) => (
-                        <FilterButton
-                          key={option}
-                          label={option}
-                          active={
-                            level === option
-                          }
-                          onClick={() =>
-                            setLevel(option)
-                          }
-                        />
-                      )
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
-                    WHAT ARE WE TRAINING?
+                    WHAT DO YOU WANT TO WORK ON?
                   </p>
 
                   <div className="mt-4 flex flex-wrap gap-2">
@@ -638,7 +815,7 @@ export default function WorkoutsPage() {
                             setType(option)
                           }
                         />
-                      )
+                      ),
                     )}
                   </div>
                 </div>
@@ -648,7 +825,8 @@ export default function WorkoutsPage() {
 
           {/* TODAY'S SELECTED WORKOUTS */}
 
-          {selectedWorkoutIds.length > 0 && (
+          {selectedWorkoutIds.length >
+            0 && (
             <section className="pb-8">
               <div className="rounded-[1.75rem] border border-[#CBA9A2] bg-[#EAD8D3] px-6 py-5 md:px-7">
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
@@ -658,7 +836,9 @@ export default function WorkoutsPage() {
                     </p>
 
                     <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                      {selectedWorkoutIds.length}{" "}
+                      {
+                        selectedWorkoutIds.length
+                      }{" "}
                       {selectedWorkoutIds.length ===
                       1
                         ? "workout"
@@ -667,9 +847,10 @@ export default function WorkoutsPage() {
                     </p>
 
                     <p className="mt-1 text-xs text-[#725F5A]">
-                      Mix strength, cardio,
-                      core or whatever fits
-                      your day.
+                      Mix strength,
+                      cardio, core or
+                      whatever fits your
+                      day.
                     </p>
 
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -678,10 +859,13 @@ export default function WorkoutsPage() {
                           const workout =
                             workouts.find(
                               (item) =>
-                                item.id === id
+                                item.id ===
+                                id,
                             );
 
-                          if (!workout) {
+                          if (
+                            !workout
+                          ) {
                             return null;
                           }
 
@@ -691,7 +875,7 @@ export default function WorkoutsPage() {
                               type="button"
                               onClick={() =>
                                 removeWorkoutForToday(
-                                  id
+                                  id,
                                 )
                               }
                               className="rounded-full border border-[#B78F87] bg-[#F7F1ED]/60 px-3 py-2 text-[7px] tracking-[0.12em] text-[#6F514B] transition hover:bg-[#F7F1ED]"
@@ -700,7 +884,7 @@ export default function WorkoutsPage() {
                               ×
                             </button>
                           );
-                        }
+                        },
                       )}
                     </div>
                   </div>
@@ -712,7 +896,8 @@ export default function WorkoutsPage() {
                     }
                     className="w-fit rounded-full border border-[#B78F87] px-5 py-3 text-[7px] tracking-[0.2em] text-[#6F514B] transition hover:bg-[#F7F1ED]"
                   >
-                    CLEAR TODAY&apos;S WORKOUTS
+                    CLEAR TODAY&apos;S
+                    WORKOUTS
                   </button>
                 </div>
               </div>
@@ -736,35 +921,53 @@ export default function WorkoutsPage() {
                 </h1>
 
                 <p className="mt-3 max-w-xl text-sm leading-6 text-[#806E68]">
-                  Choose one workout or add a
-                  few together. You can mix
-                  strength, cardio, core and more.
+                  Choose one workout or
+                  add a few together. You
+                  can mix strength, cardio,
+                  core and more.
                 </p>
               </div>
 
               <p className="font-serif text-lg italic text-[#A77B73]">
                 {filteredWorkouts.length}{" "}
-                {filteredWorkouts.length === 1
+                {filteredWorkouts.length ===
+                1
                   ? "workout"
                   : "workouts"}{" "}
                 ♡
               </p>
             </div>
 
-            {filteredWorkouts.length > 0 ? (
+            {filteredWorkouts.length >
+            0 ? (
               <div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
                 {filteredWorkouts.map(
-                  (workout, index) => {
-                    const Icon = workout.icon;
+                  (
+                    workout,
+                    index,
+                  ) => {
+                    const Icon =
+                      workout.icon;
 
                     const isSelected =
                       selectedWorkoutIds.includes(
-                        workout.id
+                        workout.id,
                       );
+
+                    const equipmentItems =
+                      Array.isArray(
+                        workout.equipment,
+                      )
+                        ? workout.equipment
+                        : [
+                            workout.equipment,
+                          ];
 
                     return (
                       <article
-                        key={workout.id}
+                        key={
+                          workout.id
+                        }
                         className={`group flex min-h-[300px] flex-col justify-between rounded-[1.75rem] border bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:shadow-sm ${
                           isSelected
                             ? "border-[#A77B73]"
@@ -772,8 +975,6 @@ export default function WorkoutsPage() {
                         }`}
                       >
                         <div>
-                          {/* ICON + LEVEL */}
-
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex items-center gap-3">
                               <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#EAD8D3] text-[#9D6F67] transition duration-300 group-hover:bg-[#E3CCC6]">
@@ -782,8 +983,12 @@ export default function WorkoutsPage() {
 
                               <span className="font-serif text-sm text-[#C6A29A]">
                                 {String(
-                                  index + 1
-                                ).padStart(2, "0")}
+                                  index +
+                                    1,
+                                ).padStart(
+                                  2,
+                                  "0",
+                                )}
                               </span>
                             </div>
 
@@ -792,70 +997,116 @@ export default function WorkoutsPage() {
                             </span>
                           </div>
 
-                          {/* WORKOUT INFO */}
-
                           <p className="mt-6 text-[8px] tracking-[0.25em] text-[#806E68]">
                             {workout.type.toUpperCase()}{" "}
                             •{" "}
+                            {workout.locations
+                              .filter(
+                                (
+                                  location,
+                                ) =>
+                                  location !==
+                                  "No Equipment",
+                              )
+                              .join(
+                                " + ",
+                              )
+                              .toUpperCase()}
                             {workout.locations.includes(
-                              "No Equipment"
+                              "No Equipment",
                             )
-                              ? "HOME + GYM • NO EQUIPMENT"
-                              : "HOME + GYM"}
+                              ? " • NO EQUIPMENT"
+                              : ""}
                           </p>
 
                           <h2 className="mt-3 font-serif text-3xl leading-tight">
-                            {workout.title}
+                            {
+                              workout.title
+                            }
                           </h2>
 
                           <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                            {workout.subtitle}
+                            {
+                              workout.subtitle
+                            }
                           </p>
                         </div>
 
                         <div className="mt-8">
-                          {/* WORKOUT DETAILS */}
-
                           <div className="grid grid-cols-3 gap-2 border-t border-[#E1D3CE] pt-4">
+                            {/* TIME */}
+
                             <div className="flex min-w-0 items-center gap-2">
                               <ClockIcon className="h-4 w-4 shrink-0 text-[#B48A82]" />
 
-                              <span className="truncate text-[7px] tracking-[0.1em] text-[#806E68]">
-                                {workout.time}
+                              <span className="block text-[7px] leading-3 tracking-[0.1em] text-[#806E68]">
+                                {
+                                  workout.time
+                                }
                               </span>
                             </div>
 
-                            <div className="flex min-w-0 items-center gap-2">
-                              <EquipmentIcon className="h-4 w-4 shrink-0 text-[#B48A82]" />
+                            {/* EQUIPMENT */}
 
-                              <span className="truncate text-[7px] tracking-[0.08em] text-[#806E68]">
-                                {workout.equipment}
-                              </span>
+                            <div className="flex min-w-0 items-start gap-2">
+                              <div className="flex min-w-0 flex-col gap-1">
+                                {equipmentItems.map(
+                                  (
+                                    item,
+                                  ) => {
+                                    const EquipmentIcon =
+                                      getEquipmentIcon(
+                                        item,
+                                      );
+
+                                    return (
+                                      <div
+                                        key={
+                                          item
+                                        }
+                                        className="flex items-center gap-1.5"
+                                      >
+                                        <EquipmentIcon className="h-3.5 w-3.5 shrink-0 text-[#B48A82]" />
+
+                                        <span className="block text-[7px] leading-3 tracking-[0.08em] text-[#806E68]">
+                                          {
+                                            item
+                                          }
+                                        </span>
+                                      </div>
+                                    );
+                                  },
+                                )}
+                              </div>
                             </div>
+
+                            {/* EXERCISES */}
 
                             <div className="flex min-w-0 items-center justify-end gap-2">
                               <ExerciseIcon className="h-4 w-4 shrink-0 text-[#B48A82]" />
 
-                              <span className="truncate text-[7px] tracking-[0.08em] text-[#806E68]">
-                                {workout.exercises}
+                              <span className="block text-[7px] leading-3 tracking-[0.08em] text-[#806E68]">
+                                {
+                                  workout.exercises
+                                }
                               </span>
                             </div>
                           </div>
-
-                          {/* ACTIONS */}
 
                           <div className="mt-5 grid gap-2">
                             <button
                               type="button"
                               disabled={!userId}
                               onClick={() => {
-                                if (isSelected) {
+                                if (
+                                  isSelected
+                                ) {
                                   removeWorkoutForToday(
-                                    workout.id
+                                    workout.id,
                                   );
                                 } else {
                                   chooseWorkoutForToday(
-                                    workout
+                                    workout,
                                   );
                                 }
                               }}
@@ -879,7 +1130,8 @@ export default function WorkoutsPage() {
                               className="flex items-center justify-between border-t border-[#E1D3CE] pt-3 text-[7px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
                             >
                               <span>
-                                VIEW WORKOUT
+                                VIEW
+                                WORKOUT
                               </span>
 
                               <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition hover:bg-[#EAD8D3]">
@@ -890,7 +1142,7 @@ export default function WorkoutsPage() {
                         </div>
                       </article>
                     );
-                  }
+                  },
                 )}
               </div>
             ) : (
@@ -901,15 +1153,17 @@ export default function WorkoutsPage() {
 
                 <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#806E68]">
                   Try another combination —
-                  we&apos;re still growing the
-                  workout library.
+                  we&apos;re still growing
+                  the workout library.
                 </p>
 
                 <button
                   type="button"
                   onClick={() => {
-                    setLocation("All");
-                    setLevel("All");
+                    setLocation(
+                      "All",
+                    );
+
                     setType("All");
                   }}
                   className="mt-6 rounded-full border border-[#CBA9A2] px-6 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
@@ -930,7 +1184,8 @@ export default function WorkoutsPage() {
                 </p>
 
                 <h2 className="mt-3 font-serif text-3xl">
-                  Modify when you need to.{" "}
+                  Modify when you need
+                  to.{" "}
                   <span className="italic text-[#9D6F67]">
                     keep moving. ♡
                   </span>
