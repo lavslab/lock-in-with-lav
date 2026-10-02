@@ -1049,28 +1049,40 @@ export default function MealPlansPage() {
 
                             {selectedRecipe ? (
                               <div className="mt-4 min-h-[112px] rounded-2xl border border-[#D6C3BD] bg-[#F7F1ED] p-4">
-                                <p className="font-serif text-lg leading-tight text-[#211C19]">
-                                  {selectedRecipe.title}
-                                </p>
-
                                 {selectedRecipe.id.startsWith(
                                   "custom-meal:"
                                 ) ? (
-                                  <p className="mt-2 text-[7px] tracking-[0.12em] text-[#806E68]">
-                                    PERSONAL MEAL •
-                                    ADDED BY YOU
-                                  </p>
+                                  <div>
+                                    <p className="font-serif text-lg leading-tight text-[#211C19]">
+                                      {selectedRecipe.title}
+                                    </p>
+
+                                    <p className="mt-2 text-[7px] tracking-[0.12em] text-[#806E68]">
+                                      PERSONAL MEAL • ADDED BY YOU
+                                    </p>
+                                  </div>
                                 ) : (
-                                  <p className="mt-2 text-[7px] tracking-[0.12em] text-[#806E68]">
-                                    {
-                                      selectedRecipe.calories
-                                    }{" "}
-                                    CAL •{" "}
-                                    {
-                                      selectedRecipe.protein
-                                    }
-                                    G PROTEIN
-                                  </p>
+                                  <Link
+                                    href={`/dashboard/resources/recipes/${selectedRecipe.id}`}
+                                    className="group block rounded-xl transition"
+                                  >
+                                    <p className="font-serif text-lg leading-tight text-[#211C19] transition group-hover:text-[#8F655E]">
+                                      {selectedRecipe.title}
+                                    </p>
+
+                                    <p className="mt-2 text-[7px] tracking-[0.12em] text-[#806E68]">
+                                      {selectedRecipe.calories} CAL •{" "}
+                                      {selectedRecipe.protein}G PROTEIN
+                                    </p>
+
+                                    <div className="mt-3 flex items-center gap-2 text-[7px] tracking-[0.16em] text-[#9D6F67] transition group-hover:text-[#211C19]">
+                                      <span>VIEW RECIPE</span>
+
+                                      <span className="font-serif text-sm transition group-hover:translate-x-1">
+                                        →
+                                      </span>
+                                    </div>
+                                  </Link>
                                 )}
 
                                 <div className="mt-4 flex items-center gap-4 border-t border-[#E1D3CE] pt-3">
