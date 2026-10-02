@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -132,6 +133,39 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
   ],
 };
 
+/*
+ * Expand the swap system so replacement exercises can also
+ * be swapped again.
+ *
+ * Example:
+ *
+ * Dead Bug
+ * → Heel Taps
+ * → Bird Dog
+ * → Marching Dead Bug
+ * → Dead Bug
+ *
+ * This keeps the swap button available after every replacement.
+ */
+const expandedExerciseSwaps: Record<string, SwapOption[]> = {
+  ...exerciseSwaps,
+};
+
+Object.entries(exerciseSwaps).forEach(([originalExercise, options]) => {
+  options.forEach((option) => {
+    if (!expandedExerciseSwaps[option.name]) {
+      expandedExerciseSwaps[option.name] = [
+        {
+          name: originalExercise,
+          location: "BOTH",
+          note: `Swap back to ${originalExercise}.`,
+        },
+        ...options.filter((item) => item.name !== option.name),
+      ];
+    }
+  });
+});
+
 const exercises: WorkoutExercise[] = [
   {
     number: "01",
@@ -143,6 +177,7 @@ const exercises: WorkoutExercise[] = [
     home: "Dead Bug — 3 sets × 8–10 / side",
     gym: "Dead Bug — 3 sets × 8–10 / side",
   },
+
   {
     number: "02",
     name: "Plank",
@@ -153,6 +188,7 @@ const exercises: WorkoutExercise[] = [
     home: "Forearm Plank — 3 sets × 30–45 sec",
     gym: "Forearm Plank — 3 sets × 30–45 sec",
   },
+
   {
     number: "03",
     name: "Bird Dog",
@@ -163,6 +199,7 @@ const exercises: WorkoutExercise[] = [
     home: "Bird Dog — 3 sets × 8 / side",
     gym: "Bird Dog — 3 sets × 8 / side",
   },
+
   {
     number: "04",
     name: "Core Press",
@@ -173,6 +210,7 @@ const exercises: WorkoutExercise[] = [
     home: "Banded Pallof Press — 3 sets × 10 / side",
     gym: "Cable Pallof Press — 3 sets × 10 / side",
   },
+
   {
     number: "05",
     name: "Reverse Crunch",
@@ -183,6 +221,7 @@ const exercises: WorkoutExercise[] = [
     home: "Reverse Crunch — 3 sets × 10–12 reps",
     gym: "Bench Reverse Crunch — 3 sets × 10–12 reps",
   },
+
   {
     number: "06",
     name: "Side Plank",
@@ -212,8 +251,10 @@ const cooldown = [
 export default function CoreControlPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+
   const [workoutExercises, setWorkoutExercises] =
     useState<WorkoutExercise[]>(exercises);
+
   const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
 
   useEffect(() => {
@@ -482,7 +523,7 @@ export default function CoreControlPage() {
                   </div>
 
                   {/* SWAP */}
-                  {exerciseSwaps[exercise.name] && (
+                  {expandedExerciseSwaps[exercise.name] && (
                     <div className="mt-4 md:ml-[58px]">
                       <button
                         type="button"
@@ -500,55 +541,59 @@ export default function CoreControlPage() {
                         </span>
 
                         <span className="text-sm text-[#A77B73]">
-                          {openSwapFor === exercise.number ? "−" : "+"}
+                          {openSwapFor === exercise.number
+                            ? "−"
+                            : "+"}
                         </span>
                       </button>
 
                       {openSwapFor === exercise.number && (
                         <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
                           <div className="divide-y divide-[#D8C3BD]">
-                            {exerciseSwaps[exercise.name].map((swap) => (
-                              <button
-                                key={`${exercise.number}-${swap.name}`}
-                                type="button"
-                                onClick={() => {
-                                  setWorkoutExercises((current) =>
-                                    current.map((item) =>
-                                      item.number === exercise.number
-                                        ? {
-                                            ...item,
-                                            name: swap.name,
-                                            cue: swap.note,
-                                            home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                            gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                          }
-                                        : item,
-                                    ),
-                                  );
+                            {expandedExerciseSwaps[exercise.name].map(
+                              (swap) => (
+                                <button
+                                  key={`${exercise.number}-${swap.name}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setWorkoutExercises((current) =>
+                                      current.map((item) =>
+                                        item.number === exercise.number
+                                          ? {
+                                              ...item,
+                                              name: swap.name,
+                                              cue: swap.note,
+                                              home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                              gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                            }
+                                          : item,
+                                      ),
+                                    );
 
-                                  setOpenSwapFor(null);
-                                }}
-                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
-                              >
-                                <span className="min-w-0">
-                                  <span className="block font-serif text-base text-[#211C19]">
-                                    {swap.name}
+                                    setOpenSwapFor(null);
+                                  }}
+                                  className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                                >
+                                  <span className="min-w-0">
+                                    <span className="block font-serif text-base text-[#211C19]">
+                                      {swap.name}
+                                    </span>
+
+                                    <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                      {swap.note}
+                                    </span>
+
+                                    <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                      {swap.location}
+                                    </span>
                                   </span>
 
-                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
-                                    {swap.note}
+                                  <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                    →
                                   </span>
-
-                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                                    {swap.location}
-                                  </span>
-                                </span>
-
-                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
-                                  →
-                                </span>
-                              </button>
-                            ))}
+                                </button>
+                              ),
+                            )}
                           </div>
                         </div>
                       )}

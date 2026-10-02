@@ -155,6 +155,31 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
   ],
 };
 
+/*
+ * Every replacement can also be swapped again.
+ *
+ * This builds the additional swap paths automatically from the
+ * existing exerciseSwaps list.
+ */
+const expandedExerciseSwaps: Record<string, SwapOption[]> = {
+  ...exerciseSwaps,
+};
+
+Object.entries(exerciseSwaps).forEach(([originalExercise, options]) => {
+  options.forEach((option) => {
+    if (!expandedExerciseSwaps[option.name]) {
+      expandedExerciseSwaps[option.name] = [
+        {
+          name: originalExercise,
+          location: "BOTH",
+          note: `Swap back to ${originalExercise}.`,
+        },
+        ...options.filter((item) => item.name !== option.name),
+      ];
+    }
+  });
+});
+
 const exercises: WorkoutExercise[] = [
   {
     number: "01",
@@ -323,9 +348,7 @@ export default function GluteBuilderPage() {
 
                 <h1 className="mt-3 font-serif text-4xl leading-none sm:text-5xl">
                   Glute{" "}
-                  <span className="italic text-[#A77B73]">
-                    Builder.
-                  </span>
+                  <span className="italic text-[#A77B73]">Builder.</span>
                 </h1>
 
                 <p className="mt-3 max-w-xl text-sm leading-6 text-[#806E68]">
@@ -346,9 +369,7 @@ export default function GluteBuilderPage() {
                   TIME
                 </p>
 
-                <p className="mt-1.5 font-serif text-lg">
-                  40 min
-                </p>
+                <p className="mt-1.5 font-serif text-lg">40 min</p>
               </div>
 
               <div className="border-b border-[#E1D3CE] py-4 pl-4 sm:border-b-0 sm:border-r">
@@ -356,9 +377,7 @@ export default function GluteBuilderPage() {
                   EXERCISES
                 </p>
 
-                <p className="mt-1.5 font-serif text-lg">
-                  07
-                </p>
+                <p className="mt-1.5 font-serif text-lg">07</p>
               </div>
 
               <div className="border-r border-[#E1D3CE] py-4 pr-3 sm:pl-4">
@@ -376,9 +395,7 @@ export default function GluteBuilderPage() {
                   EQUIPMENT
                 </p>
 
-                <p className="mt-1.5 font-serif text-lg">
-                  Home or gym
-                </p>
+                <p className="mt-1.5 font-serif text-lg">Home or gym</p>
               </div>
             </div>
           </section>
@@ -393,14 +410,12 @@ export default function GluteBuilderPage() {
 
                 <h2 className="mt-2 font-serif text-2xl">
                   Get ready{" "}
-                  <span className="italic text-[#9D6F67]">
-                    to move.
-                  </span>
+                  <span className="italic text-[#9D6F67]">to move.</span>
                 </h2>
 
                 <p className="mt-2 text-xs leading-5 text-[#806E68]">
-                  Wake up your glutes and prepare your hips before
-                  adding resistance.
+                  Wake up your glutes and prepare your hips before adding
+                  resistance.
                 </p>
               </div>
 
@@ -440,8 +455,8 @@ export default function GluteBuilderPage() {
               </div>
 
               <p className="max-w-sm text-xs leading-5 text-[#806E68]">
-                Work through each movement in order. Choose the
-                setup that fits where you&apos;re training today.
+                Work through each movement in order. Choose the setup that
+                fits where you&apos;re training today.
               </p>
             </div>
 
@@ -519,7 +534,7 @@ export default function GluteBuilderPage() {
                   </div>
 
                   {/* SWAP */}
-                  {exerciseSwaps[exercise.name] && (
+                  {expandedExerciseSwaps[exercise.name] && (
                     <div className="mt-4 md:ml-[58px]">
                       <button
                         type="button"
@@ -544,48 +559,50 @@ export default function GluteBuilderPage() {
                       {openSwapFor === exercise.number && (
                         <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
                           <div className="divide-y divide-[#D8C3BD]">
-                            {exerciseSwaps[exercise.name].map((swap) => (
-                              <button
-                                key={`${exercise.number}-${swap.name}`}
-                                type="button"
-                                onClick={() => {
-                                  setWorkoutExercises((current) =>
-                                    current.map((item) =>
-                                      item.number === exercise.number
-                                        ? {
-                                            ...item,
-                                            name: swap.name,
-                                            cue: swap.note,
-                                            home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                            gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                          }
-                                        : item,
-                                    ),
-                                  );
+                            {expandedExerciseSwaps[exercise.name].map(
+                              (swap) => (
+                                <button
+                                  key={`${exercise.number}-${swap.name}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setWorkoutExercises((current) =>
+                                      current.map((item) =>
+                                        item.number === exercise.number
+                                          ? {
+                                              ...item,
+                                              name: swap.name,
+                                              cue: swap.note,
+                                              home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                              gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                            }
+                                          : item,
+                                      ),
+                                    );
 
-                                  setOpenSwapFor(null);
-                                }}
-                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
-                              >
-                                <span className="min-w-0">
-                                  <span className="block font-serif text-base text-[#211C19]">
-                                    {swap.name}
+                                    setOpenSwapFor(null);
+                                  }}
+                                  className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                                >
+                                  <span className="min-w-0">
+                                    <span className="block font-serif text-base text-[#211C19]">
+                                      {swap.name}
+                                    </span>
+
+                                    <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                      {swap.note}
+                                    </span>
+
+                                    <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                      {swap.location}
+                                    </span>
                                   </span>
 
-                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
-                                    {swap.note}
+                                  <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                    →
                                   </span>
-
-                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                                    {swap.location}
-                                  </span>
-                                </span>
-
-                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
-                                  →
-                                </span>
-                              </button>
-                            ))}
+                                </button>
+                              ),
+                            )}
                           </div>
                         </div>
                       )}
@@ -606,14 +623,12 @@ export default function GluteBuilderPage() {
 
                 <h2 className="mt-2 font-serif text-2xl">
                   Finish{" "}
-                  <span className="italic text-[#A77B73]">
-                    slowly. ♡
-                  </span>
+                  <span className="italic text-[#A77B73]">slowly. ♡</span>
                 </h2>
 
                 <p className="mt-2 text-xs leading-5 text-[#806E68]">
-                  Give your body a few quiet minutes before moving
-                  on with your day.
+                  Give your body a few quiet minutes before moving on with
+                  your day.
                 </p>
               </div>
 

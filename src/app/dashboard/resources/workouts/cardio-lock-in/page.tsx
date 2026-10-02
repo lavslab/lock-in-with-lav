@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -150,6 +151,32 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
   ],
 };
 
+/*
+ * Expand the swap system so replacement exercises
+ * can also be swapped again.
+ *
+ * This means users can keep swapping the same exercise
+ * as many times as they want.
+ */
+const expandedExerciseSwaps: Record<string, SwapOption[]> = {
+  ...exerciseSwaps,
+};
+
+Object.entries(exerciseSwaps).forEach(([originalExercise, options]) => {
+  options.forEach((option) => {
+    if (!expandedExerciseSwaps[option.name]) {
+      expandedExerciseSwaps[option.name] = [
+        {
+          name: originalExercise,
+          location: "BOTH",
+          note: `Swap back to ${originalExercise}.`,
+        },
+        ...options.filter((item) => item.name !== option.name),
+      ];
+    }
+  });
+});
+
 const exercises: WorkoutExercise[] = [
   {
     number: "01",
@@ -161,6 +188,7 @@ const exercises: WorkoutExercise[] = [
     home: "Brisk march, walking pad, stairs, or outdoor walk — 5 min",
     gym: "Treadmill, bike, elliptical, or stair climber — 5 min",
   },
+
   {
     number: "02",
     name: "Squat to Reach",
@@ -171,6 +199,7 @@ const exercises: WorkoutExercise[] = [
     home: "Bodyweight Squat to Reach — 40 sec",
     gym: "Bodyweight Squat to Reach — 40 sec",
   },
+
   {
     number: "03",
     name: "Low-Impact Cardio Push",
@@ -182,6 +211,7 @@ const exercises: WorkoutExercise[] = [
     home: "Fast March or Step Jacks — 45 sec",
     gym: "Incline Treadmill Walk or Bike Push — 45 sec",
   },
+
   {
     number: "04",
     name: "Alternating Reverse Lunge",
@@ -193,6 +223,7 @@ const exercises: WorkoutExercise[] = [
     home: "Bodyweight Reverse Lunge — 3 sets × 8 / side",
     gym: "Bodyweight or Light Dumbbell Reverse Lunge — 3 sets × 8 / side",
   },
+
   {
     number: "05",
     name: "Cardio Interval",
@@ -204,6 +235,7 @@ const exercises: WorkoutExercise[] = [
     home: "Walking Pad, Stairs, Fast March, or Outdoor Pace Pick-Up",
     gym: "Treadmill, Bike, Rower, Elliptical, or Stair Climber",
   },
+
   {
     number: "06",
     name: "Standing Knee Drive",
@@ -215,6 +247,7 @@ const exercises: WorkoutExercise[] = [
     home: "Alternating Standing Knee Drives — 30 sec",
     gym: "Alternating Standing Knee Drives — 30 sec",
   },
+
   {
     number: "07",
     name: "Final Cardio Finish",
@@ -245,8 +278,10 @@ const cooldown = [
 export default function CardioLockInPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+
   const [workoutExercises, setWorkoutExercises] =
     useState<WorkoutExercise[]>(exercises);
+
   const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
 
   useEffect(() => {
@@ -515,7 +550,7 @@ export default function CardioLockInPage() {
                   </div>
 
                   {/* SWAP */}
-                  {exerciseSwaps[exercise.name] && (
+                  {expandedExerciseSwaps[exercise.name] && (
                     <div className="mt-4 md:ml-[58px]">
                       <button
                         type="button"
@@ -533,55 +568,59 @@ export default function CardioLockInPage() {
                         </span>
 
                         <span className="text-sm text-[#A77B73]">
-                          {openSwapFor === exercise.number ? "−" : "+"}
+                          {openSwapFor === exercise.number
+                            ? "−"
+                            : "+"}
                         </span>
                       </button>
 
                       {openSwapFor === exercise.number && (
                         <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
                           <div className="divide-y divide-[#D8C3BD]">
-                            {exerciseSwaps[exercise.name].map((swap) => (
-                              <button
-                                key={`${exercise.number}-${swap.name}`}
-                                type="button"
-                                onClick={() => {
-                                  setWorkoutExercises((current) =>
-                                    current.map((item) =>
-                                      item.number === exercise.number
-                                        ? {
-                                            ...item,
-                                            name: swap.name,
-                                            cue: swap.note,
-                                            home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                            gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                          }
-                                        : item,
-                                    ),
-                                  );
+                            {expandedExerciseSwaps[exercise.name].map(
+                              (swap) => (
+                                <button
+                                  key={`${exercise.number}-${swap.name}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setWorkoutExercises((current) =>
+                                      current.map((item) =>
+                                        item.number === exercise.number
+                                          ? {
+                                              ...item,
+                                              name: swap.name,
+                                              cue: swap.note,
+                                              home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                              gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                            }
+                                          : item,
+                                      ),
+                                    );
 
-                                  setOpenSwapFor(null);
-                                }}
-                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
-                              >
-                                <span className="min-w-0">
-                                  <span className="block font-serif text-base text-[#211C19]">
-                                    {swap.name}
+                                    setOpenSwapFor(null);
+                                  }}
+                                  className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                                >
+                                  <span className="min-w-0">
+                                    <span className="block font-serif text-base text-[#211C19]">
+                                      {swap.name}
+                                    </span>
+
+                                    <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                      {swap.note}
+                                    </span>
+
+                                    <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                      {swap.location}
+                                    </span>
                                   </span>
 
-                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
-                                    {swap.note}
+                                  <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                    →
                                   </span>
-
-                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                                    {swap.location}
-                                  </span>
-                                </span>
-
-                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
-                                  →
-                                </span>
-                              </button>
-                            ))}
+                                </button>
+                              ),
+                            )}
                           </div>
                         </div>
                       )}

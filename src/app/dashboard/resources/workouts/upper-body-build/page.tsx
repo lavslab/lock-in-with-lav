@@ -150,6 +150,36 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
   ],
 };
 
+/*
+ * This expands the swap system so every exercise that can be selected
+ * can also be swapped again.
+ *
+ * Example:
+ * Lat Pulldown
+ *   → Dumbbell Pullover
+ *      → Lat Pulldown / Resistance Band Pulldown / Assisted Pull-Up
+ *
+ * This means users can keep swapping as many times as they want.
+ */
+const expandedExerciseSwaps: Record<string, SwapOption[]> = {
+  ...exerciseSwaps,
+};
+
+Object.entries(exerciseSwaps).forEach(([originalExercise, options]) => {
+  options.forEach((option) => {
+    if (!expandedExerciseSwaps[option.name]) {
+      expandedExerciseSwaps[option.name] = [
+        {
+          name: originalExercise,
+          location: "BOTH",
+          note: `Swap back to ${originalExercise}.`,
+        },
+        ...options.filter((item) => item.name !== option.name),
+      ];
+    }
+  });
+});
+
 const exercises: WorkoutExercise[] = [
   {
     number: "01",
@@ -516,7 +546,7 @@ export default function UpperBodyBuildPage() {
                   </div>
 
                   {/* SWAP */}
-                  {exerciseSwaps[exercise.name] && (
+                  {expandedExerciseSwaps[exercise.name] && (
                     <div className="mt-4 md:ml-[58px]">
                       <button
                         type="button"
@@ -541,48 +571,50 @@ export default function UpperBodyBuildPage() {
                       {openSwapFor === exercise.number && (
                         <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
                           <div className="divide-y divide-[#D8C3BD]">
-                            {exerciseSwaps[exercise.name].map((swap) => (
-                              <button
-                                key={`${exercise.number}-${swap.name}`}
-                                type="button"
-                                onClick={() => {
-                                  setWorkoutExercises((current) =>
-                                    current.map((item) =>
-                                      item.number === exercise.number
-                                        ? {
-                                            ...item,
-                                            name: swap.name,
-                                            cue: swap.note,
-                                            home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                            gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                          }
-                                        : item,
-                                    ),
-                                  );
+                            {expandedExerciseSwaps[exercise.name].map(
+                              (swap) => (
+                                <button
+                                  key={`${exercise.number}-${swap.name}`}
+                                  type="button"
+                                  onClick={() => {
+                                    setWorkoutExercises((current) =>
+                                      current.map((item) =>
+                                        item.number === exercise.number
+                                          ? {
+                                              ...item,
+                                              name: swap.name,
+                                              cue: swap.note,
+                                              home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                              gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                            }
+                                          : item,
+                                      ),
+                                    );
 
-                                  setOpenSwapFor(null);
-                                }}
-                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
-                              >
-                                <span className="min-w-0">
-                                  <span className="block font-serif text-base text-[#211C19]">
-                                    {swap.name}
+                                    setOpenSwapFor(null);
+                                  }}
+                                  className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                                >
+                                  <span className="min-w-0">
+                                    <span className="block font-serif text-base text-[#211C19]">
+                                      {swap.name}
+                                    </span>
+
+                                    <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                      {swap.note}
+                                    </span>
+
+                                    <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                      {swap.location}
+                                    </span>
                                   </span>
 
-                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
-                                    {swap.note}
+                                  <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                    →
                                   </span>
-
-                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                                    {swap.location}
-                                  </span>
-                                </span>
-
-                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
-                                  →
-                                </span>
-                              </button>
-                            ))}
+                                </button>
+                              ),
+                            )}
                           </div>
                         </div>
                       )}
