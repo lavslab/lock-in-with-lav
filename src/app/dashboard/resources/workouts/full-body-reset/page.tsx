@@ -5,7 +5,132 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
-const exercises = [
+type SwapOption = {
+  name: string;
+  location: "GYM" | "HOME" | "BOTH";
+  note: string;
+};
+
+type WorkoutExercise = {
+  number: string;
+  name: string;
+  prescription: string;
+  rest: string;
+  cue: string;
+  modification: string;
+};
+
+const exerciseSwaps: Record<string, SwapOption[]> = {
+  "Bodyweight Squat": [
+    {
+      name: "Goblet Squat",
+      location: "HOME",
+      note: "Adds light resistance while keeping the same squat pattern.",
+    },
+    {
+      name: "Chair Squat",
+      location: "HOME",
+      note: "Provides a stable target and keeps the movement beginner-friendly.",
+    },
+    {
+      name: "Leg Press",
+      location: "GYM",
+      note: "Stable machine-based option for training the lower body.",
+    },
+  ],
+
+  "Incline Push-Up": [
+    {
+      name: "Wall Push-Up",
+      location: "HOME",
+      note: "A higher surface makes the pushing movement easier.",
+    },
+    {
+      name: "Knee Push-Up",
+      location: "HOME",
+      note: "Keeps the push-up pattern with less bodyweight to control.",
+    },
+    {
+      name: "Chest Press",
+      location: "GYM",
+      note: "Machine-based pressing option for the same general movement pattern.",
+    },
+  ],
+
+  "Alternating Reverse Lunge": [
+    {
+      name: "Split Squat",
+      location: "BOTH",
+      note: "Keeps the single-leg pattern without requiring a step.",
+    },
+    {
+      name: "Step-Up",
+      location: "BOTH",
+      note: "Single-leg option using a stable step or bench.",
+    },
+    {
+      name: "Goblet Squat",
+      location: "BOTH",
+      note: "Bilateral option when single-leg work is not comfortable.",
+    },
+  ],
+
+  "Glute Bridge": [
+    {
+      name: "Hip Thrust",
+      location: "BOTH",
+      note: "A larger-range hip extension movement for the glutes.",
+    },
+    {
+      name: "Frog Pump",
+      location: "HOME",
+      note: "Simple floor-based option with a strong glute focus.",
+    },
+    {
+      name: "Cable Pull-Through",
+      location: "GYM",
+      note: "Standing hip-extension option with cable resistance.",
+    },
+  ],
+
+  "Bird Dog": [
+    {
+      name: "Dead Bug",
+      location: "HOME",
+      note: "Core-focused option that trains controlled opposite-side movement.",
+    },
+    {
+      name: "Quadruped Leg Extension",
+      location: "HOME",
+      note: "Simplifies the movement by focusing on the lower body.",
+    },
+    {
+      name: "Pallof Press",
+      location: "GYM",
+      note: "Anti-rotation core exercise using cable resistance.",
+    },
+  ],
+
+  "Low-Impact Mountain Climber": [
+    {
+      name: "Marching Plank",
+      location: "HOME",
+      note: "Keeps the plank position while slowing down the movement.",
+    },
+    {
+      name: "Standing Knee Drive",
+      location: "HOME",
+      note: "Low-impact standing option that still gets the body moving.",
+    },
+    {
+      name: "Bike",
+      location: "GYM",
+      note: "Low-impact cardio option that can be performed at a controlled pace.",
+    },
+  ],
+};
+
+const exercises: WorkoutExercise[] = [
   {
     number: "01",
     name: "Bodyweight Squat",
@@ -45,7 +170,8 @@ const exercises = [
     prescription: "3 SETS × 8 / SIDE",
     rest: "30 SEC REST",
     cue: "Brace your core and reach the opposite arm and leg away from you while keeping your hips square to the floor.",
-    modification: "Move only your arm or only your leg until you feel stable.",
+    modification:
+      "Move only your arm or only your leg until you feel stable.",
   },
   {
     number: "06",
@@ -75,6 +201,9 @@ const cooldown = [
 export default function FullBodyResetPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [workoutExercises, setWorkoutExercises] =
+    useState<WorkoutExercise[]>(exercises);
+  const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -270,11 +399,11 @@ export default function FullBodyResetPage() {
 
             {/* ONE WORKOUT CARD */}
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
-              {exercises.map((exercise, index) => (
+              {workoutExercises.map((exercise, index) => (
                 <article
                   key={exercise.number}
                   className={`px-4 py-6 sm:px-6 ${
-                    index !== exercises.length - 1
+                    index !== workoutExercises.length - 1
                       ? "border-b border-[#DED0CB]"
                       : ""
                   }`}
@@ -318,6 +447,78 @@ export default function FullBodyResetPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* SWAP */}
+                  {exerciseSwaps[exercise.name] && (
+                    <div className="mt-4 md:ml-[58px]">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenSwapFor((current) =>
+                            current === exercise.number
+                              ? null
+                              : exercise.number,
+                          )
+                        }
+                        className="flex w-full items-center justify-between rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:bg-[#EAD8D3]"
+                      >
+                        <span className="text-[8px] tracking-[0.18em] text-[#8F655E]">
+                          ↔ SWAP EXERCISE
+                        </span>
+
+                        <span className="text-sm text-[#A77B73]">
+                          {openSwapFor === exercise.number ? "−" : "+"}
+                        </span>
+                      </button>
+
+                      {openSwapFor === exercise.number && (
+                        <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
+                          <div className="divide-y divide-[#D8C3BD]">
+                            {exerciseSwaps[exercise.name].map((swap) => (
+                              <button
+                                key={`${exercise.number}-${swap.name}`}
+                                type="button"
+                                onClick={() => {
+                                  setWorkoutExercises((current) =>
+                                    current.map((item) =>
+                                      item.number === exercise.number
+                                        ? {
+                                            ...item,
+                                            name: swap.name,
+                                            cue: swap.note,
+                                          }
+                                        : item,
+                                    ),
+                                  );
+
+                                  setOpenSwapFor(null);
+                                }}
+                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block font-serif text-base text-[#211C19]">
+                                    {swap.name}
+                                  </span>
+
+                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                    {swap.note}
+                                  </span>
+
+                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                    {swap.location}
+                                  </span>
+                                </span>
+
+                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                  →
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

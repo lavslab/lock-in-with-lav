@@ -5,7 +5,134 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
-const exercises = [
+type SwapOption = {
+  name: string;
+  location: "GYM" | "HOME" | "BOTH";
+  note: string;
+};
+
+type WorkoutExercise = {
+  number: string;
+  name: string;
+  prescription: string;
+  rest: string;
+  cue: string;
+  modification: string;
+  home: string;
+  gym: string;
+};
+
+const exerciseSwaps: Record<string, SwapOption[]> = {
+  "Dead Bug": [
+    {
+      name: "Heel Taps",
+      location: "HOME",
+      note: "A simple core-control option that keeps your lower back supported.",
+    },
+    {
+      name: "Bird Dog",
+      location: "BOTH",
+      note: "Trains opposite-side coordination while maintaining a braced core.",
+    },
+    {
+      name: "Marching Dead Bug",
+      location: "HOME",
+      note: "A slower variation that reduces the range of motion.",
+    },
+  ],
+
+  Plank: [
+    {
+      name: "Incline Plank",
+      location: "HOME",
+      note: "Elevating your hands reduces the amount of bodyweight you need to control.",
+    },
+    {
+      name: "Dead Bug",
+      location: "BOTH",
+      note: "Floor-based core control option without holding a plank.",
+    },
+    {
+      name: "Pallof Press",
+      location: "GYM",
+      note: "Anti-rotation option that challenges your core without a plank hold.",
+    },
+  ],
+
+  "Bird Dog": [
+    {
+      name: "Dead Bug",
+      location: "HOME",
+      note: "Another controlled opposite-side core movement performed on the floor.",
+    },
+    {
+      name: "Quadruped Leg Extension",
+      location: "HOME",
+      note: "Simplifies the movement by focusing on one limb at a time.",
+    },
+    {
+      name: "Pallof Press",
+      location: "GYM",
+      note: "Standing anti-rotation exercise that trains core stability.",
+    },
+  ],
+
+  "Core Press": [
+    {
+      name: "Banded Pallof Press",
+      location: "HOME",
+      note: "The same anti-rotation pattern using a resistance band.",
+    },
+    {
+      name: "Cable Pallof Press",
+      location: "GYM",
+      note: "Cable-based anti-rotation movement with adjustable resistance.",
+    },
+    {
+      name: "Dead Bug",
+      location: "HOME",
+      note: "Floor-based alternative focused on bracing and resisting movement.",
+    },
+  ],
+
+  "Reverse Crunch": [
+    {
+      name: "Heel Taps",
+      location: "HOME",
+      note: "A controlled lower-abdominal movement with a smaller range of motion.",
+    },
+    {
+      name: "Bent-Knee Leg Raise",
+      location: "HOME",
+      note: "Keeps the knees bent to make the movement more manageable.",
+    },
+    {
+      name: "Captain's Chair Knee Raise",
+      location: "GYM",
+      note: "Supported knee-raise variation that targets the abdominal muscles.",
+    },
+  ],
+
+  "Side Plank": [
+    {
+      name: "Knee Side Plank",
+      location: "HOME",
+      note: "Keeps the side-plank position while reducing the load.",
+    },
+    {
+      name: "Side-Lying Leg Raise",
+      location: "HOME",
+      note: "Targets the side body and hip while removing the plank hold.",
+    },
+    {
+      name: "Pallof Press",
+      location: "GYM",
+      note: "Anti-rotation movement that challenges the obliques and core.",
+    },
+  ],
+};
+
+const exercises: WorkoutExercise[] = [
   {
     number: "01",
     name: "Dead Bug",
@@ -85,6 +212,9 @@ const cooldown = [
 export default function CoreControlPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [workoutExercises, setWorkoutExercises] =
+    useState<WorkoutExercise[]>(exercises);
+  const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -280,11 +410,11 @@ export default function CoreControlPage() {
 
             {/* ONE WORKOUT CARD */}
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
-              {exercises.map((exercise, index) => (
+              {workoutExercises.map((exercise, index) => (
                 <article
                   key={exercise.number}
                   className={`px-4 py-6 sm:px-6 ${
-                    index !== exercises.length - 1
+                    index !== workoutExercises.length - 1
                       ? "border-b border-[#DED0CB]"
                       : ""
                   }`}
@@ -350,6 +480,80 @@ export default function CoreControlPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* SWAP */}
+                  {exerciseSwaps[exercise.name] && (
+                    <div className="mt-4 md:ml-[58px]">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenSwapFor((current) =>
+                            current === exercise.number
+                              ? null
+                              : exercise.number,
+                          )
+                        }
+                        className="flex w-full items-center justify-between rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:bg-[#EAD8D3]"
+                      >
+                        <span className="text-[8px] tracking-[0.18em] text-[#8F655E]">
+                          ↔ SWAP EXERCISE
+                        </span>
+
+                        <span className="text-sm text-[#A77B73]">
+                          {openSwapFor === exercise.number ? "−" : "+"}
+                        </span>
+                      </button>
+
+                      {openSwapFor === exercise.number && (
+                        <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
+                          <div className="divide-y divide-[#D8C3BD]">
+                            {exerciseSwaps[exercise.name].map((swap) => (
+                              <button
+                                key={`${exercise.number}-${swap.name}`}
+                                type="button"
+                                onClick={() => {
+                                  setWorkoutExercises((current) =>
+                                    current.map((item) =>
+                                      item.number === exercise.number
+                                        ? {
+                                            ...item,
+                                            name: swap.name,
+                                            cue: swap.note,
+                                            home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                            gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                          }
+                                        : item,
+                                    ),
+                                  );
+
+                                  setOpenSwapFor(null);
+                                }}
+                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block font-serif text-base text-[#211C19]">
+                                    {swap.name}
+                                  </span>
+
+                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                    {swap.note}
+                                  </span>
+
+                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                    {swap.location}
+                                  </span>
+                                </span>
+
+                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                  →
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

@@ -1,8 +1,11 @@
 "use client";
 
 import Link from "next/link";
+
 import { useEffect, useState } from "react";
+
 import { supabase } from "@/lib/supabase";
+
 import DashboardSidebar from "@/components/DashboardSidebar";
 
 type IconProps = {
@@ -27,26 +30,6 @@ function CalculatorIcon({ className = "" }: IconProps) {
       <path d="M14 11.5h2" />
       <path d="M8 15.5h2" />
       <path d="M14 15.5h2" />
-    </svg>
-  );
-}
-
-function SwapIcon({ className = "" }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M5 8h12" />
-      <path d="m14 5 3 3-3 3" />
-      <path d="M19 16H7" />
-      <path d="m10 13-3 3 3 3" />
     </svg>
   );
 }
@@ -162,7 +145,7 @@ export default function ToolsPage() {
                 </p>
 
                 <p className="mt-3 text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                  CALCULATE • SWAP • PLAN
+                  CALCULATE • PLAN
                 </p>
               </div>
             </div>
@@ -260,6 +243,7 @@ export default function ToolsPage() {
                       <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
                         CALORIES
                       </p>
+
                       <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
                         kcal
                       </p>
@@ -269,6 +253,7 @@ export default function ToolsPage() {
                       <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
                         PROTEIN
                       </p>
+
                       <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
                         grams
                       </p>
@@ -278,6 +263,7 @@ export default function ToolsPage() {
                       <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
                         CARBS
                       </p>
+
                       <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
                         grams
                       </p>
@@ -287,6 +273,7 @@ export default function ToolsPage() {
                       <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
                         FATS
                       </p>
+
                       <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
                         grams
                       </p>
@@ -296,83 +283,9 @@ export default function ToolsPage() {
               </div>
             </Link>
 
-            {/* SECONDARY TOOLS */}
+            {/* TEMPLATES */}
 
-            <div className="mt-5 grid gap-5 lg:grid-cols-2">
-              {/* EXERCISE SWAP */}
-
-              <Link
-                href="/dashboard/resources/tools/exercise-swap"
-                className="group rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 transition duration-300 hover:border-[#C39A92] hover:shadow-sm md:p-7"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-[0.9rem] bg-[#EAD8D3]/75 text-[#9D6F67]">
-                    <SwapIcon className="h-5 w-5" />
-                  </div>
-
-                  <span className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                    TRAINING TOOL
-                  </span>
-                </div>
-
-                <div className="mt-6">
-                  <span className="font-serif text-sm italic text-[#C39A92]">
-                    02
-                  </span>
-
-                  <h3 className="mt-2 font-serif text-2xl">
-                    Exercise Swap
-                  </h3>
-
-                  <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                    find another way to train it.
-                  </p>
-
-                  <p className="mt-4 text-[11px] leading-5 text-[#6F5F59]">
-                    Pick an exercise and find alternatives that train
-                    the same muscles and movement pattern.
-                  </p>
-                </div>
-
-                {/* SWAP VISUAL */}
-
-                <div className="mt-6 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                  <div className="rounded-[0.9rem] bg-[#F2E7E3] px-4 py-3 text-center">
-                    <p className="text-[7px] tracking-[0.18em] text-[#8F655E]">
-                      CURRENT
-                    </p>
-                    <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
-                      exercise
-                    </p>
-                  </div>
-
-                  <span className="font-serif text-lg text-[#B98980]">
-                    →
-                  </span>
-
-                  <div className="rounded-[0.9rem] bg-[#F2E7E3] px-4 py-3 text-center">
-                    <p className="text-[7px] tracking-[0.18em] text-[#8F655E]">
-                      SWAP
-                    </p>
-                    <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
-                      alternative
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-6 flex items-center justify-between border-t border-[#E1D3CE] pt-4">
-                  <span className="text-[7px] tracking-[0.22em] text-[#8F655E]">
-                    FIND A SWAP
-                  </span>
-
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-base text-[#A77B73] transition duration-300 group-hover:translate-x-1 group-hover:bg-[#EAD8D3]">
-                    →
-                  </span>
-                </div>
-              </Link>
-
-              {/* TEMPLATES */}
-
+            <div className="mt-5 grid gap-5 lg:grid-cols-1">
               <Link
                 href="/dashboard/resources/tools/templates"
                 className="group rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 transition duration-300 hover:border-[#C39A92] hover:shadow-sm md:p-7"
@@ -389,7 +302,7 @@ export default function ToolsPage() {
 
                 <div className="mt-6">
                   <span className="font-serif text-sm italic text-[#C39A92]">
-                    03
+                    02
                   </span>
 
                   <h3 className="mt-2 font-serif text-2xl">
@@ -462,14 +375,16 @@ export default function ToolsPage() {
                   </p>
                 </div>
 
-                <div className="grid gap-5 sm:grid-cols-3 md:border-l md:border-[#DED0CB] md:pl-8">
+                <div className="grid gap-5 sm:grid-cols-2 md:border-l md:border-[#DED0CB] md:pl-8">
                   <div>
                     <p className="font-serif text-lg italic text-[#C39A92]">
                       01
                     </p>
+
                     <p className="mt-1 text-[7px] tracking-[0.18em] text-[#8F655E]">
                       NEED AN ESTIMATE?
                     </p>
+
                     <p className="mt-2 text-[9px] leading-4 text-[#806D67]">
                       Use the macro calculator.
                     </p>
@@ -479,21 +394,11 @@ export default function ToolsPage() {
                     <p className="font-serif text-lg italic text-[#C39A92]">
                       02
                     </p>
-                    <p className="mt-1 text-[7px] tracking-[0.18em] text-[#8F655E]">
-                      NEED AN ALTERNATIVE?
-                    </p>
-                    <p className="mt-2 text-[9px] leading-4 text-[#806D67]">
-                      Find an exercise swap.
-                    </p>
-                  </div>
 
-                  <div>
-                    <p className="font-serif text-lg italic text-[#C39A92]">
-                      03
-                    </p>
                     <p className="mt-1 text-[7px] tracking-[0.18em] text-[#8F655E]">
                       NEED STRUCTURE?
                     </p>
+
                     <p className="mt-2 text-[9px] leading-4 text-[#806D67]">
                       Grab a template.
                     </p>

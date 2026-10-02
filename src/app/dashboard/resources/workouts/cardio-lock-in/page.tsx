@@ -5,7 +5,152 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
-const exercises = [
+type SwapOption = {
+  name: string;
+  location: "GYM" | "HOME" | "BOTH";
+  note: string;
+};
+
+type WorkoutExercise = {
+  number: string;
+  name: string;
+  prescription: string;
+  rest: string;
+  cue: string;
+  modification: string;
+  home: string;
+  gym: string;
+};
+
+const exerciseSwaps: Record<string, SwapOption[]> = {
+  "Steady Cardio": [
+    {
+      name: "Walking Pad",
+      location: "HOME",
+      note: "Low-impact steady cardio that lets you control your pace.",
+    },
+    {
+      name: "Outdoor Walk",
+      location: "BOTH",
+      note: "Simple steady-state cardio that can be adjusted to your pace.",
+    },
+    {
+      name: "Elliptical",
+      location: "GYM",
+      note: "Low-impact cardio option with continuous movement.",
+    },
+  ],
+
+  "Squat to Reach": [
+    {
+      name: "Bodyweight Squat",
+      location: "BOTH",
+      note: "Keeps the lower-body movement without the overhead reach.",
+    },
+    {
+      name: "Step-Up",
+      location: "BOTH",
+      note: "A simple lower-body movement that can be performed at a steady pace.",
+    },
+    {
+      name: "March to Reach",
+      location: "HOME",
+      note: "Keeps the full-body rhythm with less squat depth.",
+    },
+  ],
+
+  "Low-Impact Cardio Push": [
+    {
+      name: "Fast March",
+      location: "HOME",
+      note: "Simple low-impact cardio that can be performed at different speeds.",
+    },
+    {
+      name: "Step Jacks",
+      location: "HOME",
+      note: "Low-impact jumping-jack alternative that keeps you moving.",
+    },
+    {
+      name: "Bike Push",
+      location: "GYM",
+      note: "Allows you to increase effort without impact from running or jumping.",
+    },
+  ],
+
+  "Alternating Reverse Lunge": [
+    {
+      name: "Step-Up",
+      location: "BOTH",
+      note: "Single-leg movement that can be performed at a controlled pace.",
+    },
+    {
+      name: "Bodyweight Squat",
+      location: "BOTH",
+      note: "Bilateral lower-body option when lunges are uncomfortable.",
+    },
+    {
+      name: "Low Step Touch",
+      location: "HOME",
+      note: "Lower-impact movement that keeps you continuously moving.",
+    },
+  ],
+
+  "Cardio Interval": [
+    {
+      name: "Walking Pad Intervals",
+      location: "HOME",
+      note: "Alternate between an easy walk and a faster controlled pace.",
+    },
+    {
+      name: "Outdoor Walk Intervals",
+      location: "BOTH",
+      note: "Use changes in pace to create your work and recovery intervals.",
+    },
+    {
+      name: "Bike Intervals",
+      location: "GYM",
+      note: "Alternate resistance or speed for your work and recovery periods.",
+    },
+  ],
+
+  "Standing Knee Drive": [
+    {
+      name: "March in Place",
+      location: "HOME",
+      note: "A lower-intensity version of alternating knee drives.",
+    },
+    {
+      name: "Step Touch",
+      location: "HOME",
+      note: "Easy standing cardio option with controlled side-to-side movement.",
+    },
+    {
+      name: "Elliptical",
+      location: "GYM",
+      note: "Continuous low-impact cardio option for the same interval.",
+    },
+  ],
+
+  "Final Cardio Finish": [
+    {
+      name: "Brisk Walk",
+      location: "BOTH",
+      note: "Simple way to finish with a controlled increase in pace.",
+    },
+    {
+      name: "Walking Pad",
+      location: "HOME",
+      note: "Lets you control your final pace while gradually slowing down.",
+    },
+    {
+      name: "Bike",
+      location: "GYM",
+      note: "Controlled cardio option that makes it easy to gradually reduce intensity.",
+    },
+  ],
+};
+
+const exercises: WorkoutExercise[] = [
   {
     number: "01",
     name: "Steady Cardio",
@@ -100,6 +245,9 @@ const cooldown = [
 export default function CardioLockInPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [workoutExercises, setWorkoutExercises] =
+    useState<WorkoutExercise[]>(exercises);
+  const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -295,11 +443,11 @@ export default function CardioLockInPage() {
 
             {/* ONE WORKOUT CARD */}
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
-              {exercises.map((exercise, index) => (
+              {workoutExercises.map((exercise, index) => (
                 <article
                   key={exercise.number}
                   className={`px-4 py-6 sm:px-6 ${
-                    index !== exercises.length - 1
+                    index !== workoutExercises.length - 1
                       ? "border-b border-[#DED0CB]"
                       : ""
                   }`}
@@ -365,6 +513,80 @@ export default function CardioLockInPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* SWAP */}
+                  {exerciseSwaps[exercise.name] && (
+                    <div className="mt-4 md:ml-[58px]">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenSwapFor((current) =>
+                            current === exercise.number
+                              ? null
+                              : exercise.number,
+                          )
+                        }
+                        className="flex w-full items-center justify-between rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:bg-[#EAD8D3]"
+                      >
+                        <span className="text-[8px] tracking-[0.18em] text-[#8F655E]">
+                          ↔ SWAP EXERCISE
+                        </span>
+
+                        <span className="text-sm text-[#A77B73]">
+                          {openSwapFor === exercise.number ? "−" : "+"}
+                        </span>
+                      </button>
+
+                      {openSwapFor === exercise.number && (
+                        <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
+                          <div className="divide-y divide-[#D8C3BD]">
+                            {exerciseSwaps[exercise.name].map((swap) => (
+                              <button
+                                key={`${exercise.number}-${swap.name}`}
+                                type="button"
+                                onClick={() => {
+                                  setWorkoutExercises((current) =>
+                                    current.map((item) =>
+                                      item.number === exercise.number
+                                        ? {
+                                            ...item,
+                                            name: swap.name,
+                                            cue: swap.note,
+                                            home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                            gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                          }
+                                        : item,
+                                    ),
+                                  );
+
+                                  setOpenSwapFor(null);
+                                }}
+                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block font-serif text-base text-[#211C19]">
+                                    {swap.name}
+                                  </span>
+
+                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                    {swap.note}
+                                  </span>
+
+                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                    {swap.location}
+                                  </span>
+                                </span>
+
+                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                  →
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

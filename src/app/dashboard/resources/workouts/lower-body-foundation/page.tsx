@@ -1,14 +1,120 @@
 "use client";
 
 import Link from "next/link";
+
 import { useEffect, useState } from "react";
+
 import { supabase } from "@/lib/supabase";
+
 import DashboardSidebar from "@/components/DashboardSidebar";
 
-const exercises = [
+type SwapOption = {
+  name: string;
+  location: "GYM" | "HOME" | "BOTH";
+  note: string;
+};
+
+const exerciseSwaps: Record<string, SwapOption[]> = {
+  "Goblet Squat": [
+    {
+      name: "Leg Press",
+      location: "GYM",
+      note: "Stable option for loading the quads and glutes.",
+    },
+    {
+      name: "Dumbbell Squat",
+      location: "BOTH",
+      note: "Easy swap when a barbell is not available.",
+    },
+    {
+      name: "Split Squat",
+      location: "BOTH",
+      note: "Single-leg option that still trains quads and glutes.",
+    },
+  ],
+
+  "Dumbbell Romanian Deadlift": [
+    {
+      name: "Dumbbell RDL",
+      location: "BOTH",
+      note: "Keeps the same hip-hinge pattern.",
+    },
+    {
+      name: "Cable Pull-Through",
+      location: "GYM",
+      note: "Hip-dominant option with less loading in the hands.",
+    },
+    {
+      name: "Good Morning",
+      location: "BOTH",
+      note: "Another hinge pattern for hamstrings and glutes.",
+    },
+    {
+      name: "Single-Leg RDL",
+      location: "BOTH",
+      note: "Adds unilateral work and balance.",
+    },
+  ],
+
+  "Reverse Lunge": [
+    {
+      name: "Split Squat",
+      location: "BOTH",
+      note: "Removes the stepping component.",
+    },
+    {
+      name: "Step-Up",
+      location: "BOTH",
+      note: "Single-leg option using a box, step or bench.",
+    },
+    {
+      name: "Leg Press",
+      location: "GYM",
+      note: "Stable bilateral alternative for lower-body loading.",
+    },
+  ],
+
+  "Glute Bridge": [
+    {
+      name: "Hip Thrust",
+      location: "BOTH",
+      note: "A stronger hip-extension option for the glutes.",
+    },
+    {
+      name: "Dumbbell Hip Thrust",
+      location: "BOTH",
+      note: "Same pattern with easier equipment.",
+    },
+    {
+      name: "Cable Pull-Through",
+      location: "GYM",
+      note: "Trains hip extension from a standing position.",
+    },
+    {
+      name: "Frog Pump",
+      location: "HOME",
+      note: "Low-equipment glute-focused option.",
+    },
+  ],
+};
+
+type WorkoutExercise = {
+  number: string;
+  name: string;
+  swapKey?: string;
+  prescription: string;
+  rest: string;
+  cue: string;
+  modification: string;
+  home: string;
+  gym: string;
+};
+
+const exercises: WorkoutExercise[] = [
   {
     number: "01",
     name: "Goblet Squat",
+    swapKey: "Goblet Squat",
     prescription: "3 SETS × 10–12 REPS",
     rest: "60 SEC REST",
     cue: "Keep the weight close to your chest, brace your core, and sit down between your hips.",
@@ -16,9 +122,11 @@ const exercises = [
     home: "Goblet Squat — 3 sets × 10–12 reps",
     gym: "Leg Press — 3 sets × 10–12 reps",
   },
+
   {
     number: "02",
     name: "Dumbbell Romanian Deadlift",
+    swapKey: "Dumbbell Romanian Deadlift",
     prescription: "3 SETS × 10–12 REPS",
     rest: "60 SEC REST",
     cue: "Push your hips back with soft knees and keep the dumbbells close to your legs.",
@@ -26,9 +134,11 @@ const exercises = [
     home: "Dumbbell Romanian Deadlift — 3 sets × 10–12 reps",
     gym: "Smith Machine Romanian Deadlift — 3 sets × 10–12 reps",
   },
+
   {
     number: "03",
     name: "Reverse Lunge",
+    swapKey: "Reverse Lunge",
     prescription: "3 SETS × 8–10 / SIDE",
     rest: "60 SEC REST",
     cue: "Step back with control and keep your front foot planted as you lower.",
@@ -37,9 +147,11 @@ const exercises = [
     home: "Dumbbell Reverse Lunge — 3 sets × 8–10 / side",
     gym: "Smith Machine Reverse Lunge — 3 sets × 8–10 / side",
   },
+
   {
     number: "04",
     name: "Glute Bridge",
+    swapKey: "Glute Bridge",
     prescription: "3 SETS × 12–15 REPS",
     rest: "45 SEC REST",
     cue: "Drive through your heels and squeeze your glutes at the top without overextending your back.",
@@ -47,6 +159,7 @@ const exercises = [
     home: "Dumbbell Glute Bridge — 3 sets × 12–15 reps",
     gym: "Hip Thrust Machine — 3 sets × 12–15 reps",
   },
+
   {
     number: "05",
     name: "Dumbbell Sumo Squat",
@@ -57,6 +170,7 @@ const exercises = [
     home: "Dumbbell Sumo Squat — 3 sets × 10–12 reps",
     gym: "Hack Squat or Leg Press — 3 sets × 10–12 reps",
   },
+
   {
     number: "06",
     name: "Standing Calf Raise",
@@ -86,6 +200,8 @@ const cooldown = [
 export default function LowerBodyFoundationPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [workoutExercises, setWorkoutExercises] = useState(exercises);
+  const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -280,7 +396,7 @@ export default function LowerBodyFoundationPage() {
 
             {/* ONE WORKOUT CARD */}
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
-              {exercises.map((exercise, index) => (
+              {workoutExercises.map((exercise, index) => (
                 <article
                   key={exercise.number}
                   className={`px-4 py-6 sm:px-6 ${
@@ -350,6 +466,82 @@ export default function LowerBodyFoundationPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* SWAP */}
+                  {exerciseSwaps[exercise.swapKey ?? exercise.name] && (
+                    <div className="mt-4 md:ml-[58px]">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenSwapFor((current) =>
+                            current === exercise.number
+                              ? null
+                              : exercise.number,
+                          )
+                        }
+                        className="flex w-full items-center justify-between rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:bg-[#EAD8D3]"
+                      >
+                        <span className="text-[8px] tracking-[0.18em] text-[#8F655E]">
+                          ↔ SWAP EXERCISE
+                        </span>
+
+                        <span className="text-sm text-[#A77B73]">
+                          {openSwapFor === exercise.number ? "−" : "+"}
+                        </span>
+                      </button>
+
+                      {openSwapFor === exercise.number && (
+                        <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
+                          <div className="divide-y divide-[#D8C3BD]">
+                            {exerciseSwaps[
+                              exercise.swapKey ?? exercise.name
+                            ].map((swap) => (
+                              <button
+                                key={`${exercise.number}-${swap.name}`}
+                                type="button"
+                                onClick={() => {
+                                  setWorkoutExercises((current) =>
+                                    current.map((item) =>
+                                      item.number === exercise.number
+                                        ? {
+                                            ...item,
+                                            name: swap.name,
+                                            cue: swap.note,
+                                            home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                            gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                          }
+                                        : item,
+                                    ),
+                                  );
+
+                                  setOpenSwapFor(null);
+                                }}
+                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block font-serif text-base text-[#211C19]">
+                                    {swap.name}
+                                  </span>
+
+                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                    {swap.note}
+                                  </span>
+
+                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                    {swap.location}
+                                  </span>
+                                </span>
+
+                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                  →
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

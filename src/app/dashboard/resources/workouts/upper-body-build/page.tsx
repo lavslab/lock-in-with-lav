@@ -5,7 +5,152 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
-const exercises = [
+type SwapOption = {
+  name: string;
+  location: "GYM" | "HOME" | "BOTH";
+  note: string;
+};
+
+type WorkoutExercise = {
+  number: string;
+  name: string;
+  prescription: string;
+  rest: string;
+  cue: string;
+  modification: string;
+  home: string;
+  gym: string;
+};
+
+const exerciseSwaps: Record<string, SwapOption[]> = {
+  "Lat Pulldown": [
+    {
+      name: "Dumbbell Pullover",
+      location: "HOME",
+      note: "Targets the lats through a controlled overhead pulling motion.",
+    },
+    {
+      name: "Resistance Band Pulldown",
+      location: "HOME",
+      note: "Keeps the vertical pulling pattern with a band.",
+    },
+    {
+      name: "Assisted Pull-Up",
+      location: "GYM",
+      note: "Another vertical pulling option for the back and lats.",
+    },
+  ],
+
+  "Seated Cable Row": [
+    {
+      name: "Dumbbell Bent-Over Row",
+      location: "BOTH",
+      note: "Keeps the horizontal pulling pattern with free weights.",
+    },
+    {
+      name: "Chest-Supported Dumbbell Row",
+      location: "BOTH",
+      note: "Provides extra support while training the upper back.",
+    },
+    {
+      name: "Machine Row",
+      location: "GYM",
+      note: "Stable machine-based alternative for the same pulling pattern.",
+    },
+  ],
+
+  "Dumbbell Shoulder Press": [
+    {
+      name: "Arnold Press",
+      location: "BOTH",
+      note: "Another dumbbell pressing variation for the shoulders.",
+    },
+    {
+      name: "Single-Arm Shoulder Press",
+      location: "BOTH",
+      note: "Allows you to focus on one side at a time.",
+    },
+    {
+      name: "Machine Shoulder Press",
+      location: "GYM",
+      note: "Supported pressing option with a stable setup.",
+    },
+  ],
+
+  "Chest Press Machine": [
+    {
+      name: "Dumbbell Floor Press",
+      location: "HOME",
+      note: "Chest press variation that limits the range of motion.",
+    },
+    {
+      name: "Dumbbell Bench Press",
+      location: "BOTH",
+      note: "Classic horizontal pressing movement for the chest.",
+    },
+    {
+      name: "Push-Up",
+      location: "BOTH",
+      note: "Bodyweight pressing option for the chest and triceps.",
+    },
+  ],
+
+  "Dumbbell Lateral Raise": [
+    {
+      name: "Cable Lateral Raise",
+      location: "GYM",
+      note: "Keeps constant tension through the shoulder raise.",
+    },
+    {
+      name: "Band Lateral Raise",
+      location: "HOME",
+      note: "Resistance-band option for the side delts.",
+    },
+    {
+      name: "Lean-Away Lateral Raise",
+      location: "BOTH",
+      note: "Creates a slightly different resistance curve for the side delts.",
+    },
+  ],
+
+  "Cable Triceps Pressdown": [
+    {
+      name: "Overhead Dumbbell Triceps Extension",
+      location: "BOTH",
+      note: "Trains the triceps through an overhead position.",
+    },
+    {
+      name: "Close-Grip Push-Up",
+      location: "BOTH",
+      note: "Bodyweight pressing option with more emphasis on the triceps.",
+    },
+    {
+      name: "Bench Dip",
+      location: "HOME",
+      note: "Bodyweight triceps-focused option using a stable surface.",
+    },
+  ],
+
+  "Dumbbell Biceps Curl": [
+    {
+      name: "Hammer Curl",
+      location: "BOTH",
+      note: "Neutral-grip curl that also trains the brachialis and forearms.",
+    },
+    {
+      name: "Resistance Band Curl",
+      location: "HOME",
+      note: "Band-based option for the same elbow-flexion pattern.",
+    },
+    {
+      name: "Cable Curl",
+      location: "GYM",
+      note: "Provides consistent cable resistance through the curl.",
+    },
+  ],
+};
+
+const exercises: WorkoutExercise[] = [
   {
     number: "01",
     name: "Lat Pulldown",
@@ -101,6 +246,9 @@ const cooldown = [
 export default function UpperBodyBuildPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [workoutExercises, setWorkoutExercises] =
+    useState<WorkoutExercise[]>(exercises);
+  const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -296,11 +444,11 @@ export default function UpperBodyBuildPage() {
 
             {/* ONE WORKOUT CARD */}
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
-              {exercises.map((exercise, index) => (
+              {workoutExercises.map((exercise, index) => (
                 <article
                   key={exercise.number}
                   className={`px-4 py-6 sm:px-6 ${
-                    index !== exercises.length - 1
+                    index !== workoutExercises.length - 1
                       ? "border-b border-[#DED0CB]"
                       : ""
                   }`}
@@ -366,6 +514,80 @@ export default function UpperBodyBuildPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* SWAP */}
+                  {exerciseSwaps[exercise.name] && (
+                    <div className="mt-4 md:ml-[58px]">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setOpenSwapFor((current) =>
+                            current === exercise.number
+                              ? null
+                              : exercise.number,
+                          )
+                        }
+                        className="flex w-full items-center justify-between rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:bg-[#EAD8D3]"
+                      >
+                        <span className="text-[8px] tracking-[0.18em] text-[#8F655E]">
+                          ↔ SWAP EXERCISE
+                        </span>
+
+                        <span className="text-sm text-[#A77B73]">
+                          {openSwapFor === exercise.number ? "−" : "+"}
+                        </span>
+                      </button>
+
+                      {openSwapFor === exercise.number && (
+                        <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
+                          <div className="divide-y divide-[#D8C3BD]">
+                            {exerciseSwaps[exercise.name].map((swap) => (
+                              <button
+                                key={`${exercise.number}-${swap.name}`}
+                                type="button"
+                                onClick={() => {
+                                  setWorkoutExercises((current) =>
+                                    current.map((item) =>
+                                      item.number === exercise.number
+                                        ? {
+                                            ...item,
+                                            name: swap.name,
+                                            cue: swap.note,
+                                            home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                            gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                          }
+                                        : item,
+                                    ),
+                                  );
+
+                                  setOpenSwapFor(null);
+                                }}
+                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block font-serif text-base text-[#211C19]">
+                                    {swap.name}
+                                  </span>
+
+                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                    {swap.note}
+                                  </span>
+
+                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                    {swap.location}
+                                  </span>
+                                </span>
+
+                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                  →
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </article>
               ))}
             </div>
