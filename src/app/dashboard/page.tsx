@@ -22,13 +22,13 @@ const commitments = [
   {
     number: "03",
     title: "HYDRATE",
-    description: "Hit your water goal",
+    description: "Stay hydrated",
     column: "hydrate",
   },
   {
     number: "04",
     title: "READ",
-    description: "10 pages",
+    description: "Read a few pages",
     column: "read",
   },
   {
@@ -777,7 +777,7 @@ export default function DashboardPage() {
                               </p>
 
                               <p className="mt-1 text-[12px] text-[#8C7770]">
-                                1 gallon goal
+                                Stay hydrated
                               </p>
                             </div>
 
