@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-
 import {
   useEffect,
   useMemo,
@@ -10,7 +9,6 @@ import {
 } from "react";
 
 import { supabase } from "@/lib/supabase";
-
 import DashboardSidebar from "@/components/DashboardSidebar";
 
 type IconProps = {
@@ -32,8 +30,8 @@ type Workout = {
 };
 
 /* ---------------------------------
- * WORKOUT TYPE ICONS
- * --------------------------------- */
+   WORKOUT TYPE ICONS
+--------------------------------- */
 
 function LowerBodyIcon({ className = "" }: IconProps) {
   return (
@@ -161,8 +159,8 @@ function CardioIcon({ className = "" }: IconProps) {
 }
 
 /* ---------------------------------
- * EQUIPMENT ICONS
- * --------------------------------- */
+   EQUIPMENT ICONS
+--------------------------------- */
 
 function DumbbellIcon({ className = "" }: IconProps) {
   return (
@@ -266,31 +264,87 @@ function KettlebellIcon({ className = "" }: IconProps) {
   );
 }
 
+function BandIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M5 7c4 2 10 2 14 0" />
+      <path d="M5 17c4-2 10-2 14 0" />
+      <path d="M5 7c-2 2.5-2 7.5 0 10" />
+      <path d="M19 7c2 2.5 2 7.5 0 10" />
+    </svg>
+  );
+}
+
+function MachineIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M6 19V7h9" />
+      <path d="M15 7v5h4" />
+      <path d="M9 19h10" />
+      <path d="M4 19h2" />
+      <path d="M9 7V4h4" />
+      <circle cx="8" cy="19" r="2" />
+      <circle cx="18" cy="19" r="2" />
+    </svg>
+  );
+}
+
 function getEquipmentIcon(
   equipment: string,
 ): ComponentType<IconProps> {
-  switch (equipment) {
-    case "HOUSEHOLD ITEMS":
-      return HouseholdIcon;
+  const normalized = equipment.toUpperCase();
 
-    case "MAT":
-      return MatIcon;
-
-    case "BODYWEIGHT":
-      return BodyweightIcon;
-
-    case "GYM":
-      return KettlebellIcon;
-
-    case "DUMBBELLS":
-    default:
-      return DumbbellIcon;
+  if (normalized.includes("HOUSEHOLD")) {
+    return HouseholdIcon;
   }
+
+  if (normalized.includes("MAT")) {
+    return MatIcon;
+  }
+
+  if (normalized.includes("BODYWEIGHT")) {
+    return BodyweightIcon;
+  }
+
+  if (
+    normalized.includes("GYM") ||
+    normalized.includes("MACHINE")
+  ) {
+    return MachineIcon;
+  }
+
+  if (normalized.includes("BAND")) {
+    return BandIcon;
+  }
+
+  if (normalized.includes("KETTLEBELL")) {
+    return KettlebellIcon;
+  }
+
+  return DumbbellIcon;
 }
 
 /* ---------------------------------
- * WORKOUT DETAIL ICONS
- * --------------------------------- */
+   WORKOUT DETAIL ICONS
+--------------------------------- */
 
 function ClockIcon({ className = "" }: IconProps) {
   return (
@@ -333,8 +387,8 @@ function ExerciseIcon({ className = "" }: IconProps) {
 }
 
 /* ---------------------------------
- * WORKOUT DATA
- * --------------------------------- */
+   WORKOUT DATA
+--------------------------------- */
 
 const workouts: Workout[] = [
   {
@@ -344,6 +398,7 @@ const workouts: Workout[] = [
     locations: ["Home", "Gym"],
     level: "Beginner",
     type: "Lower Body",
+    types: ["Lower Body"],
     time: "35 MIN",
     equipment: "DUMBBELLS",
     exercises: "6 EXERCISES",
@@ -359,12 +414,37 @@ const workouts: Workout[] = [
     type: "Lower Body",
     types: ["Lower Body", "Glutes"],
     time: "35 MIN",
-    equipment: [
-      "DUMBBELLS",
-      "HOUSEHOLD ITEMS",
-    ],
+    equipment: ["DUMBBELLS", "HOUSEHOLD ITEMS"],
     exercises: "7 EXERCISES",
     icon: GlutesIcon,
+  },
+
+  {
+    id: "home-back-biceps",
+    title: "Home Back & Biceps",
+    subtitle: "strong back. strong girl.",
+    locations: ["Home"],
+    level: "Beginner / Intermediate",
+    type: "Upper Body",
+    types: ["Upper Body"],
+    time: "35 MIN",
+    equipment: ["DUMBBELLS", "HOUSEHOLD ITEMS"],
+    exercises: "7 EXERCISES",
+    icon: UpperBodyIcon,
+  },
+
+  {
+    id: "home-chest-triceps",
+    title: "Home Chest & Triceps",
+    subtitle: "push. tone. lock in.",
+    locations: ["Home"],
+    level: "Beginner / Intermediate",
+    type: "Upper Body",
+    types: ["Upper Body"],
+    time: "35 MIN",
+    equipment: ["DUMBBELLS", "HOUSEHOLD ITEMS"],
+    exercises: "7 EXERCISES",
+    icon: UpperBodyIcon,
   },
 
   {
@@ -374,10 +454,67 @@ const workouts: Workout[] = [
     locations: ["Home", "Gym"],
     level: "Intermediate",
     type: "Glutes",
+    types: ["Lower Body", "Glutes"],
     time: "40 MIN",
-    equipment: "DUMBBELLS + BAND",
+    equipment: ["DUMBBELLS", "BAND"],
     exercises: "7 EXERCISES",
     icon: GlutesIcon,
+  },
+
+  {
+    id: "gym-glute-legs",
+    title: "Gym Glute & Legs",
+    subtitle: "heavy. controlled. locked in.",
+    locations: ["Gym"],
+    level: "Intermediate",
+    type: "Lower Body",
+    types: ["Lower Body", "Glutes"],
+    time: "45 MIN",
+    equipment: ["GYM"],
+    exercises: "7 EXERCISES",
+    icon: GlutesIcon,
+  },
+
+  {
+    id: "gym-back-biceps",
+    title: "Gym Back & Biceps",
+    subtitle: "pull. squeeze. repeat.",
+    locations: ["Gym"],
+    level: "Intermediate",
+    type: "Upper Body",
+    types: ["Upper Body"],
+    time: "40 MIN",
+    equipment: ["GYM"],
+    exercises: "7 EXERCISES",
+    icon: UpperBodyIcon,
+  },
+
+  {
+    id: "gym-chest-triceps",
+    title: "Gym Chest & Triceps",
+    subtitle: "press. squeeze. lock in.",
+    locations: ["Gym"],
+    level: "Intermediate",
+    type: "Upper Body",
+    types: ["Upper Body"],
+    time: "40 MIN",
+    equipment: ["GYM"],
+    exercises: "6 EXERCISES",
+    icon: UpperBodyIcon,
+  },
+
+  {
+    id: "gym-machine-cardio",
+    title: "Gym Machine Cardio",
+    subtitle: "move. sweat. reset.",
+    locations: ["Gym"],
+    level: "Intermediate",
+    type: "Cardio",
+    types: ["Cardio"],
+    time: "40 MIN",
+    equipment: ["GYM"],
+    exercises: "6 BLOCKS",
+    icon: CardioIcon,
   },
 
   {
@@ -387,6 +524,7 @@ const workouts: Workout[] = [
     locations: ["Home", "Gym", "No Equipment"],
     level: "Beginner",
     type: "Full Body",
+    types: ["Full Body"],
     time: "25 MIN",
     equipment: "BODYWEIGHT",
     exercises: "6 EXERCISES",
@@ -400,6 +538,7 @@ const workouts: Workout[] = [
     locations: ["Home", "Gym"],
     level: "Intermediate",
     type: "Upper Body",
+    types: ["Upper Body"],
     time: "45 MIN",
     equipment: "GYM",
     exercises: "7 EXERCISES",
@@ -413,6 +552,7 @@ const workouts: Workout[] = [
     locations: ["Home", "Gym"],
     level: "Beginner",
     type: "Core",
+    types: ["Core"],
     time: "20 MIN",
     equipment: "MAT",
     exercises: "6 EXERCISES",
@@ -426,6 +566,7 @@ const workouts: Workout[] = [
     locations: ["Home", "Gym", "No Equipment"],
     level: "Intermediate",
     type: "Cardio",
+    types: ["Cardio"],
     time: "30 MIN",
     equipment: "BODYWEIGHT",
     exercises: "8 INTERVALS",
@@ -465,8 +606,8 @@ function formatLocalDate(date: Date) {
 }
 
 /* ---------------------------------
- * PAGE
- * --------------------------------- */
+   PAGE
+--------------------------------- */
 
 export default function WorkoutsPage() {
   const [firstName, setFirstName] =
@@ -514,7 +655,8 @@ export default function WorkoutsPage() {
       const todayKey =
         formatLocalDate(new Date());
 
-      const storageKey = `selected-workout-${user.id}-${todayKey}`;
+      const storageKey =
+        `selected-workout-${user.id}-${todayKey}`;
 
       const savedWorkout =
         localStorage.getItem(storageKey);
@@ -542,8 +684,7 @@ export default function WorkoutsPage() {
                   (
                     id: unknown,
                   ): id is string =>
-                    typeof id ===
-                    "string",
+                    typeof id === "string",
                 ),
             );
           } else if (
@@ -611,7 +752,8 @@ export default function WorkoutsPage() {
     const todayKey =
       formatLocalDate(new Date());
 
-    const storageKey = `selected-workout-${userId}-${todayKey}`;
+    const storageKey =
+      `selected-workout-${userId}-${todayKey}`;
 
     if (workoutIds.length === 0) {
       localStorage.removeItem(
@@ -983,8 +1125,7 @@ export default function WorkoutsPage() {
 
                               <span className="font-serif text-sm text-[#C6A29A]">
                                 {String(
-                                  index +
-                                    1,
+                                  index + 1,
                                 ).padStart(
                                   2,
                                   "0",
@@ -1163,7 +1304,6 @@ export default function WorkoutsPage() {
                     setLocation(
                       "All",
                     );
-
                     setType("All");
                   }}
                   className="mt-6 rounded-full border border-[#CBA9A2] px-6 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"

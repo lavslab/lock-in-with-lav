@@ -2,60 +2,168 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
+/* ---------------------------------
+   WEEKLY TRAINING OPTIONS
+--------------------------------- */
+
 const trainingWeek = [
-  [
-    "01",
-    "LOWER BODY",
-    "Glutes + Quads",
-    "Lower Body Foundation",
-    "/dashboard/resources/workouts/lower-body-foundation",
-  ],
-  [
-    "02",
-    "UPPER BODY",
-    "Back + Arms + Posture",
-    "Upper Body Build",
-    "/dashboard/resources/workouts/upper-body-build",
-  ],
-  [
-    "03",
-    "CORE + MOBILITY",
-    "Control + Stability",
-    "Core Control",
-    "/dashboard/resources/workouts/core-control",
-  ],
-  [
-    "04",
-    "GLUTES",
-    "Build + Strength",
-    "Glute Builder",
-    "/dashboard/resources/workouts/glute-builder",
-  ],
-  [
-    "05",
-    "FULL BODY",
-    "Upper + Core",
-    "Full Body Reset",
-    "/dashboard/resources/workouts/full-body-reset",
-  ],
-  [
-    "06",
-    "CONDITIONING",
-    "Low Impact + Cardio",
-    "Cardio Lock In",
-    "/dashboard/resources/workouts/cardio-lock-in",
-  ],
-  [
-    "07",
-    "RECOVER",
-    "Mobility + Walking",
-    null,
-    null,
-  ],
+  {
+    day: "01",
+    title: "LOWER BODY",
+    focus: "Glutes + Quads",
+    description:
+      "Choose the lower-body session that fits your day.",
+    workouts: [
+      {
+        title: "Lower Body Foundation",
+        href: "/dashboard/resources/workouts/lower-body-foundation",
+        meta: "BEGINNER • 35 MIN",
+      },
+      {
+        title: "Home Glute & Legs",
+        href: "/dashboard/resources/workouts/home-glute-legs",
+        meta: "HOME • 35 MIN",
+      },
+      {
+        title: "Gym Glute & Legs",
+        href: "/dashboard/resources/workouts/gym-glute-legs",
+        meta: "GYM • 45 MIN",
+      },
+      {
+        title: "Glute Builder",
+        href: "/dashboard/resources/workouts/glute-builder",
+        meta: "HOME / GYM • 40 MIN",
+      },
+    ],
+  },
+
+  {
+    day: "02",
+    title: "UPPER BODY",
+    focus: "Back + Arms + Posture",
+    description:
+      "Pick the upper-body focus that feels right for you today.",
+    workouts: [
+      {
+        title: "Home Back & Biceps",
+        href: "/dashboard/resources/workouts/home-back-biceps",
+        meta: "HOME • 35 MIN",
+      },
+      {
+        title: "Home Chest & Triceps",
+        href: "/dashboard/resources/workouts/home-chest-triceps",
+        meta: "HOME • 35 MIN",
+      },
+      {
+        title: "Gym Back & Biceps",
+        href: "/dashboard/resources/workouts/gym-back-biceps",
+        meta: "GYM • 40 MIN",
+      },
+      {
+        title: "Gym Chest & Triceps",
+        href: "/dashboard/resources/workouts/gym-chest-triceps",
+        meta: "GYM • 40 MIN",
+      },
+      {
+        title: "Upper Body Build",
+        href: "/dashboard/resources/workouts/upper-body-build",
+        meta: "HOME / GYM • 45 MIN",
+      },
+    ],
+  },
+
+  {
+    day: "03",
+    title: "CORE + MOBILITY",
+    focus: "Control + Stability",
+    description:
+      "Keep the focus controlled and intentional.",
+    workouts: [
+      {
+        title: "Core Control",
+        href: "/dashboard/resources/workouts/core-control",
+        meta: "HOME / GYM • 20 MIN",
+      },
+    ],
+  },
+
+  {
+    day: "04",
+    title: "GLUTES",
+    focus: "Build + Strength",
+    description:
+      "Choose your glute session based on where you're training.",
+    workouts: [
+      {
+        title: "Home Glute & Legs",
+        href: "/dashboard/resources/workouts/home-glute-legs",
+        meta: "HOME • 35 MIN",
+      },
+      {
+        title: "Glute Builder",
+        href: "/dashboard/resources/workouts/glute-builder",
+        meta: "HOME / GYM • 40 MIN",
+      },
+      {
+        title: "Gym Glute & Legs",
+        href: "/dashboard/resources/workouts/gym-glute-legs",
+        meta: "GYM • 45 MIN",
+      },
+    ],
+  },
+
+  {
+    day: "05",
+    title: "FULL BODY",
+    focus: "Upper + Core",
+    description:
+      "A full-body option for the days you want everything working together.",
+    workouts: [
+      {
+        title: "Full Body Reset",
+        href: "/dashboard/resources/workouts/full-body-reset",
+        meta: "HOME / GYM • 25 MIN",
+      },
+    ],
+  },
+
+  {
+    day: "06",
+    title: "CONDITIONING",
+    focus: "Low Impact + Cardio",
+    description:
+      "Choose your conditioning based on your space and equipment.",
+    workouts: [
+      {
+        title: "Cardio Lock In",
+        href: "/dashboard/resources/workouts/cardio-lock-in",
+        meta: "HOME / NO EQUIPMENT • 30 MIN",
+      },
+      {
+        title: "Gym Machine Cardio",
+        href: "/dashboard/resources/workouts/gym-machine-cardio",
+        meta: "GYM • 40 MIN",
+      },
+    ],
+  },
+
+  {
+    day: "07",
+    title: "RECOVER",
+    focus: "Mobility + Walking",
+    description:
+      "Recovery is part of the plan. Walk, stretch, move gently, or rest.",
+    workouts: [],
+  },
 ];
+
+/* ---------------------------------
+   TRAINING LEVELS
+--------------------------------- */
 
 const trainingLevels = [
   {
@@ -78,6 +186,10 @@ const trainingLevels = [
   },
 ];
 
+/* ---------------------------------
+   BASICS
+--------------------------------- */
+
 const basics = [
   {
     number: "01",
@@ -99,9 +211,19 @@ const basics = [
   },
 ];
 
+/* ---------------------------------
+   PAGE
+--------------------------------- */
+
 export default function GuidePage() {
-  const [firstName, setFirstName] = useState("there");
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [firstName, setFirstName] =
+    useState("there");
+
+  const [isLoadingUser, setIsLoadingUser] =
+    useState(true);
+
+  const [expandedDay, setExpandedDay] =
+    useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -114,12 +236,15 @@ export default function GuidePage() {
         return;
       }
 
-      const savedName = user.user_metadata?.name;
+      const savedName =
+        user.user_metadata?.name;
 
       if (savedName) {
         setFirstName(savedName);
       } else if (user.email) {
-        setFirstName(user.email.split("@")[0]);
+        setFirstName(
+          user.email.split("@")[0],
+        );
       }
 
       setIsLoadingUser(false);
@@ -129,8 +254,11 @@ export default function GuidePage() {
   }, []);
 
   const initial =
-    !isLoadingUser && firstName !== "there"
-      ? firstName.charAt(0).toUpperCase()
+    !isLoadingUser &&
+    firstName !== "there"
+      ? firstName
+          .charAt(0)
+          .toUpperCase()
       : "♡";
 
   if (isLoadingUser) {
@@ -173,6 +301,7 @@ export default function GuidePage() {
         />
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
+
           {/* HEADER */}
 
           <header className="flex items-start justify-between gap-6">
@@ -244,53 +373,154 @@ export default function GuidePage() {
 
             <div className="mt-7 overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
               {trainingWeek.map(
-                (
-                  [day, title, focus, workout, workoutHref],
-                  index
-                ) => (
-                  <div
-                    key={day}
-                    className={`grid gap-3 px-5 py-4 sm:grid-cols-[48px_1fr_auto] sm:items-center sm:gap-4 md:px-7 ${
-                      index !== 0
-                        ? "border-t border-[#E1D3CE]"
-                        : ""
-                    } ${
-                      day === "07"
-                        ? "bg-[#EAD8D3]/50"
-                        : ""
-                    }`}
-                  >
-                    <span className="font-serif text-xl text-[#B48A82]">
-                      {day}
-                    </span>
+                (day, index) => {
+                  const isExpanded =
+                    expandedDay === day.day;
 
-                    <p className="text-[10px] tracking-[0.16em]">
-                      {title}
-                    </p>
+                  const isRecovery =
+                    day.workouts.length === 0;
 
-                    <div className="text-left sm:text-right">
-                      <p className="font-serif text-base italic text-[#A77B73]">
-                        {focus}
-                      </p>
+                  return (
+                    <div
+                      key={day.day}
+                      className={`border-[#E1D3CE] ${
+                        index !== 0
+                          ? "border-t"
+                          : ""
+                      } ${
+                        day.day === "07"
+                          ? "bg-[#EAD8D3]/50"
+                          : ""
+                      }`}
+                    >
+                      {/* DAY HEADER */}
 
-                      {workout && workoutHref ? (
-                        <Link
-                          href={workoutHref}
-                          className="mt-2 inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-3 py-1.5 text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:bg-[#EAD8D3] hover:text-[#211C19]"
-                        >
-                          {workout.toUpperCase()}
-                          <span className="font-serif text-sm">
-                            →
-                          </span>
-                        </Link>
-                      ) : (
-                        <p className="mt-2 text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                          REST • WALK • MOBILITY
-                        </p>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            isRecovery
+                          ) {
+                            return;
+                          }
+
+                          setExpandedDay(
+                            isExpanded
+                              ? null
+                              : day.day,
+                          );
+                        }}
+                        className={`grid w-full gap-3 px-5 py-5 text-left transition sm:grid-cols-[48px_1fr_auto] sm:items-center sm:gap-4 md:px-7 ${
+                          isRecovery
+                            ? "cursor-default"
+                            : "hover:bg-[#F7F1ED]"
+                        }`}
+                      >
+                        <span className="font-serif text-xl text-[#B48A82]">
+                          {day.day}
+                        </span>
+
+                        <div>
+                          <p className="text-[10px] tracking-[0.16em]">
+                            {day.title}
+                          </p>
+
+                          <p className="mt-1 font-serif text-base italic text-[#A77B73]">
+                            {day.focus}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center justify-start gap-3 sm:justify-end">
+                          {isRecovery ? (
+                            <p className="text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                              REST • WALK • MOBILITY
+                            </p>
+                          ) : (
+                            <>
+                              <span className="hidden text-[7px] tracking-[0.16em] text-[#9D6F67] sm:block">
+                                {isExpanded
+                                  ? "HIDE OPTIONS"
+                                  : "CHOOSE WORKOUT"}
+                              </span>
+
+                              <span
+                                className={`flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-sm text-[#A77B73] transition ${
+                                  isExpanded
+                                    ? "rotate-90 bg-[#EAD8D3]"
+                                    : ""
+                                }`}
+                              >
+                                →
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </button>
+
+                      {/* OPTIONS */}
+
+                      {isExpanded &&
+                        !isRecovery && (
+                          <div className="border-t border-[#E1D3CE] bg-[#F7F1ED] px-5 py-5 md:px-7">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                              <div>
+                                <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
+                                  CHOOSE WHAT FITS YOUR DAY
+                                </p>
+
+                                <p className="mt-2 max-w-xl text-[11px] leading-5 text-[#806E68]">
+                                  {day.description}
+                                </p>
+                              </div>
+
+                              <Link
+                                href="/dashboard/resources/workouts"
+                                className="shrink-0 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
+                              >
+                                VIEW ALL WORKOUTS →
+                              </Link>
+                            </div>
+
+                            <div className="mt-5 grid gap-2 md:grid-cols-2">
+                              {day.workouts.map(
+                                (
+                                  workout,
+                                ) => (
+                                  <Link
+                                    key={
+                                      workout.href
+                                    }
+                                    href={
+                                      workout.href
+                                    }
+                                    className="group flex items-center justify-between rounded-[1rem] border border-[#D8C7C1] bg-[#FBF8F6] px-4 py-4 transition hover:border-[#B9948B] hover:bg-[#EAD8D3]"
+                                  >
+                                    <div className="min-w-0">
+                                      <p className="font-serif text-lg text-[#211C19]">
+                                        {
+                                          workout.title
+                                        }
+                                      </p>
+
+                                      <p className="mt-1 text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                        {
+                                          workout.meta
+                                        }
+                                      </p>
+                                    </div>
+
+                                    <span className="ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-sm text-[#A77B73] transition group-hover:bg-[#F7F1ED]">
+                                      →
+                                    </span>
+                                  </Link>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        )}
                     </div>
-                  </div>
-                )
+                  );
+                },
               )}
             </div>
 
@@ -300,8 +530,8 @@ export default function GuidePage() {
               </span>
 
               <p className="max-w-2xl text-[11px] leading-5 text-[#927D76]">
-                Use this as your rhythm, not a rulebook. Adjust when you need
-                to and keep showing up.
+                Use this as your rhythm, not a rulebook. Choose the workout
+                that fits your space, energy and goals that day.
               </p>
             </div>
           </section>
@@ -329,34 +559,36 @@ export default function GuidePage() {
             </div>
 
             <div className="mt-7 grid overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] md:grid-cols-3">
-              {trainingLevels.map((level, index) => (
-                <div
-                  key={level.number}
-                  className={`p-6 ${
-                    index !== 0
-                      ? "border-t border-[#E1D3CE] md:border-l md:border-t-0"
-                      : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-serif text-2xl text-[#D2B0A9]">
-                      {level.number}
-                    </span>
+              {trainingLevels.map(
+                (level, index) => (
+                  <div
+                    key={level.number}
+                    className={`p-6 ${
+                      index !== 0
+                        ? "border-t border-[#E1D3CE] md:border-l md:border-t-0"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-serif text-2xl text-[#D2B0A9]">
+                        {level.number}
+                      </span>
 
-                    <span className="text-[8px] tracking-[0.2em] text-[#9D6F67]">
-                      {level.title}
-                    </span>
+                      <span className="text-[8px] tracking-[0.2em] text-[#9D6F67]">
+                        {level.title}
+                      </span>
+                    </div>
+
+                    <p className="mt-5 font-serif text-xl italic text-[#A77B73]">
+                      {level.tagline}
+                    </p>
+
+                    <p className="mt-2 text-[11px] leading-5 text-[#806E68]">
+                      {level.text}
+                    </p>
                   </div>
-
-                  <p className="mt-5 font-serif text-xl italic text-[#A77B73]">
-                    {level.tagline}
-                  </p>
-
-                  <p className="mt-2 text-[11px] leading-5 text-[#806E68]">
-                    {level.text}
-                  </p>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </section>
 
@@ -378,30 +610,32 @@ export default function GuidePage() {
             </div>
 
             <div className="mt-7 divide-y divide-[#DED0CB] border-y border-[#DED0CB]">
-              {basics.map((item) => (
-                <div
-                  key={item.number}
-                  className="grid gap-4 py-6 md:grid-cols-[60px_0.7fr_1.3fr] md:items-start md:gap-6"
-                >
-                  <span className="font-serif text-2xl text-[#D2B0A9]">
-                    {item.number}
-                  </span>
+              {basics.map(
+                (item) => (
+                  <div
+                    key={item.number}
+                    className="grid gap-4 py-6 md:grid-cols-[60px_0.7fr_1.3fr] md:items-start md:gap-6"
+                  >
+                    <span className="font-serif text-2xl text-[#D2B0A9]">
+                      {item.number}
+                    </span>
 
-                  <div>
-                    <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
-                      {item.title}
-                    </p>
+                    <div>
+                      <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+                        {item.title}
+                      </p>
 
-                    <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                      {item.tagline}
+                      <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
+                        {item.tagline}
+                      </p>
+                    </div>
+
+                    <p className="max-w-xl text-[12px] leading-6 text-[#806E68]">
+                      {item.text}
                     </p>
                   </div>
-
-                  <p className="max-w-xl text-[12px] leading-6 text-[#806E68]">
-                    {item.text}
-                  </p>
-                </div>
-              ))}
+                ),
+              )}
             </div>
           </section>
 
