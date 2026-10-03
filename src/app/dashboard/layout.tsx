@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import DashboardMobileNav from "@/components/DashboardMobileNav";
+import WorkoutBackNav from "@/components/WorkoutBackNav";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardLayout({
@@ -37,7 +38,8 @@ export default async function DashboardLayout({
       ? user.user_metadata.name.trim()
       : "";
 
-  const accountName = savedName || user.email?.split("@")[0] || "";
+  const accountName =
+    savedName || user.email?.split("@")[0] || "";
 
   const accountInitial = accountName
     ? accountName.charAt(0).toUpperCase()
@@ -46,7 +48,12 @@ export default async function DashboardLayout({
   return (
     <>
       <DashboardMobileNav initial={accountInitial} />
-      <div className="pb-24 md:pb-0">{children}</div>
+
+      <WorkoutBackNav />
+
+      <div className="pb-24 md:pb-0">
+        {children}
+      </div>
     </>
   );
 }

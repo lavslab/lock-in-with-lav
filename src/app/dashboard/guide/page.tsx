@@ -6,9 +6,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
-/* ---------------------------------
-   WEEKLY TRAINING OPTIONS
---------------------------------- */
+/* ---------------------------------*
+ *  WEEKLY TRAINING OPTIONS
+ *--------------------------------- */
 
 const trainingWeek = [
   {
@@ -161,9 +161,9 @@ const trainingWeek = [
   },
 ];
 
-/* ---------------------------------
-   TRAINING LEVELS
---------------------------------- */
+/* ---------------------------------*
+ *  TRAINING LEVELS
+ *--------------------------------- */
 
 const trainingLevels = [
   {
@@ -186,9 +186,9 @@ const trainingLevels = [
   },
 ];
 
-/* ---------------------------------
-   BASICS
---------------------------------- */
+/* ---------------------------------*
+ *  BASICS
+ *--------------------------------- */
 
 const basics = [
   {
@@ -211,9 +211,9 @@ const basics = [
   },
 ];
 
-/* ---------------------------------
-   PAGE
---------------------------------- */
+/* ---------------------------------*
+ *  PAGE
+ *--------------------------------- */
 
 export default function GuidePage() {
   const [firstName, setFirstName] = useState("there");
@@ -225,7 +225,7 @@ export default function GuidePage() {
     useState<string | null>(null);
 
   const [selectedWorkouts, setSelectedWorkouts] =
-    useState<Record<string, string>>({});
+    useState<Record<string, string[]>>({});
 
   const [selectionStorageKey, setSelectionStorageKey] =
     useState<string | null>(null);
@@ -258,7 +258,27 @@ export default function GuidePage() {
             parsedSelections &&
             typeof parsedSelections === "object"
           ) {
-            setSelectedWorkouts(parsedSelections);
+            const normalizedSelections: Record<
+              string,
+              string[]
+            > = {};
+
+            Object.entries(parsedSelections).forEach(
+              ([dayId, value]) => {
+                if (Array.isArray(value)) {
+                  normalizedSelections[dayId] =
+                    value.filter(
+                      (item): item is string =>
+                        typeof item === "string",
+                    );
+                } else if (typeof value === "string") {
+                  // Convert the old single-workout format to the new multi-workout format.
+                  normalizedSelections[dayId] = [value];
+                }
+              },
+            );
+
+            setSelectedWorkouts(normalizedSelections);
           }
         }
       } catch {
@@ -286,21 +306,33 @@ export default function GuidePage() {
     dayId: string,
     workoutTitle: string,
   ) => {
+    const currentSelections =
+      selectedWorkouts[dayId] ?? [];
+
     const isCurrentlySelected =
-      selectedWorkouts[dayId] === workoutTitle;
+      currentSelections.includes(workoutTitle);
+
+    const nextDaySelections = isCurrentlySelected
+      ? currentSelections.filter(
+          (title) => title !== workoutTitle,
+        )
+      : [...currentSelections, workoutTitle];
 
     const nextSelections = {
       ...selectedWorkouts,
     };
 
-    if (isCurrentlySelected) {
+    if (nextDaySelections.length === 0) {
       delete nextSelections[dayId];
     } else {
-      nextSelections[dayId] = workoutTitle;
+      nextSelections[dayId] =
+        nextDaySelections;
     }
 
     setSelectedWorkouts(nextSelections);
-    setExpandedDay(null);
+
+    // Keep the options open so users can select more than one workout.
+    setExpandedDay(dayId);
 
     if (selectionStorageKey) {
       try {
@@ -316,6 +348,10 @@ export default function GuidePage() {
 
   const handleChangeWorkout = (dayId: string) => {
     setExpandedDay(dayId);
+  };
+
+  const handleDoneSelecting = () => {
+    setExpandedDay(null);
   };
 
   const initial =
@@ -444,13 +480,15 @@ export default function GuidePage() {
                 const isRecovery =
                   day.workouts.length === 0;
 
-                const selectedTitle =
-                  selectedWorkouts[day.day];
+                const selectedTitles =
+                  selectedWorkouts[day.day] ?? [];
 
-                const selectedWorkout =
-                  day.workouts.find(
+                const selectedWorkoutsForDay =
+                  day.workouts.filter(
                     (workout) =>
-                      workout.title === selectedTitle,
+                      selectedTitles.includes(
+                        workout.title,
+                      ),
                   );
 
                 return (
@@ -466,7 +504,6 @@ export default function GuidePage() {
                         : ""
                     }`}
                   >
-
                     {/* DAY HEADER */}
 
                     <div className="grid gap-4 px-5 py-5 sm:grid-cols-[48px_1fr_auto] sm:items-start sm:gap-4 md:px-7">
@@ -488,19 +525,40 @@ export default function GuidePage() {
                           {day.focus}
                         </p>
 
-                        {selectedWorkout && (
-                          <div className="mt-3">
-                            <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                              YOUR PICK
-                            </p>
+                        {/* YOUR PICKS */}
 
-                            <p className="mt-1 font-serif text-lg text-[#211C19]">
-                              {selectedWorkout.title}
-                            </p>
+                        {selectedWorkoutsForDay.length > 0 && (
+                          <div className="mt-4 rounded-[1rem] border border-[#CBA9A2] bg-[#EAD8D3]/75 px-4 py-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="text-[8px] font-medium tracking-[0.22em] text-[#8F655E]">
+                                YOUR PICKS
+                              </p>
 
-                            <p className="mt-1 text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                              {selectedWorkout.meta}
-                            </p>
+                              <span className="rounded-full border border-[#CBA9A2] bg-[#F7F1ED]/70 px-2.5 py-1 text-[7px] tracking-[0.14em] text-[#8F655E]">
+                                {selectedWorkoutsForDay.length}{" "}
+                                SELECTED
+                              </span>
+                            </div>
+
+                            <div className="mt-2 space-y-1.5">
+                              {selectedWorkoutsForDay.map(
+                                (workout) => (
+                                  <Link
+                                    key={workout.href}
+                                    href={workout.href}
+                                    className="group flex items-center justify-between gap-3 rounded-[0.7rem] border border-[#D6C1BB] bg-[#FBF8F6]/75 px-3 py-2 transition hover:border-[#B9948B] hover:bg-[#F7F1ED]"
+                                  >
+                                    <span className="font-serif text-base text-[#211C19]">
+                                      {workout.title}
+                                    </span>
+
+                                    <span className="shrink-0 font-serif text-sm text-[#A77B73] transition group-hover:translate-x-0.5">
+                                      →
+                                    </span>
+                                  </Link>
+                                ),
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -508,7 +566,6 @@ export default function GuidePage() {
                       {/* RIGHT-SIDE ACTIONS */}
 
                       <div className="flex flex-col items-start gap-1.5 sm:items-end">
-
                         {isRecovery ? (
                           <Link
                             href="/dashboard/resources/recovery"
@@ -520,44 +577,37 @@ export default function GuidePage() {
                               →
                             </span>
                           </Link>
-
-                        ) : selectedWorkout ? (
-
+                        ) : selectedWorkoutsForDay.length > 0 ? (
                           <>
-                            <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  handleChangeWorkout(day.day)
-                                }
-                                className="inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-3 py-1.5 text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:bg-[#EAD8D3] hover:text-[#211C19]"
+                            <button
+                              type="button"
+                              onClick={() =>
+                                isExpanded
+                                  ? handleDoneSelecting()
+                                  : handleChangeWorkout(day.day)
+                              }
+                              className="inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-3 py-1.5 text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:bg-[#EAD8D3] hover:text-[#211C19]"
+                            >
+                              {isExpanded
+                                ? "DONE SELECTING"
+                                : "EDIT PICKS"}
+
+                              <span
+                                className={`font-serif text-sm transition ${
+                                  isExpanded
+                                    ? "rotate-90"
+                                    : ""
+                                }`}
                               >
-                                CHANGE
+                                →
+                              </span>
+                            </button>
 
-                                <span className="font-serif text-sm">
-                                  →
-                                </span>
-                              </button>
-
-                              <Link
-                                href={selectedWorkout.href}
-                                className="inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-3 py-1.5 text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:bg-[#EAD8D3] hover:text-[#211C19]"
-                              >
-                                GO TO WORKOUT
-
-                                <span className="font-serif text-sm">
-                                  →
-                                </span>
-                              </Link>
-                            </div>
-
-                            <p className="text-[8px] leading-4 text-[#A18B84] sm:text-right">
-                              Your selection stays here until you change it.
+                            <p className="max-w-[180px] text-[8px] leading-4 text-[#A18B84] sm:text-right">
+                              Select one or more workouts for this day.
                             </p>
                           </>
-
                         ) : (
-
                           <button
                             type="button"
                             onClick={() =>
@@ -584,7 +634,6 @@ export default function GuidePage() {
                             </span>
                           </button>
                         )}
-
                       </div>
                     </div>
 
@@ -595,65 +644,98 @@ export default function GuidePage() {
                         <div className="border-t border-[#E1D3CE] bg-[#F7F1ED] px-5 py-5 md:px-7">
                           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                             <div>
-                              <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                                CHOOSE WHAT FITS YOUR DAY
-                              </p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
+                                  BUILD YOUR DAY
+                                </p>
+
+                                {selectedWorkoutsForDay.length > 0 && (
+                                  <span className="rounded-full bg-[#EAD8D3] px-2.5 py-1 text-[7px] tracking-[0.14em] text-[#8F655E]">
+                                    {selectedWorkoutsForDay.length}{" "}
+                                    SELECTED
+                                  </span>
+                                )}
+                              </div>
 
                               <p className="mt-2 max-w-xl text-[11px] leading-5 text-[#806E68]">
-                                {day.description}
+                                {day.description} You can choose more than
+                                one if you want to combine workouts.
                               </p>
                             </div>
 
-                            <Link
-                              href="/dashboard/resources/workouts"
-                              className="shrink-0 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
-                            >
-                              VIEW ALL WORKOUTS →
-                            </Link>
+                            <div className="flex shrink-0 items-center gap-4">
+                              <Link
+                                href="/dashboard/resources/workouts"
+                                className="text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
+                              >
+                                VIEW ALL WORKOUTS →
+                              </Link>
+
+                              <button
+                                type="button"
+                                onClick={handleDoneSelecting}
+                                className="rounded-full bg-[#211C19] px-4 py-2 text-[7px] tracking-[0.18em] text-[#F7F1ED] transition hover:bg-[#493D39]"
+                              >
+                                DONE
+                              </button>
+                            </div>
                           </div>
 
                           <div className="mt-5 grid gap-2 md:grid-cols-2">
-                            {day.workouts.map(
-                              (workout) => {
-                                const isSelected =
-                                  selectedTitle ===
-                                  workout.title;
+                            {day.workouts.map((workout) => {
+                              const isSelected =
+                                selectedTitles.includes(
+                                  workout.title,
+                                );
 
-                                return (
-                                  <button
-                                    key={workout.href}
-                                    type="button"
-                                    onClick={() =>
-                                      handleWorkoutSelect(
-                                        day.day,
-                                        workout.title,
-                                      )
-                                    }
-                                    className={`group flex items-center justify-between rounded-[1rem] border px-4 py-4 text-left transition ${
-                                      isSelected
-                                        ? "border-[#B9948B] bg-[#EAD8D3]"
-                                        : "border-[#D8C7C1] bg-[#FBF8F6] hover:border-[#B9948B] hover:bg-[#EAD8D3]"
-                                    }`}
-                                  >
-                                    <div className="min-w-0">
+                              return (
+                                <button
+                                  key={workout.href}
+                                  type="button"
+                                  onClick={() =>
+                                    handleWorkoutSelect(
+                                      day.day,
+                                      workout.title,
+                                    )
+                                  }
+                                  className={`group flex items-center justify-between rounded-[1rem] border px-4 py-4 text-left transition ${
+                                    isSelected
+                                      ? "border-[#A77B73] bg-[#EAD8D3] shadow-[0_0_0_2px_rgba(167,123,115,0.12)]"
+                                      : "border-[#D8C7C1] bg-[#FBF8F6] hover:border-[#B9948B] hover:bg-[#EAD8D3]"
+                                  }`}
+                                >
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
                                       <p className="font-serif text-lg text-[#211C19]">
                                         {workout.title}
                                       </p>
 
-                                      <p className="mt-1 text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                                        {workout.meta}
-                                      </p>
+                                      {isSelected && (
+                                        <span className="rounded-full bg-[#F7F1ED] px-2 py-1 text-[6px] font-medium tracking-[0.14em] text-[#8F655E]">
+                                          SELECTED
+                                        </span>
+                                      )}
                                     </div>
 
-                                    <span className="ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-sm text-[#A77B73] transition group-hover:bg-[#F7F1ED]">
-                                      {isSelected
-                                        ? "✓"
-                                        : "→"}
-                                    </span>
-                                  </button>
-                                );
-                              },
-                            )}
+                                    <p className="mt-1 text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                      {workout.meta}
+                                    </p>
+                                  </div>
+
+                                  <span
+                                    className={`ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-sm transition ${
+                                      isSelected
+                                        ? "border-[#A77B73] bg-[#F7F1ED] text-[#A77B73]"
+                                        : "border-[#CBA9A2] text-[#A77B73] group-hover:bg-[#F7F1ED]"
+                                    }`}
+                                  >
+                                    {isSelected
+                                      ? "✓"
+                                      : "+"}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -846,6 +928,7 @@ export default function GuidePage() {
               just keep showing up. ♡
             </p>
           </div>
+
         </section>
       </div>
     </main>

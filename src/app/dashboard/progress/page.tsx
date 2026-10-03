@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+
+import {
+  Camera,
+  CameraResultType,
+  CameraSource,
+} from "@capacitor/camera";
+
 import { Capacitor } from "@capacitor/core";
 
 import { createClient } from "@/lib/supabase/client";
+
 import DashboardSidebar from "@/components/DashboardSidebar";
 
 import {
@@ -69,27 +76,41 @@ export default function ProgressPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
-  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
-    null
-  );
+  const [challengeStartDate, setChallengeStartDate] =
+    useState<string | null>(null);
 
-  const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
-  const [photoPaths, setPhotoPaths] = useState<Record<number, string>>({});
+  const [photoUrls, setPhotoUrls] =
+    useState<Record<number, string>>({});
 
-  const [editingPhotoDay, setEditingPhotoDay] = useState<number | null>(null);
-  const [photoTargetDay, setPhotoTargetDay] = useState<number>(1);
+  const [photoPaths, setPhotoPaths] =
+    useState<Record<number, string>>({});
 
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [editingPhotoDay, setEditingPhotoDay] =
+    useState<number | null>(null);
 
-  const webPhotoInputRef = useRef<HTMLInputElement>(null);
+  const [photoTargetDay, setPhotoTargetDay] =
+    useState<number>(1);
+
+  const [isUploadingPhoto, setIsUploadingPhoto] =
+    useState(false);
+
+  const [photoError, setPhotoError] =
+    useState<string | null>(null);
+
+  const webPhotoInputRef =
+    useRef<HTMLInputElement>(null);
 
   const [measurementRow, setMeasurementRow] =
     useState<MeasurementRow | null>(null);
 
-  const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false);
-  const [isSavingMeasurements, setIsSavingMeasurements] = useState(false);
-  const [measurementError, setMeasurementError] = useState<string | null>(null);
+  const [isMeasurementModalOpen, setIsMeasurementModalOpen] =
+    useState(false);
+
+  const [isSavingMeasurements, setIsSavingMeasurements] =
+    useState(false);
+
+  const [measurementError, setMeasurementError] =
+    useState<string | null>(null);
 
   const [measurementForm, setMeasurementForm] = useState({
     weight: "",
@@ -100,20 +121,25 @@ export default function ProgressPage() {
     arm: "",
   });
 
-  const [completedWins, setCompletedWins] = useState<Record<string, boolean>>(
-    {}
-  );
+  const [completedWins, setCompletedWins] =
+    useState<Record<string, boolean>>({});
 
-  const [isCustomWinModalOpen, setIsCustomWinModalOpen] = useState(false);
+  const [isCustomWinModalOpen, setIsCustomWinModalOpen] =
+    useState(false);
+
   const [customWin, setCustomWin] = useState("");
-  const [isSavingCustomWin, setIsSavingCustomWin] = useState(false);
-  const [customWinError, setCustomWinError] = useState<string | null>(null);
 
-  const [weeklyCheckins, setWeeklyCheckins] = useState<
-    Record<number, CheckinRow>
-  >({});
+  const [isSavingCustomWin, setIsSavingCustomWin] =
+    useState(false);
 
-  const [checkinWeek, setCheckinWeek] = useState<number | null>(null);
+  const [customWinError, setCustomWinError] =
+    useState<string | null>(null);
+
+  const [weeklyCheckins, setWeeklyCheckins] =
+    useState<Record<number, CheckinRow>>({});
+
+  const [checkinWeek, setCheckinWeek] =
+    useState<number | null>(null);
 
   const [checkinForm, setCheckinForm] = useState({
     went_well: "",
@@ -122,8 +148,11 @@ export default function ProgressPage() {
     next_week_focus: "",
   });
 
-  const [isSavingCheckin, setIsSavingCheckin] = useState(false);
-  const [checkinError, setCheckinError] = useState<string | null>(null);
+  const [isSavingCheckin, setIsSavingCheckin] =
+    useState(false);
+
+  const [checkinError, setCheckinError] =
+    useState<string | null>(null);
 
   useEffect(() => {
     const loadProgress = async () => {
@@ -144,31 +173,52 @@ export default function ProgressPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("challenge_start_date")
-        .eq("id", user.id)
-        .single();
+      const { data: profile, error: profileError } =
+        await supabase
+          .from("profiles")
+          .select("challenge_start_date")
+          .eq("id", user.id)
+          .single();
 
       if (profileError) {
-        console.error("Could not load profile:", profileError);
+        console.error(
+          "Could not load profile:",
+          profileError
+        );
       } else if (profile) {
-        setChallengeStartDate(profile.challenge_start_date);
+        setChallengeStartDate(
+          profile.challenge_start_date
+        );
       }
 
-      const { data: storedPhotos, error: photosError } = await supabase
+      const {
+        data: storedPhotos,
+        error: photosError,
+      } = await supabase
         .from("progress_photos")
-        .select("challenge_day, storage_path, updated_at")
+        .select(
+          "challenge_day, storage_path, updated_at"
+        )
         .eq("user_id", user.id)
-        .order("updated_at", { ascending: false });
+        .order("updated_at", {
+          ascending: false,
+        });
 
       if (photosError) {
-        console.error("Could not load progress photos:", photosError);
+        console.error(
+          "Could not load progress photos:",
+          photosError
+        );
       } else {
-        const latestPhotoByDay = new Map<number, string>();
+        const latestPhotoByDay =
+          new Map<number, string>();
 
         for (const photo of storedPhotos ?? []) {
-          if (!latestPhotoByDay.has(photo.challenge_day)) {
+          if (
+            !latestPhotoByDay.has(
+              photo.challenge_day
+            )
+          ) {
             latestPhotoByDay.set(
               photo.challenge_day,
               photo.storage_path
@@ -180,14 +230,27 @@ export default function ProgressPage() {
         const paths: Record<number, string> = {};
 
         await Promise.all(
-          Array.from(latestPhotoByDay.entries()).map(
+          Array.from(
+            latestPhotoByDay.entries()
+          ).map(
             async ([day, path]) => {
-              const { data, error } = await supabase.storage
+              const {
+                data,
+                error,
+              } = await supabase.storage
                 .from("progress-photos")
-                .createSignedUrl(path, 60 * 60);
+                .createSignedUrl(
+                  path,
+                  60 * 60
+                );
 
-              if (!error && data?.signedUrl) {
-                urls[day] = data.signedUrl;
+              if (
+                !error &&
+                data?.signedUrl
+              ) {
+                urls[day] =
+                  data.signedUrl;
+
                 paths[day] = path;
               }
             }
@@ -198,24 +261,39 @@ export default function ProgressPage() {
         setPhotoPaths(paths);
       }
 
-      const { data: savedWins, error: winsError } = await supabase
+      const {
+        data: savedWins,
+        error: winsError,
+      } = await supabase
         .from("little_wins")
-        .select("win_key, is_completed")
+        .select(
+          "win_key, is_completed"
+        )
         .eq("user_id", user.id);
 
       if (winsError) {
-        console.error("Could not load little wins:", winsError);
+        console.error(
+          "Could not load little wins:",
+          winsError
+        );
       } else {
-        const loaded: Record<string, boolean> = {};
+        const loaded: Record<
+          string,
+          boolean
+        > = {};
 
         for (const row of savedWins ?? []) {
-          loaded[row.win_key] = Boolean(row.is_completed);
+          loaded[row.win_key] =
+            Boolean(row.is_completed);
         }
 
         setCompletedWins(loaded);
       }
 
-      const { data: savedCheckins, error: checkinsError } = await supabase
+      const {
+        data: savedCheckins,
+        error: checkinsError,
+      } = await supabase
         .from("weekly_checkins")
         .select(
           "week_number, went_well, felt_hard, proud_of, next_week_focus"
@@ -228,7 +306,10 @@ export default function ProgressPage() {
           checkinsError
         );
       } else {
-        const loaded: Record<number, CheckinRow> = {};
+        const loaded: Record<
+          number,
+          CheckinRow
+        > = {};
 
         for (const row of savedCheckins ?? []) {
           loaded[row.week_number] = row;
@@ -237,16 +318,20 @@ export default function ProgressPage() {
         setWeeklyCheckins(loaded);
       }
 
-      const { data: latestMeasurement, error: measurementError } =
-        await supabase
-          .from("measurements")
-          .select(
-            "weight, waist, hips, chest, thigh, arm, challenge_day"
-          )
-          .eq("user_id", user.id)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+      const {
+        data: latestMeasurement,
+        error: measurementError,
+      } = await supabase
+        .from("measurements")
+        .select(
+          "weight, waist, hips, chest, thigh, arm, challenge_day"
+        )
+        .eq("user_id", user.id)
+        .order("created_at", {
+          ascending: false,
+        })
+        .limit(1)
+        .maybeSingle();
 
       if (measurementError) {
         console.error(
@@ -254,7 +339,9 @@ export default function ProgressPage() {
           measurementError
         );
       } else if (latestMeasurement) {
-        setMeasurementRow(latestMeasurement);
+        setMeasurementRow(
+          latestMeasurement
+        );
       }
 
       setIsLoadingUser(false);
@@ -268,32 +355,67 @@ export default function ProgressPage() {
   let endDate: Date | null = null;
 
   if (challengeStartDate) {
-    startDate = parseChallengeDate(challengeStartDate);
-    endDate = getChallengeEndDate(challengeStartDate);
-    currentDay = getCurrentChallengeDay(
-      challengeStartDate,
-      new Date()
-    );
+    startDate =
+      parseChallengeDate(
+        challengeStartDate
+      );
+
+    endDate =
+      getChallengeEndDate(
+        challengeStartDate
+      );
+
+    currentDay =
+      getCurrentChallengeDay(
+        challengeStartDate,
+        new Date()
+      );
   }
 
-  const safeCurrentDay = Math.max(1, currentDay);
-  const dayNumber = String(safeCurrentDay).padStart(2, "0");
+  const safeCurrentDay =
+    Math.max(1, currentDay);
 
-  const startLabel = startDate ? formatShortDate(startDate) : "—";
-  const endLabel = endDate ? formatShortDate(endDate) : "—";
+  const dayNumber = String(
+    safeCurrentDay
+  ).padStart(2, "0");
 
-  const currentWeek = Math.max(1, Math.ceil(safeCurrentDay / 7));
-  const currentWeekComplete = Boolean(weeklyCheckins[currentWeek]);
+  const startLabel = startDate
+    ? formatShortDate(startDate)
+    : "—";
 
-  const completedCheckins = Object.keys(weeklyCheckins).length;
+  const endLabel = endDate
+    ? formatShortDate(endDate)
+    : "—";
+
+  const currentWeek = Math.max(
+    1,
+    Math.ceil(safeCurrentDay / 7)
+  );
+
+  const currentWeekComplete =
+    Boolean(
+      weeklyCheckins[currentWeek]
+    );
+
+  const completedCheckins =
+    Object.keys(
+      weeklyCheckins
+    ).length;
 
   const initial =
-    !isLoadingUser && firstName !== "there"
-      ? firstName.charAt(0).toUpperCase()
+    !isLoadingUser &&
+    firstName !== "there"
+      ? firstName
+          .charAt(0)
+          .toUpperCase()
       : "♡";
 
-  const customWins = Object.keys(completedWins)
-    .filter((key) => key.startsWith("custom:"))
+  const customWins = Object.keys(
+    completedWins
+  )
+    .filter((key) =>
+      key.startsWith("custom:")
+    )
     .map((key) => ({
       key,
       label: key
@@ -301,7 +423,9 @@ export default function ProgressPage() {
         .split("-")
         .filter(Boolean)
         .map(
-          (word) => word.charAt(0).toUpperCase() + word.slice(1)
+          (word) =>
+            word.charAt(0).toUpperCase() +
+            word.slice(1)
         )
         .join(" "),
     }));
@@ -315,7 +439,9 @@ export default function ProgressPage() {
    * Uses a normal file input.
    *
    * NATIVE iOS:
-   * Uses Capacitor Camera.
+   * Uses Capacitor Camera when available.
+   * Falls back to the normal file picker if the native
+   * Camera plugin cannot be opened.
    */
 
   const uploadPhotoFile = async (
@@ -325,7 +451,8 @@ export default function ProgressPage() {
     setIsUploadingPhoto(true);
     setPhotoError(null);
 
-    let newFilePath: string | null = null;
+    let newFilePath: string | null =
+      null;
 
     try {
       const {
@@ -340,7 +467,9 @@ export default function ProgressPage() {
       }
 
       if (!file.type.startsWith("image/")) {
-        throw new Error("Please choose an image file.");
+        throw new Error(
+          "Please choose an image file."
+        );
       }
 
       const extension =
@@ -348,21 +477,34 @@ export default function ProgressPage() {
           .split(".")
           .pop()
           ?.toLowerCase()
-          .replace(/[^a-z0-9]/g, "") || "jpg";
+          .replace(
+            /[^a-z0-9]/g,
+            ""
+          ) || "jpg";
 
-      const paddedDay = String(day).padStart(2, "0");
+      const paddedDay = String(
+        day
+      ).padStart(2, "0");
 
       newFilePath =
         `${user.id}/day-${paddedDay}-${Date.now()}.${extension}`;
 
-      const { error: uploadError } = await withTimeout(
+      const {
+        error: uploadError,
+      } = await withTimeout(
         supabase.storage
           .from("progress-photos")
-          .upload(newFilePath, file, {
-            cacheControl: "3600",
-            upsert: false,
-            contentType: file.type,
-          }),
+          .upload(
+            newFilePath,
+            file,
+            {
+              cacheControl:
+                "3600",
+              upsert: false,
+              contentType:
+                file.type,
+            }
+          ),
         "The photo upload timed out. Please try again."
       );
 
@@ -370,15 +512,24 @@ export default function ProgressPage() {
         throw uploadError;
       }
 
-      const { data: signedData, error: signedError } =
+      const {
+        data: signedData,
+        error: signedError,
+      } =
         await withTimeout(
           supabase.storage
             .from("progress-photos")
-            .createSignedUrl(newFilePath, 60 * 60),
+            .createSignedUrl(
+              newFilePath,
+              60 * 60
+            ),
           "The photo uploaded, but the preview could not be created."
         );
 
-      if (signedError || !signedData?.signedUrl) {
+      if (
+        signedError ||
+        !signedData?.signedUrl
+      ) {
         throw (
           signedError ??
           new Error(
@@ -387,17 +538,22 @@ export default function ProgressPage() {
         );
       }
 
-      const { error: recordError } = await withTimeout(
+      const {
+        error: recordError,
+      } = await withTimeout(
         supabase
           .from("progress_photos")
           .upsert(
             {
               user_id: user.id,
               challenge_day: day,
-              storage_path: newFilePath,
-              photo_type: "progress",
+              storage_path:
+                newFilePath,
+              photo_type:
+                "progress",
               caption: null,
-              updated_at: new Date().toISOString(),
+              updated_at:
+                new Date().toISOString(),
             },
             {
               onConflict:
@@ -411,25 +567,39 @@ export default function ProgressPage() {
         throw recordError;
       }
 
-      const oldPath = photoPaths[day];
+      const oldPath =
+        photoPaths[day];
 
-      setPhotoUrls((previous) => ({
-        ...previous,
-        [day]: signedData.signedUrl,
-      }));
+      setPhotoUrls(
+        (previous) => ({
+          ...previous,
+          [day]:
+            signedData.signedUrl,
+        })
+      );
 
-      setPhotoPaths((previous) => ({
-        ...previous,
-        [day]: newFilePath!,
-      }));
+      setPhotoPaths(
+        (previous) => ({
+          ...previous,
+          [day]:
+            newFilePath!,
+        })
+      );
 
       setEditingPhotoDay(null);
 
-      if (oldPath && oldPath !== newFilePath) {
-        const { error: removeError } =
+      if (
+        oldPath &&
+        oldPath !== newFilePath
+      ) {
+        const {
+          error: removeError,
+        } =
           await supabase.storage
             .from("progress-photos")
-            .remove([oldPath]);
+            .remove([
+              oldPath,
+            ]);
 
         if (removeError) {
           console.warn(
@@ -439,7 +609,10 @@ export default function ProgressPage() {
         }
       }
     } catch (error) {
-      console.error("Progress photo upload error:", error);
+      console.error(
+        "Progress photo upload error:",
+        error
+      );
 
       setPhotoError(
         error instanceof Error
@@ -450,163 +623,286 @@ export default function ProgressPage() {
       if (newFilePath) {
         await supabase.storage
           .from("progress-photos")
-          .remove([newFilePath])
+          .remove([
+            newFilePath,
+          ])
           .catch(() => {});
       }
     } finally {
-      setIsUploadingPhoto(false);
+      setIsUploadingPhoto(
+        false
+      );
     }
   };
 
-  const openPhotoPicker = async (day: number) => {
+  const openPhotoPicker = async (
+    day: number
+  ) => {
     if (isUploadingPhoto) return;
 
-    setPhotoTargetDay(day);
-    setPhotoError(null);
+  setPhotoTargetDay(day);
+  setPhotoError(null);
 
-    /*
-     * WEB
-     *
-     * Do NOT use Capacitor Camera here.
-     * Let the browser handle the file picker.
-     */
-    if (!Capacitor.isNativePlatform()) {
-      webPhotoInputRef.current?.click();
-      return;
+  // WEB
+  // Keep the existing browser picker exactly as it works now.
+  if (!Capacitor.isNativePlatform()) {
+    webPhotoInputRef.current?.click();
+    return;
+  }
+
+  // NATIVE iOS
+  // Use the Capacitor Camera plugin directly.
+  // The existing Supabase upload function is NOT changed.
+  setIsUploadingPhoto(true);
+
+  try {
+    const permissions = await Camera.checkPermissions();
+
+    if (permissions.camera === "denied") {
+      throw new Error(
+        "Camera access is turned off. Please allow camera access for Lock In With Lav in Settings."
+      );
     }
 
-    /*
-     * NATIVE iOS
-     */
-    setIsUploadingPhoto(true);
+    if (permissions.photos === "denied") {
+      throw new Error(
+        "Photo access is turned off. Please allow photo access for Lock In With Lav in Settings."
+      );
+    }
 
-    try {
-      const photo = await Camera.getPhoto({
-        resultType: CameraResultType.Base64,
-        source: CameraSource.Prompt,
-        quality: 90,
-        width: 1600,
-        height: 2000,
-        allowEditing: false,
-        correctOrientation: true,
-      });
+    if (
+      permissions.camera !== "granted" ||
+      permissions.photos !== "granted"
+    ) {
+      const requested =
+        await Camera.requestPermissions({
+          permissions: ["camera", "photos"],
+        });
 
-      if (!photo.base64String) {
+      if (requested.camera === "denied") {
         throw new Error(
-          "No photo was selected. Please try again."
+          "Camera access is required to take a progress photo."
         );
       }
 
-      const byteCharacters = atob(photo.base64String);
-      const byteNumbers = new Array(byteCharacters.length);
+      if (requested.photos === "denied") {
+        throw new Error(
+          "Photo access is required to choose a progress photo."
+        );
+      }
+    }
 
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    if (!Capacitor.isPluginAvailable("Camera")) {
+      throw new Error(
+        "The camera is not available in this version of the app. Please install the newest app build."
+      );
+    }
+
+    const photo = await Camera.getPhoto({
+      resultType: CameraResultType.Base64,
+      source: CameraSource.Prompt,
+      quality: 90,
+      width: 1600,
+      height: 2000,
+      allowEditing: false,
+      correctOrientation: true,
+      promptLabelHeader: "Progress Photo",
+      promptLabelPhoto: "Choose from Photos",
+      promptLabelPicture: "Take Photo",
+    });
+
+    if (!photo.base64String) {
+      throw new Error(
+        "No photo was selected. Please try again."
+      );
+    }
+
+    const byteCharacters = atob(
+      photo.base64String
+    );
+
+    const byteNumbers = new Array(
+      byteCharacters.length
+    );
+
+    for (
+      let i = 0;
+      i < byteCharacters.length;
+      i++
+    ) {
+      byteNumbers[i] =
+        byteCharacters.charCodeAt(i);
+    }
+
+    const byteArray = new Uint8Array(
+      byteNumbers
+    );
+
+    const isPng =
+      photo.format === "png";
+
+    const mimeType = isPng
+      ? "image/png"
+      : "image/jpeg";
+
+    const extension = isPng
+      ? "png"
+      : "jpg";
+
+    const file = new File(
+      [byteArray],
+      `progress-day-${day}.${extension}`,
+      {
+        type: mimeType,
+      }
+    );
+
+    setIsUploadingPhoto(false);
+
+    // IMPORTANT:
+    // Send the native photo through the exact same
+    // upload function that already works on the web.
+    await uploadPhotoFile(
+      file,
+      day
+    );
+  } catch (error) {
+    setIsUploadingPhoto(false);
+
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Could not select the photo.";
+
+    const lower =
+      message.toLowerCase();
+
+    // Don't show an error when the user simply
+    // closes/cancels the native picker.
+    if (
+      !lower.includes("cancel") &&
+      !lower.includes("cancelled") &&
+      !lower.includes("canceled")
+    ) {
+      console.error(
+        "Camera error:",
+        error
+      );
+
+      setPhotoError(message);
+    }
+  }
+};
+
+  const handleWebPhotoChange =
+    async (
+      event: React.ChangeEvent<HTMLInputElement>
+    ) => {
+      const file =
+        event.target.files?.[0];
+
+      /*
+       * Reset the input so selecting
+       * the same photo again still
+       * triggers onChange.
+       */
+      event.target.value = "";
+
+      if (!file) return;
+
+      await uploadPhotoFile(
+        file,
+        photoTargetDay
+      );
+    };
+
+  const removeProgressPhoto =
+    async (day: number) => {
+      const path =
+        photoPaths[day];
+
+      if (!path) return;
+
+      setPhotoError(null);
+
+      const {
+        data: userData,
+      } = await supabase.auth.getUser();
+
+      if (!userData.user) {
+        setPhotoError(
+          "You need to be signed in."
+        );
+        return;
       }
 
-      const byteArray = new Uint8Array(byteNumbers);
+      const {
+        error: storageError,
+      } =
+        await supabase.storage
+          .from("progress-photos")
+          .remove([path]);
 
-      const isPng = photo.format === "png";
-      const mimeType = isPng ? "image/png" : "image/jpeg";
-      const extension = isPng ? "png" : "jpg";
+      if (storageError) {
+        setPhotoError(
+          storageError.message
+        );
+        return;
+      }
 
-      const file = new File(
-        [byteArray],
-        `progress-day-${day}.${extension}`,
-        {
-          type: mimeType,
+      const {
+        error: recordError,
+      } = await supabase
+        .from("progress_photos")
+        .delete()
+        .eq(
+          "user_id",
+          userData.user.id
+        )
+        .eq(
+          "challenge_day",
+          day
+        )
+        .eq(
+          "photo_type",
+          "progress"
+        );
+
+      if (recordError) {
+        setPhotoError(
+          recordError.message
+        );
+        return;
+      }
+
+      setPhotoUrls(
+        (previous) => {
+          const next = {
+            ...previous,
+          };
+
+          delete next[day];
+
+          return next;
         }
       );
 
-      setIsUploadingPhoto(false);
+      setPhotoPaths(
+        (previous) => {
+          const next = {
+            ...previous,
+          };
 
-      await uploadPhotoFile(file, day);
-    } catch (error) {
-      setIsUploadingPhoto(false);
+          delete next[day];
 
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Could not select the photo.";
+          return next;
+        }
+      );
 
-      const lower = message.toLowerCase();
-
-      if (
-        !lower.includes("cancel") &&
-        !lower.includes("cancelled") &&
-        !lower.includes("canceled")
-      ) {
-        console.error("Camera error:", error);
-        setPhotoError(message);
-      }
-    }
-  };
-
-  const handleWebPhotoChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
-
-    /*
-     * Reset the input so selecting the same photo again
-     * still triggers onChange.
-     */
-    event.target.value = "";
-
-    if (!file) return;
-
-    await uploadPhotoFile(file, photoTargetDay);
-  };
-
-  const removeProgressPhoto = async (day: number) => {
-    const path = photoPaths[day];
-
-    if (!path) return;
-
-    setPhotoError(null);
-
-    const { data: userData } = await supabase.auth.getUser();
-
-    if (!userData.user) {
-      setPhotoError("You need to be signed in.");
-      return;
-    }
-
-    const { error: storageError } = await supabase.storage
-      .from("progress-photos")
-      .remove([path]);
-
-    if (storageError) {
-      setPhotoError(storageError.message);
-      return;
-    }
-
-    const { error: recordError } = await supabase
-      .from("progress_photos")
-      .delete()
-      .eq("user_id", userData.user.id)
-      .eq("challenge_day", day)
-      .eq("photo_type", "progress");
-
-    if (recordError) {
-      setPhotoError(recordError.message);
-      return;
-    }
-
-    setPhotoUrls((previous) => {
-      const next = { ...previous };
-      delete next[day];
-      return next;
-    });
-
-    setPhotoPaths((previous) => {
-      const next = { ...previous };
-      delete next[day];
-      return next;
-    });
-
-    setEditingPhotoDay(null);
-  };
+      setEditingPhotoDay(
+        null
+      );
+    };
 
   /*
    * ============================================================
@@ -614,95 +910,147 @@ export default function ProgressPage() {
    * ============================================================
    */
 
-  const openMeasurementModal = () => {
-    setMeasurementError(null);
+  const openMeasurementModal =
+    () => {
+      setMeasurementError(null);
 
-    setMeasurementForm({
-      weight: measurementRow?.weight?.toString() ?? "",
-      waist: measurementRow?.waist?.toString() ?? "",
-      hips: measurementRow?.hips?.toString() ?? "",
-      chest: measurementRow?.chest?.toString() ?? "",
-      thigh: measurementRow?.thigh?.toString() ?? "",
-      arm: measurementRow?.arm?.toString() ?? "",
-    });
+      setMeasurementForm({
+        weight:
+          measurementRow?.weight?.toString() ??
+          "",
+        waist:
+          measurementRow?.waist?.toString() ??
+          "",
+        hips:
+          measurementRow?.hips?.toString() ??
+          "",
+        chest:
+          measurementRow?.chest?.toString() ??
+          "",
+        thigh:
+          measurementRow?.thigh?.toString() ??
+          "",
+        arm:
+          measurementRow?.arm?.toString() ??
+          "",
+      });
 
-    setIsMeasurementModalOpen(true);
-  };
+      setIsMeasurementModalOpen(
+        true
+      );
+    };
 
-  const saveMeasurements = async () => {
-    setIsSavingMeasurements(true);
-    setMeasurementError(null);
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error(
-          "You need to be signed in to save measurements."
-        );
-      }
-
-      const toNumber = (value: string) =>
-        value.trim() === "" ? null : Number(value);
-
-      const payload = {
-        user_id: user.id,
-        challenge_day: safeCurrentDay,
-        weight: toNumber(measurementForm.weight),
-        waist: toNumber(measurementForm.waist),
-        hips: toNumber(measurementForm.hips),
-        chest: toNumber(measurementForm.chest),
-        thigh: toNumber(measurementForm.thigh),
-        arm: toNumber(measurementForm.arm),
-      };
-
-      const values = [
-        payload.weight,
-        payload.waist,
-        payload.hips,
-        payload.chest,
-        payload.thigh,
-        payload.arm,
-      ];
-
-      if (
-        values.some(
-          (value) =>
-            value !== null &&
-            (!Number.isFinite(value) || value < 0)
-        )
-      ) {
-        throw new Error(
-          "Please enter valid positive numbers."
-        );
-      }
-
-      const { data, error } = await supabase
-        .from("measurements")
-        .insert(payload)
-        .select(
-          "weight, waist, hips, chest, thigh, arm, challenge_day"
-        )
-        .single();
-
-      if (error) throw error;
-
-      setMeasurementRow(data);
-      setIsMeasurementModalOpen(false);
-    } catch (error) {
-      console.error(error);
+  const saveMeasurements =
+    async () => {
+      setIsSavingMeasurements(
+        true
+      );
 
       setMeasurementError(
-        error instanceof Error
-          ? error.message
-          : "Could not save measurements."
+        null
       );
-    } finally {
-      setIsSavingMeasurements(false);
-    }
-  };
+
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+          throw new Error(
+            "You need to be signed in to save measurements."
+          );
+        }
+
+        const toNumber = (
+          value: string
+        ) =>
+          value.trim() === ""
+            ? null
+            : Number(value);
+
+        const payload = {
+          user_id: user.id,
+          challenge_day:
+            safeCurrentDay,
+          weight: toNumber(
+            measurementForm.weight
+          ),
+          waist: toNumber(
+            measurementForm.waist
+          ),
+          hips: toNumber(
+            measurementForm.hips
+          ),
+          chest: toNumber(
+            measurementForm.chest
+          ),
+          thigh: toNumber(
+            measurementForm.thigh
+          ),
+          arm: toNumber(
+            measurementForm.arm
+          ),
+        };
+
+        const values = [
+          payload.weight,
+          payload.waist,
+          payload.hips,
+          payload.chest,
+          payload.thigh,
+          payload.arm,
+        ];
+
+        if (
+          values.some(
+            (value) =>
+              value !== null &&
+              (!Number.isFinite(
+                value
+              ) ||
+                value < 0)
+          )
+        ) {
+          throw new Error(
+            "Please enter valid positive numbers."
+          );
+        }
+
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("measurements")
+          .insert(payload)
+          .select(
+            "weight, waist, hips, chest, thigh, arm, challenge_day"
+          )
+          .single();
+
+        if (error)
+          throw error;
+
+        setMeasurementRow(
+          data
+        );
+
+        setIsMeasurementModalOpen(
+          false
+        );
+      } catch (error) {
+        console.error(error);
+
+        setMeasurementError(
+          error instanceof Error
+            ? error.message
+            : "Could not save measurements."
+        );
+      } finally {
+        setIsSavingMeasurements(
+          false
+        );
+      }
+    };
 
   /*
    * ============================================================
@@ -710,86 +1058,41 @@ export default function ProgressPage() {
    * ============================================================
    */
 
-  const toggleWin = async (win: string) => {
+  const toggleWin = async (
+    win: string
+  ) => {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) return;
 
-    const nextValue = !completedWins[win];
+    const nextValue =
+      !completedWins[win];
 
-    setCompletedWins((previous) => ({
-      ...previous,
-      [win]: nextValue,
-    }));
-
-    const { error } = await supabase
-      .from("little_wins")
-      .upsert(
-        {
-          user_id: user.id,
-          win_key: win,
-          label: win,
-          is_completed: nextValue,
-          challenge_day: safeCurrentDay,
-          completed_at: nextValue
-            ? new Date().toISOString()
-            : null,
-        },
-        {
-          onConflict:
-            "user_id,win_key,challenge_day",
-        }
-      );
-
-    if (error) {
-      console.error("Could not save little win:", error);
-
-      setCompletedWins((previous) => ({
+    setCompletedWins(
+      (previous) => ({
         ...previous,
-        [win]: !nextValue,
-      }));
-    }
-  };
+        [win]: nextValue,
+      })
+    );
 
-  const saveCustomWin = async () => {
-    const label = customWin.trim();
-
-    if (!label) {
-      setCustomWinError("Write your win first. ♡");
-      return;
-    }
-
-    setIsSavingCustomWin(true);
-    setCustomWinError(null);
-
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error(
-          "You need to be signed in to add a win."
-        );
-      }
-
-      const winKey = `custom:${label
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")}`;
-
-      const { error } = await supabase
+    const { error } =
+      await supabase
         .from("little_wins")
         .upsert(
           {
             user_id: user.id,
-            win_key: winKey,
-            label,
-            is_completed: true,
-            challenge_day: safeCurrentDay,
-            completed_at: new Date().toISOString(),
+            win_key: win,
+            label: win,
+            is_completed:
+              nextValue,
+            challenge_day:
+              safeCurrentDay,
+            completed_at:
+              nextValue
+                ? new Date().toISOString()
+                : null,
           },
           {
             onConflict:
@@ -797,27 +1100,117 @@ export default function ProgressPage() {
           }
         );
 
-      if (error) throw error;
-
-      setCompletedWins((previous) => ({
-        ...previous,
-        [winKey]: true,
-      }));
-
-      setCustomWin("");
-      setIsCustomWinModalOpen(false);
-    } catch (error) {
-      console.error(error);
-
-      setCustomWinError(
-        error instanceof Error
-          ? error.message
-          : "Could not save your win."
+    if (error) {
+      console.error(
+        "Could not save little win:",
+        error
       );
-    } finally {
-      setIsSavingCustomWin(false);
+
+      setCompletedWins(
+        (previous) => ({
+          ...previous,
+          [win]:
+            !nextValue,
+        })
+      );
     }
   };
+
+  const saveCustomWin =
+    async () => {
+      const label =
+        customWin.trim();
+
+      if (!label) {
+        setCustomWinError(
+          "Write your win first. ♡"
+        );
+        return;
+      }
+
+      setIsSavingCustomWin(
+        true
+      );
+
+      setCustomWinError(
+        null
+      );
+
+      try {
+        const {
+          data: { user },
+        } =
+          await supabase.auth.getUser();
+
+        if (!user) {
+          throw new Error(
+            "You need to be signed in to add a win."
+          );
+        }
+
+        const winKey =
+          `custom:${label
+            .toLowerCase()
+            .replace(
+              /[^a-z0-9]+/g,
+              "-"
+            )
+            .replace(
+              /^-|-$/g,
+              ""
+            )}`;
+
+        const { error } =
+          await supabase
+            .from("little_wins")
+            .upsert(
+              {
+                user_id: user.id,
+                win_key:
+                  winKey,
+                label,
+                is_completed:
+                  true,
+                challenge_day:
+                  safeCurrentDay,
+                completed_at:
+                  new Date().toISOString(),
+              },
+              {
+                onConflict:
+                  "user_id,win_key,challenge_day",
+              }
+            );
+
+        if (error)
+          throw error;
+
+        setCompletedWins(
+          (previous) => ({
+            ...previous,
+            [winKey]: true,
+          })
+        );
+
+        setCustomWin("");
+
+        setIsCustomWinModalOpen(
+          false
+        );
+      } catch (error) {
+        console.error(error);
+
+        setCustomWinError(
+          error instanceof Error
+            ? error.message
+            : "Could not save your win."
+        );
+      } finally {
+        setIsSavingCustomWin(
+          false
+        );
+      }
+    };
 
   /*
    * ============================================================
@@ -825,84 +1218,114 @@ export default function ProgressPage() {
    * ============================================================
    */
 
-  const openWeeklyCheckin = (week: number) => {
-    const saved = weeklyCheckins[week];
+  const openWeeklyCheckin =
+    (week: number) => {
+      const saved =
+        weeklyCheckins[week];
 
-    setCheckinError(null);
+      setCheckinError(null);
 
-    setCheckinForm(
-      saved
-        ? {
-            went_well: saved.went_well,
-            felt_hard: saved.felt_hard,
-            proud_of: saved.proud_of,
-            next_week_focus: saved.next_week_focus,
-          }
-        : {
-            went_well: "",
-            felt_hard: "",
-            proud_of: "",
-            next_week_focus: "",
-          }
-    );
+      setCheckinForm(
+        saved
+          ? {
+              went_well:
+                saved.went_well,
+              felt_hard:
+                saved.felt_hard,
+              proud_of:
+                saved.proud_of,
+              next_week_focus:
+                saved.next_week_focus,
+            }
+          : {
+              went_well: "",
+              felt_hard: "",
+              proud_of: "",
+              next_week_focus:
+                "",
+            }
+      );
 
-    setCheckinWeek(week);
-  };
+      setCheckinWeek(week);
+    };
 
-  const saveWeeklyCheckin = async () => {
-    if (checkinWeek === null) return;
+  const saveWeeklyCheckin =
+    async () => {
+      if (
+        checkinWeek === null
+      )
+        return;
 
-    setIsSavingCheckin(true);
-    setCheckinError(null);
+      setIsSavingCheckin(
+        true
+      );
 
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      setCheckinError(null);
 
-      if (!user) {
-        throw new Error(
-          "You need to be signed in to save a check-in."
+      try {
+        const {
+          data: { user },
+        } =
+          await supabase.auth.getUser();
+
+        if (!user) {
+          throw new Error(
+            "You need to be signed in to save a check-in."
+          );
+        }
+
+        const payload = {
+          user_id: user.id,
+          week_number:
+            checkinWeek,
+          ...checkinForm,
+          updated_at:
+            new Date().toISOString(),
+        };
+
+        const {
+          data,
+          error,
+        } = await supabase
+          .from("weekly_checkins")
+          .upsert(
+            payload,
+            {
+              onConflict:
+                "user_id,week_number",
+            }
+          )
+          .select(
+            "week_number, went_well, felt_hard, proud_of, next_week_focus"
+          )
+          .single();
+
+        if (error)
+          throw error;
+
+        setWeeklyCheckins(
+          (previous) => ({
+            ...previous,
+            [checkinWeek]:
+              data,
+          })
+        );
+
+        setCheckinWeek(null);
+      } catch (error) {
+        console.error(error);
+
+        setCheckinError(
+          error instanceof Error
+            ? error.message
+            : "Could not save check-in."
+        );
+      } finally {
+        setIsSavingCheckin(
+          false
         );
       }
-
-      const payload = {
-        user_id: user.id,
-        week_number: checkinWeek,
-        ...checkinForm,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { data, error } = await supabase
-        .from("weekly_checkins")
-        .upsert(payload, {
-          onConflict: "user_id,week_number",
-        })
-        .select(
-          "week_number, went_well, felt_hard, proud_of, next_week_focus"
-        )
-        .single();
-
-      if (error) throw error;
-
-      setWeeklyCheckins((previous) => ({
-        ...previous,
-        [checkinWeek]: data,
-      }));
-
-      setCheckinWeek(null);
-    } catch (error) {
-      console.error(error);
-
-      setCheckinError(
-        error instanceof Error
-          ? error.message
-          : "Could not save check-in."
-      );
-    } finally {
-      setIsSavingCheckin(false);
-    }
-  };
+    };
 
   if (isLoadingUser) {
     return (
@@ -911,7 +1334,9 @@ export default function ProgressPage() {
           <DashboardSidebar
             firstName={firstName}
             initial={initial}
-            isLoadingUser={isLoadingUser}
+            isLoadingUser={
+              isLoadingUser
+            }
           />
 
           <section className="flex flex-1 items-center justify-center">
@@ -921,7 +1346,9 @@ export default function ProgressPage() {
               </div>
 
               <p className="mt-5 font-serif text-2xl italic text-[#A77B73]">
-                loading your progress... ♡
+                loading your progress...
+                {" "}
+                ♡
               </p>
             </div>
           </section>
@@ -975,18 +1402,27 @@ export default function ProgressPage() {
         <DashboardSidebar
           firstName={firstName}
           initial={initial}
-          isLoadingUser={isLoadingUser}
+          isLoadingUser={
+            isLoadingUser
+          }
         />
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
           {/* Hidden browser picker.
-              This is ONLY used on web. */}
+              This is used on web and also serves as
+              a fallback for the native app. */}
+
           <input
-            ref={webPhotoInputRef}
+            ref={
+              webPhotoInputRef
+            }
             type="file"
             accept="image/*"
+            capture="environment"
             className="hidden"
-            onChange={handleWebPhotoChange}
+            onChange={
+              handleWebPhotoChange
+            }
           />
 
           {/* INTRO */}
@@ -995,7 +1431,9 @@ export default function ProgressPage() {
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
                 <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-                  look how far you&apos;ve come. ♡
+                  look how far you&apos;ve come.
+                  {" "}
+                  ♡
                 </p>
 
                 <p className="mt-10 text-[12px] tracking-[0.4em] text-[#9D6F67]">
@@ -1024,7 +1462,9 @@ export default function ProgressPage() {
                   {photoUrls[1] ? (
                     <>
                       <img
-                        src={photoUrls[1]}
+                        src={
+                          photoUrls[1]
+                        }
                         alt="Day 1 progress"
                         className="h-full w-full object-cover"
                       />
@@ -1033,7 +1473,8 @@ export default function ProgressPage() {
                         type="button"
                         onClick={() =>
                           setEditingPhotoDay(
-                            editingPhotoDay === 1
+                            editingPhotoDay ===
+                              1
                               ? null
                               : 1
                           )
@@ -1043,12 +1484,15 @@ export default function ProgressPage() {
                         EDIT PHOTO
                       </button>
 
-                      {editingPhotoDay === 1 && (
+                      {editingPhotoDay ===
+                        1 && (
                         <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
                           <button
                             type="button"
                             onClick={() =>
-                              openPhotoPicker(1)
+                              openPhotoPicker(
+                                1
+                              )
                             }
                             className="block w-full px-4 py-3 text-left text-[12px] tracking-[0.15em] hover:bg-[#EADCD7]"
                           >
@@ -1058,7 +1502,9 @@ export default function ProgressPage() {
                           <button
                             type="button"
                             onClick={() =>
-                              removeProgressPhoto(1)
+                              removeProgressPhoto(
+                                1
+                              )
                             }
                             className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[12px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]"
                           >
@@ -1071,9 +1517,13 @@ export default function ProgressPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        openPhotoPicker(1)
+                        openPhotoPicker(
+                          1
+                        )
                       }
-                      disabled={isUploadingPhoto}
+                      disabled={
+                        isUploadingPhoto
+                      }
                       className="flex flex-col items-center disabled:opacity-50"
                     >
                       <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-2xl text-[#A77B73] transition group-hover:bg-[#EAD8D3]">
@@ -1082,7 +1532,8 @@ export default function ProgressPage() {
 
                       <span className="mt-3 text-[12px] tracking-[0.2em] text-[#8F655E]">
                         {isUploadingPhoto &&
-                        photoTargetDay === 1
+                        photoTargetDay ===
+                          1
                           ? "UPLOADING..."
                           : "ADD PHOTO"}
                       </span>
@@ -1090,11 +1541,13 @@ export default function ProgressPage() {
                   )}
                 </div>
 
-                {photoError && photoTargetDay === 1 && (
-                  <p className="px-5 pt-3 text-[12px] text-[#9D6F67]">
-                    {photoError}
-                  </p>
-                )}
+                {photoError &&
+                  photoTargetDay ===
+                    1 && (
+                    <p className="px-5 pt-3 text-[12px] text-[#9D6F67]">
+                      {photoError}
+                    </p>
+                  )}
 
                 <div className="flex items-center justify-between p-5">
                   <div>
@@ -1121,10 +1574,16 @@ export default function ProgressPage() {
                     CURRENT
                   </span>
 
-                  {photoUrls[safeCurrentDay] ? (
+                  {photoUrls[
+                    safeCurrentDay
+                  ] ? (
                     <>
                       <img
-                        src={photoUrls[safeCurrentDay]}
+                        src={
+                          photoUrls[
+                            safeCurrentDay
+                          ]
+                        }
                         alt={`Day ${safeCurrentDay} progress`}
                         className="h-full w-full object-cover"
                       />
@@ -1181,7 +1640,9 @@ export default function ProgressPage() {
                           safeCurrentDay
                         )
                       }
-                      disabled={isUploadingPhoto}
+                      disabled={
+                        isUploadingPhoto
+                      }
                       className="flex flex-col items-center disabled:opacity-50"
                     >
                       <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#B48A82] font-serif text-2xl text-[#9D6F67] transition group-hover:bg-[#DFC7C1]">
@@ -1198,6 +1659,14 @@ export default function ProgressPage() {
                     </button>
                   )}
                 </div>
+
+                {photoError &&
+                  photoTargetDay ===
+                    safeCurrentDay && (
+                    <p className="px-5 pt-3 text-[12px] text-[#9D6F67]">
+                      {photoError}
+                    </p>
+                  )}
 
                 <div className="flex items-center justify-between p-5">
                   <div>
@@ -1267,7 +1736,9 @@ export default function ProgressPage() {
 
                 <button
                   type="button"
-                  onClick={openMeasurementModal}
+                  onClick={
+                    openMeasurementModal
+                  }
                   className="rounded-full border border-[#CBA9A2] px-4 py-2 text-[10px] tracking-[0.2em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
                 >
                   + UPDATE
@@ -1294,7 +1765,9 @@ export default function ProgressPage() {
               </div>
 
               <p className="mt-2 text-[12px] italic text-[#9A8780]">
-                Optional — track what matters to you. ♡
+                Optional — track what matters to you.
+                {" "}
+                ♡
               </p>
             </div>
 
@@ -1310,20 +1783,29 @@ export default function ProgressPage() {
               </h2>
 
               <p className="mt-2 font-serif text-base italic text-[#A77B73]">
-                the little things count too. ♡
+                the little things count too.
+                {" "}
+                ♡
               </p>
 
               <div className="mt-7 space-y-3">
                 {wins.map((win) => {
-                  const checked = Boolean(
-                    completedWins[win]
-                  );
+                  const checked =
+                    Boolean(
+                      completedWins[
+                        win
+                      ]
+                    );
 
                   return (
                     <button
                       key={win}
                       type="button"
-                      onClick={() => toggleWin(win)}
+                      onClick={() =>
+                        toggleWin(
+                          win
+                        )
+                      }
                       className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition ${
                         checked
                           ? "bg-[#F1E2DE]"
@@ -1337,7 +1819,9 @@ export default function ProgressPage() {
                             : "text-[#9D6F67]"
                         }`}
                       >
-                        {checked ? "✓" : "♡"}
+                        {checked
+                          ? "✓"
+                          : "♡"}
                       </span>
 
                       <span className="font-serif text-lg italic">
@@ -1348,40 +1832,55 @@ export default function ProgressPage() {
                 })}
               </div>
 
-              {customWins.length > 0 && (
+              {customWins.length >
+                0 && (
                 <div className="mt-3 space-y-3">
-                  {customWins.map(({ key, label }) => {
-                    const checked = Boolean(
-                      completedWins[key]
-                    );
+                  {customWins.map(
+                    ({
+                      key,
+                      label,
+                    }) => {
+                      const checked =
+                        Boolean(
+                          completedWins[
+                            key
+                          ]
+                        );
 
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => toggleWin(key)}
-                        className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition ${
-                          checked
-                            ? "bg-[#F1E2DE]"
-                            : "bg-[#F1E2DE]/50 hover:bg-[#F1E2DE]"
-                        }`}
-                      >
-                        <span
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] ${
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() =>
+                            toggleWin(
+                              key
+                            )
+                          }
+                          className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition ${
                             checked
-                              ? "bg-[#211C19] text-[#F7F1ED]"
-                              : "text-[#9D6F67]"
+                              ? "bg-[#F1E2DE]"
+                              : "bg-[#F1E2DE]/50 hover:bg-[#F1E2DE]"
                           }`}
                         >
-                          {checked ? "✓" : "♡"}
-                        </span>
+                          <span
+                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] ${
+                              checked
+                                ? "bg-[#211C19] text-[#F7F1ED]"
+                                : "text-[#9D6F67]"
+                            }`}
+                          >
+                            {checked
+                              ? "✓"
+                              : "♡"}
+                          </span>
 
-                        <span className="font-serif text-lg italic">
-                          {label}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <span className="font-serif text-lg italic">
+                            {label}
+                          </span>
+                        </button>
+                      );
+                    }
+                  )}
                 </div>
               )}
 
@@ -1389,8 +1888,12 @@ export default function ProgressPage() {
                 type="button"
                 onClick={() => {
                   setCustomWin("");
-                  setCustomWinError(null);
-                  setIsCustomWinModalOpen(true);
+                  setCustomWinError(
+                    null
+                  );
+                  setIsCustomWinModalOpen(
+                    true
+                  );
                 }}
                 className="mt-6 rounded-full border border-[#B9948C] px-5 py-3 text-[11px] tracking-[0.2em] text-[#8F655E] transition hover:bg-[#F1E2DE]"
               >
@@ -1417,7 +1920,9 @@ export default function ProgressPage() {
               </div>
 
               <p className="text-[11px] tracking-[0.18em] text-[#927D76]">
-                {completedCheckins} OF {currentWeek} COMPLETE
+                {completedCheckins} OF{" "}
+                {currentWeek}{" "}
+                COMPLETE
               </p>
             </div>
 
@@ -1425,13 +1930,24 @@ export default function ProgressPage() {
               <div className="flex flex-col gap-7 p-7 md:p-8 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-start gap-5">
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#EAD8D3] font-serif text-xl text-[#A77B73]">
-                    {String(currentWeek).padStart(2, "0")}
+                    {String(
+                      currentWeek
+                    ).padStart(
+                      2,
+                      "0"
+                    )}
                   </div>
 
                   <div>
                     <div className="flex flex-wrap items-center gap-3">
                       <p className="text-[12px] tracking-[0.25em] text-[#806E68]">
-                        WEEK {String(currentWeek).padStart(2, "0")}
+                        WEEK{" "}
+                        {String(
+                          currentWeek
+                        ).padStart(
+                          2,
+                          "0"
+                        )}
                       </p>
 
                       <span
@@ -1458,7 +1974,9 @@ export default function ProgressPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    openWeeklyCheckin(currentWeek)
+                    openWeeklyCheckin(
+                      currentWeek
+                    )
                   }
                   className="shrink-0 rounded-full bg-[#211C19] px-7 py-3.5 text-[11px] tracking-[0.22em] text-[#F7F1ED]"
                 >
@@ -1484,7 +2002,9 @@ export default function ProgressPage() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
           onClick={() =>
-            setIsMeasurementModalOpen(false)
+            setIsMeasurementModalOpen(
+              false
+            )
           }
         >
           <div
@@ -1511,7 +2031,9 @@ export default function ProgressPage() {
               <button
                 type="button"
                 onClick={() =>
-                  setIsMeasurementModalOpen(false)
+                  setIsMeasurementModalOpen(
+                    false
+                  )
                 }
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
               >
@@ -1521,44 +2043,81 @@ export default function ProgressPage() {
 
             <div className="mt-7 grid grid-cols-2 gap-3">
               {[
-                ["weight", "WEIGHT", "lb"],
-                ["waist", "WAIST", "in"],
-                ["hips", "HIPS", "in"],
-                ["chest", "CHEST", "in"],
-                ["thigh", "THIGH", "in"],
-                ["arm", "ARM", "in"],
-              ].map(([field, label, unit]) => (
-                <label
-                  key={field}
-                  className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
-                >
-                  <span className="text-[10px] tracking-[0.2em] text-[#806E68]">
-                    {label} ({unit})
-                  </span>
+                [
+                  "weight",
+                  "WEIGHT",
+                  "lb",
+                ],
+                [
+                  "waist",
+                  "WAIST",
+                  "in",
+                ],
+                [
+                  "hips",
+                  "HIPS",
+                  "in",
+                ],
+                [
+                  "chest",
+                  "CHEST",
+                  "in",
+                ],
+                [
+                  "thigh",
+                  "THIGH",
+                  "in",
+                ],
+                [
+                  "arm",
+                  "ARM",
+                  "in",
+                ],
+              ].map(
+                ([
+                  field,
+                  label,
+                  unit,
+                ]) => (
+                  <label
+                    key={field}
+                    className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
+                  >
+                    <span className="text-[10px] tracking-[0.2em] text-[#806E68]">
+                      {label} ({unit})
+                    </span>
 
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    inputMode="decimal"
-                    value={
-                      measurementForm[
-                        field as keyof typeof measurementForm
-                      ]
-                    }
-                    onChange={(event) =>
-                      setMeasurementForm(
-                        (previous) => ({
-                          ...previous,
-                          [field]: event.target.value,
-                        })
-                      )
-                    }
-                    className="mt-2 w-full bg-transparent font-serif text-2xl text-[#A77B73] outline-none"
-                    placeholder="—"
-                  />
-                </label>
-              ))}
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      inputMode="decimal"
+                      value={
+                        measurementForm[
+                          field as keyof typeof measurementForm
+                        ]
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        setMeasurementForm(
+                          (
+                            previous
+                          ) => ({
+                            ...previous,
+                            [field]:
+                              event
+                                .target
+                                .value,
+                          })
+                        )
+                      }
+                      className="mt-2 w-full bg-transparent font-serif text-2xl text-[#A77B73] outline-none"
+                      placeholder="—"
+                    />
+                  </label>
+                )
+              )}
             </div>
 
             {measurementError && (
@@ -1569,8 +2128,12 @@ export default function ProgressPage() {
 
             <button
               type="button"
-              onClick={saveMeasurements}
-              disabled={isSavingMeasurements}
+              onClick={
+                saveMeasurements
+              }
+              disabled={
+                isSavingMeasurements
+              }
               className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[12px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
             >
               {isSavingMeasurements
@@ -1587,7 +2150,9 @@ export default function ProgressPage() {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
           onClick={() =>
-            setIsCustomWinModalOpen(false)
+            setIsCustomWinModalOpen(
+              false
+            )
           }
         >
           <div
@@ -1614,7 +2179,9 @@ export default function ProgressPage() {
               <button
                 type="button"
                 onClick={() =>
-                  setIsCustomWinModalOpen(false)
+                  setIsCustomWinModalOpen(
+                    false
+                  )
                 }
                 className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
               >
@@ -1631,12 +2198,20 @@ export default function ProgressPage() {
                 type="text"
                 value={customWin}
                 onChange={(event) => {
-                  setCustomWin(event.target.value);
-                  setCustomWinError(null);
+                  setCustomWin(
+                    event.target
+                      .value
+                  );
+                  setCustomWinError(
+                    null
+                  );
                 }}
-                onKeyDown={(event) => {
+                onKeyDown={(
+                  event
+                ) => {
                   if (
-                    event.key === "Enter" &&
+                    event.key ===
+                      "Enter" &&
                     !isSavingCustomWin
                   ) {
                     saveCustomWin();
@@ -1657,7 +2232,9 @@ export default function ProgressPage() {
 
             <button
               type="button"
-              onClick={saveCustomWin}
+              onClick={
+                saveCustomWin
+              }
               disabled={
                 isSavingCustomWin ||
                 !customWin.trim()
@@ -1677,7 +2254,9 @@ export default function ProgressPage() {
       {checkinWeek !== null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
-          onClick={() => setCheckinWeek(null)}
+          onClick={() =>
+            setCheckinWeek(null)
+          }
         >
           <div
             className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8"
@@ -1689,7 +2268,9 @@ export default function ProgressPage() {
               <div>
                 <p className="text-[12px] tracking-[0.35em] text-[#9D6F67]">
                   WEEK{" "}
-                  {String(checkinWeek).padStart(
+                  {String(
+                    checkinWeek
+                  ).padStart(
                     2,
                     "0"
                   )}{" "}
@@ -1704,7 +2285,9 @@ export default function ProgressPage() {
               <button
                 type="button"
                 onClick={() =>
-                  setCheckinWeek(null)
+                  setCheckinWeek(
+                    null
+                  )
                 }
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
               >
@@ -1714,42 +2297,63 @@ export default function ProgressPage() {
 
             <div className="mt-7 space-y-3">
               {[
-                ["went_well", "What went well?"],
-                ["felt_hard", "What felt hard?"],
-                ["proud_of", "What are you proud of?"],
+                [
+                  "went_well",
+                  "What went well?",
+                ],
+                [
+                  "felt_hard",
+                  "What felt hard?",
+                ],
+                [
+                  "proud_of",
+                  "What are you proud of?",
+                ],
                 [
                   "next_week_focus",
                   "What do you want to focus on next week?",
                 ],
-              ].map(([field, label]) => (
-                <label
-                  key={field}
-                  className="block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
-                >
-                  <span className="text-[12px] tracking-[0.16em] text-[#806E68]">
-                    {label}
-                  </span>
+              ].map(
+                ([
+                  field,
+                  label,
+                ]) => (
+                  <label
+                    key={field}
+                    className="block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
+                  >
+                    <span className="text-[12px] tracking-[0.16em] text-[#806E68]">
+                      {label}
+                    </span>
 
-                  <textarea
-                    rows={2}
-                    value={
-                      checkinForm[
-                        field as keyof typeof checkinForm
-                      ]
-                    }
-                    onChange={(event) =>
-                      setCheckinForm(
-                        (previous) => ({
-                          ...previous,
-                          [field]: event.target.value,
-                        })
-                      )
-                    }
-                    className="mt-2 w-full resize-none bg-transparent font-serif text-lg italic text-[#A77B73] outline-none"
-                    placeholder="write it here..."
-                  />
-                </label>
-              ))}
+                    <textarea
+                      rows={2}
+                      value={
+                        checkinForm[
+                          field as keyof typeof checkinForm
+                        ]
+                      }
+                      onChange={(
+                        event
+                      ) =>
+                        setCheckinForm(
+                          (
+                            previous
+                          ) => ({
+                            ...previous,
+                            [field]:
+                              event
+                                .target
+                                .value,
+                          })
+                        )
+                      }
+                      className="mt-2 w-full resize-none bg-transparent font-serif text-lg italic text-[#A77B73] outline-none"
+                      placeholder="write it here..."
+                    />
+                  </label>
+                )
+              )}
             </div>
 
             {checkinError && (
@@ -1760,8 +2364,12 @@ export default function ProgressPage() {
 
             <button
               type="button"
-              onClick={saveWeeklyCheckin}
-              disabled={isSavingCheckin}
+              onClick={
+                saveWeeklyCheckin
+              }
+              disabled={
+                isSavingCheckin
+              }
               className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[12px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
             >
               {isSavingCheckin
