@@ -24,9 +24,11 @@ type WorkoutExercise = {
   home: string;
 };
 
-/* ---------------------------------
- * EXERCISE SWAPS
- * --------------------------------- */
+// ---------------------------------
+
+/* EXERCISE SWAPS */
+
+// ---------------------------------
 
 const exerciseSwaps: Record<string, SwapOption[]> = {
   "Dumbbell Goblet Squat": [
@@ -174,11 +176,11 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
   ],
 };
 
-/*
- * Every replacement can also be swapped again.
- * This automatically creates additional swap paths
- * from the existing exercise swap list.
- */
+// ---------------------------------
+
+/* EXPANDED SWAP PATHS */
+
+// ---------------------------------
 
 const expandedExerciseSwaps: Record<string, SwapOption[]> = {
   ...exerciseSwaps,
@@ -187,25 +189,32 @@ const expandedExerciseSwaps: Record<string, SwapOption[]> = {
 Object.entries(exerciseSwaps).forEach(
   ([originalExercise, options]) => {
     options.forEach((option) => {
-      if (!expandedExerciseSwaps[option.name]) {
-        expandedExerciseSwaps[option.name] = [
-          {
-            name: originalExercise,
-            location: "HOME",
-            note: `Swap back to ${originalExercise}.`,
-          },
-          ...options.filter(
-            (item) => item.name !== option.name,
-          ),
-        ];
-      }
+      const existingOptions =
+        expandedExerciseSwaps[option.name] ?? [];
+
+      const alreadyHasOriginal = existingOptions.some(
+        (item) => item.name === originalExercise,
+      );
+
+      expandedExerciseSwaps[option.name] = alreadyHasOriginal
+        ? existingOptions
+        : [
+            {
+              name: originalExercise,
+              location: "HOME",
+              note: `Return to ${originalExercise}.`,
+            },
+            ...existingOptions,
+          ];
     });
   },
 );
 
-/* ---------------------------------
- * WORKOUT
- * --------------------------------- */
+// ---------------------------------
+
+/* WORKOUT */
+
+// ---------------------------------
 
 const exercises: WorkoutExercise[] = [
   {
@@ -286,9 +295,201 @@ const exercises: WorkoutExercise[] = [
   },
 ];
 
-/* ---------------------------------
- * WARM UP
- * --------------------------------- */
+// ---------------------------------
+
+/* SWAP EXERCISE DETAILS */
+
+// ---------------------------------
+
+const swapExerciseDetails: Record<
+  string,
+  Omit<
+    WorkoutExercise,
+    "number" | "prescription" | "rest" | "home"
+  >
+> = {
+  "Bodyweight Squat": {
+    name: "Bodyweight Squat",
+    cue: "Stand with your feet about shoulder-width apart, sit your hips down and back, then drive through your feet to stand tall.",
+    modification:
+      "Use a chair behind you as a target or reduce your squat depth.",
+  },
+
+  "Dumbbell RDL": {
+    name: "Dumbbell RDL",
+    cue: "Keep the dumbbells close to your legs, push your hips back with soft knees, then squeeze your glutes to stand tall.",
+    modification:
+      "Use lighter dumbbells or shorten your range of motion.",
+  },
+
+  "Good Morning": {
+    name: "Good Morning",
+    cue: "Place your hands across your chest, soften your knees, push your hips back, then squeeze your glutes to return to standing.",
+    modification:
+      "Reduce your range of motion or perform the movement without added resistance.",
+  },
+
+  "Single-Leg RDL": {
+    name: "Single-Leg RDL",
+    cue: "Balance on one leg, hinge your hips back while reaching the other leg behind you, then drive through your standing foot to return.",
+    modification:
+      "Keep the back toes lightly on the floor or hold a stable surface for balance.",
+  },
+
+  "Split Squat": {
+    name: "Split Squat",
+    cue: "Take a staggered stance, lower your back knee toward the floor with control, then drive through your front foot to stand.",
+    modification:
+      "Hold onto a stable surface or reduce your range of motion.",
+  },
+
+  "Step-Up": {
+    name: "Step-Up",
+    cue: "Place one foot on a stable low step, drive through that foot to stand, then lower back down with control.",
+    modification:
+      "Use a lower step or hold onto a stable surface for balance.",
+  },
+
+  "Bodyweight Reverse Lunge": {
+    name: "Bodyweight Reverse Lunge",
+    cue: "Step one foot back with control, lower straight down, then drive through your front foot to return to standing.",
+    modification:
+      "Hold onto a stable surface or reduce your range of motion.",
+  },
+
+  "Glute Bridge": {
+    name: "Glute Bridge",
+    cue: "Lie on your back with your knees bent, drive through your heels, and squeeze your glutes at the top without arching your lower back.",
+    modification:
+      "Reduce your range of motion or pause before reaching the top.",
+  },
+
+  "Frog Pump": {
+    name: "Frog Pump",
+    cue: "Bring the soles of your feet together, keep your knees open, then drive your hips upward and squeeze your glutes at the top.",
+    modification:
+      "Use a smaller range of motion or slow the movement down.",
+  },
+
+  "Dumbbell Hip Thrust": {
+    name: "Dumbbell Hip Thrust",
+    cue: "Rest your upper back against a stable couch or bench, drive through your heels, and squeeze your glutes as you lift your hips.",
+    modification:
+      "Use bodyweight only or reduce the range of motion.",
+  },
+
+  "Standing Band Abduction": {
+    name: "Standing Band Abduction",
+    cue: "Stand tall with the band secured around your legs, move one leg out to the side without leaning, then return with control.",
+    modification:
+      "Use a lighter band or hold a stable surface for balance.",
+  },
+
+  "Side-Lying Leg Raise": {
+    name: "Side-Lying Leg Raise",
+    cue: "Lie on your side with your legs long, lift the top leg without rolling your hips back, then lower slowly.",
+    modification:
+      "Reduce the height of the leg raise or bend the bottom knee for support.",
+  },
+
+  "Bodyweight Lateral Walk": {
+    name: "Bodyweight Lateral Walk",
+    cue: "Stay slightly bent through your knees and hips, then take small controlled steps side to side while keeping your chest lifted.",
+    modification:
+      "Take smaller steps or reduce the depth of your squat position.",
+  },
+
+  "Goblet Squat": {
+    name: "Goblet Squat",
+    cue: "Hold one weight close to your chest, sit your hips down and back, then drive through your feet to stand tall.",
+    modification:
+      "Use a lighter weight or perform the squat with bodyweight.",
+  },
+
+  "Sumo Bodyweight Squat": {
+    name: "Sumo Bodyweight Squat",
+    cue: "Take a comfortable wide stance with your toes slightly turned out, lower your hips with control, then drive through your feet to stand.",
+    modification:
+      "Reduce your squat depth or use a chair as a target.",
+  },
+
+  "Chair Squat": {
+    name: "Chair Squat",
+    cue: "Stand in front of a sturdy chair, sit your hips back until you lightly touch the seat, then drive through your feet to stand.",
+    modification:
+      "Use a higher seat or reduce how far you lower toward the chair.",
+  },
+
+  "Donkey Kick": {
+    name: "Donkey Kick",
+    cue: "Start on all fours, brace your core, then drive one heel upward without twisting your hips or arching your lower back.",
+    modification:
+      "Use a smaller range of motion or slow each repetition down.",
+  },
+
+  "Quadruped Leg Extension": {
+    name: "Quadruped Leg Extension",
+    cue: "Start on all fours, extend one leg straight behind you while keeping your hips square, then return with control.",
+    modification:
+      "Keep the moving leg lower or perform fewer repetitions per side.",
+  },
+
+  "Standing Glute Kickback": {
+    name: "Standing Glute Kickback",
+    cue: "Hold a stable surface, brace your core, and extend one leg behind you without rotating your hips.",
+    modification:
+      "Reduce the range of motion or perform the movement without a band.",
+  },
+
+  "Bodyweight Hip Thrust": {
+    name: "Bodyweight Hip Thrust",
+    cue: "Rest your upper back against a stable surface, drive through your heels, and squeeze your glutes as you lift your hips.",
+    modification:
+      "Use a smaller range of motion or perform the movement from the floor as a glute bridge.",
+  },
+};
+
+const getSwapExercise = (
+  name: string,
+  current: WorkoutExercise,
+): WorkoutExercise => {
+  const originalExercise = exercises.find(
+    (item) => item.name === name,
+  );
+
+  if (originalExercise) {
+    return {
+      ...originalExercise,
+      number: current.number,
+      prescription: current.prescription,
+      rest: current.rest,
+    };
+  }
+
+  const swapDetails = swapExerciseDetails[name];
+
+  if (swapDetails) {
+    return {
+      ...current,
+      ...swapDetails,
+      number: current.number,
+      prescription: current.prescription,
+      rest: current.rest,
+      home: `${name} — ${current.prescription.toLowerCase()}`,
+    };
+  }
+
+  return {
+    ...current,
+    name,
+  };
+};
+
+// ---------------------------------
+
+/* WARM UP */
+
+// ---------------------------------
 
 const warmup = [
   "Bodyweight glute bridges — 12 reps",
@@ -297,9 +498,11 @@ const warmup = [
   "Alternating reverse lunges — 6 / side",
 ];
 
-/* ---------------------------------
- * COOL DOWN
- * --------------------------------- */
+// ---------------------------------
+
+/* COOL DOWN */
+
+// ---------------------------------
 
 const cooldown = [
   "Figure-four stretch — 30 sec / side",
@@ -308,9 +511,11 @@ const cooldown = [
   "Slow breathing — 60 sec",
 ];
 
-/* ---------------------------------
- * PAGE
- * --------------------------------- */
+// ---------------------------------
+
+/* PAGE */
+
+// ---------------------------------
 
 export default function HomeGluteLegsPage() {
   const [firstName, setFirstName] = useState("there");
@@ -406,7 +611,7 @@ export default function HomeGluteLegsPage() {
                 <p className="mt-3 max-w-xl text-sm leading-6 text-[#806E68]">
                   A home-focused lower-body session built
                   around glutes, quads, and hamstrings.
-                  No gym machines needed. Use dumbbells, 
+                  No gym machines needed. Use dumbbells,
                   a resistance band, water bottles, a sealed
                   detergent bottle, a bag filled with books,
                   or other sturdy household items to add
@@ -647,12 +852,10 @@ export default function HomeGluteLegsPage() {
                                           (item) =>
                                             item.number ===
                                             exercise.number
-                                              ? {
-                                                  ...item,
-                                                  name: swap.name,
-                                                  cue: swap.note,
-                                                  home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                                }
+                                              ? getSwapExercise(
+                                                  swap.name,
+                                                  item,
+                                                )
                                               : item,
                                         ),
                                     );
