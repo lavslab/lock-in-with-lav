@@ -1,15 +1,14 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { Camera, CameraResultType, CameraSource } from "@capacitor/camera";
+import { Capacitor } from "@capacitor/core";
+
 import { createClient } from "@/lib/supabase/client";
 import DashboardSidebar from "@/components/DashboardSidebar";
+
 import {
-  type DailyProgressRow,
-  calculateStreak,
   getChallengeEndDate,
-  getChallengePercentage,
-  getCompletedDayNumbers,
   getCurrentChallengeDay,
   parseChallengeDate,
 } from "@/lib/challenge";
@@ -23,7 +22,39 @@ const wins = [
   "My clothes fit differently",
 ];
 
-const PHOTO_OPERATION_TIMEOUT = 20000;
+const PHOTO_OPERATION_TIMEOUT = 30000;
+
+type MeasurementRow = {
+  weight: number | null;
+  waist: number | null;
+  hips: number | null;
+  chest: number | null;
+  thigh: number | null;
+  arm: number | null;
+  challenge_day: number | null;
+};
+
+type CheckinRow = {
+  week_number: number;
+  went_well: string;
+  felt_hard: string;
+  proud_of: string;
+  next_week_focus: string;
+};
+
+function withTimeout<T>(
+  promise: PromiseLike<T>,
+  message: string
+): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<T>((_, reject) => {
+      window.setTimeout(() => {
+        reject(new Error(message));
+      }, PHOTO_OPERATION_TIMEOUT);
+    }),
+  ]);
+}
 
 function formatShortDate(date: Date) {
   return date
@@ -34,47 +65,32 @@ function formatShortDate(date: Date) {
     .toUpperCase();
 }
 
-async function withPhotoTimeout<T>(
-  operation: Promise<T>,
-  message: string
-): Promise<T> {
-  const timeout = new Promise<T>((_, reject) => {
-    window.setTimeout(() => {
-      reject(new Error(message));
-    }, PHOTO_OPERATION_TIMEOUT);
-  });
-
-  return Promise.race([operation, timeout]);
-}
-
 export default function ProgressPage() {
-  const photoInputRef = useRef<HTMLInputElement>(null);
-
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+
   const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
     null
   );
-  const [dailyProgress, setDailyProgress] = useState<DailyProgressRow[]>([]);
+
   const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
   const [photoPaths, setPhotoPaths] = useState<Record<number, string>>({});
+
   const [editingPhotoDay, setEditingPhotoDay] = useState<number | null>(null);
+  const [photoTargetDay, setPhotoTargetDay] = useState<number>(1);
+
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
-  const [photoTargetDay, setPhotoTargetDay] = useState(1);
-  const [selectedDiaryDay, setSelectedDiaryDay] = useState<number | null>(null);
-  const [measurementRow, setMeasurementRow] = useState<{
-    weight: number | null;
-    waist: number | null;
-    hips: number | null;
-    chest: number | null;
-    thigh: number | null;
-    arm: number | null;
-    challenge_day: number | null;
-  } | null>(null);
+
+  const webPhotoInputRef = useRef<HTMLInputElement>(null);
+
+  const [measurementRow, setMeasurementRow] =
+    useState<MeasurementRow | null>(null);
+
   const [isMeasurementModalOpen, setIsMeasurementModalOpen] = useState(false);
   const [isSavingMeasurements, setIsSavingMeasurements] = useState(false);
   const [measurementError, setMeasurementError] = useState<string | null>(null);
+
   const [measurementForm, setMeasurementForm] = useState({
     weight: "",
     waist: "",
@@ -84,8 +100,33 @@ export default function ProgressPage() {
     arm: "",
   });
 
+  const [completedWins, setCompletedWins] = useState<Record<string, boolean>>(
+    {}
+  );
+
+  const [isCustomWinModalOpen, setIsCustomWinModalOpen] = useState(false);
+  const [customWin, setCustomWin] = useState("");
+  const [isSavingCustomWin, setIsSavingCustomWin] = useState(false);
+  const [customWinError, setCustomWinError] = useState<string | null>(null);
+
+  const [weeklyCheckins, setWeeklyCheckins] = useState<
+    Record<number, CheckinRow>
+  >({});
+
+  const [checkinWeek, setCheckinWeek] = useState<number | null>(null);
+
+  const [checkinForm, setCheckinForm] = useState({
+    went_well: "",
+    felt_hard: "",
+    proud_of: "",
+    next_week_focus: "",
+  });
+
+  const [isSavingCheckin, setIsSavingCheckin] = useState(false);
+  const [checkinError, setCheckinError] = useState<string | null>(null);
+
   useEffect(() => {
-    const getUserAndProfile = async () => {
+    const loadProgress = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -93,53 +134,6 @@ export default function ProgressPage() {
       if (!user) {
         setIsLoadingUser(false);
         return;
-      }
-
-      // Reload saved progress photos whenever this page opens.
-      const { data: storedPhotos, error: listError } = await supabase.storage
-        .from("progress-photos")
-        .list(user.id, {
-          limit: 100,
-          sortBy: { column: "created_at", order: "desc" },
-        });
-
-      if (listError) {
-        console.error("Could not load progress photos:", listError);
-      } else if (storedPhotos) {
-        const latestPhotoByDay = new Map<number, string>();
-
-        for (const photo of storedPhotos) {
-          const match = photo.name.match(/^day-(\d{2})-/);
-          if (!match) continue;
-
-          const photoDay = Number(match[1]);
-
-          if (!latestPhotoByDay.has(photoDay)) {
-            latestPhotoByDay.set(photoDay, `${user.id}/${photo.name}`);
-          }
-        }
-
-        const loadedUrls: Record<number, string> = {};
-        const loadedPaths: Record<number, string> = {};
-
-        await Promise.all(
-          Array.from(latestPhotoByDay.entries()).map(
-            async ([photoDay, path]) => {
-              const { data: signedData, error: signedError } =
-                await supabase.storage
-                  .from("progress-photos")
-                  .createSignedUrl(path, 60 * 60);
-
-              if (!signedError && signedData?.signedUrl) {
-                loadedUrls[photoDay] = signedData.signedUrl;
-                loadedPaths[photoDay] = path;
-              }
-            }
-          )
-        );
-
-        setPhotoUrls(loadedUrls);
-        setPhotoPaths(loadedPaths);
       }
 
       const savedName = user.user_metadata?.name;
@@ -150,47 +144,114 @@ export default function ProgressPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
-      const { data: profile, error } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("challenge_start_date")
         .eq("id", user.id)
         .single();
 
-      if (error) {
-        console.error("Could not load profile:", error);
+      if (profileError) {
+        console.error("Could not load profile:", profileError);
       } else if (profile) {
         setChallengeStartDate(profile.challenge_start_date);
       }
 
-      const { data: progressRows, error: progressError } = await supabase
-        .from("daily_progress")
-        .select(
-          "challenge_day, move, get_outside, hydrate, read, nourish, document"
-        )
+      const { data: storedPhotos, error: photosError } = await supabase
+        .from("progress_photos")
+        .select("challenge_day, storage_path, updated_at")
         .eq("user_id", user.id)
-        .order("challenge_day", { ascending: true });
+        .order("updated_at", { ascending: false });
 
-      if (progressError) {
-        console.error("Could not load daily progress:", progressError);
+      if (photosError) {
+        console.error("Could not load progress photos:", photosError);
       } else {
-        setDailyProgress((progressRows ?? []) as DailyProgressRow[]);
+        const latestPhotoByDay = new Map<number, string>();
+
+        for (const photo of storedPhotos ?? []) {
+          if (!latestPhotoByDay.has(photo.challenge_day)) {
+            latestPhotoByDay.set(
+              photo.challenge_day,
+              photo.storage_path
+            );
+          }
+        }
+
+        const urls: Record<number, string> = {};
+        const paths: Record<number, string> = {};
+
+        await Promise.all(
+          Array.from(latestPhotoByDay.entries()).map(
+            async ([day, path]) => {
+              const { data, error } = await supabase.storage
+                .from("progress-photos")
+                .createSignedUrl(path, 60 * 60);
+
+              if (!error && data?.signedUrl) {
+                urls[day] = data.signedUrl;
+                paths[day] = path;
+              }
+            }
+          )
+        );
+
+        setPhotoUrls(urls);
+        setPhotoPaths(paths);
       }
 
-      const {
-        data: latestMeasurement,
-        error: measurementLoadError,
-      } = await supabase
-        .from("measurements")
-        .select("weight, waist, hips, chest, thigh, arm, challenge_day")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data: savedWins, error: winsError } = await supabase
+        .from("little_wins")
+        .select("win_key, is_completed")
+        .eq("user_id", user.id);
 
-      if (measurementLoadError) {
+      if (winsError) {
+        console.error("Could not load little wins:", winsError);
+      } else {
+        const loaded: Record<string, boolean> = {};
+
+        for (const row of savedWins ?? []) {
+          loaded[row.win_key] = Boolean(row.is_completed);
+        }
+
+        setCompletedWins(loaded);
+      }
+
+      const { data: savedCheckins, error: checkinsError } = await supabase
+        .from("weekly_checkins")
+        .select(
+          "week_number, went_well, felt_hard, proud_of, next_week_focus"
+        )
+        .eq("user_id", user.id);
+
+      if (checkinsError) {
+        console.error(
+          "Could not load weekly check-ins:",
+          checkinsError
+        );
+      } else {
+        const loaded: Record<number, CheckinRow> = {};
+
+        for (const row of savedCheckins ?? []) {
+          loaded[row.week_number] = row;
+        }
+
+        setWeeklyCheckins(loaded);
+      }
+
+      const { data: latestMeasurement, error: measurementError } =
+        await supabase
+          .from("measurements")
+          .select(
+            "weight, waist, hips, chest, thigh, arm, challenge_day"
+          )
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+      if (measurementError) {
         console.error(
           "Could not load measurements:",
-          measurementLoadError
+          measurementError
         );
       } else if (latestMeasurement) {
         setMeasurementRow(latestMeasurement);
@@ -199,38 +260,78 @@ export default function ProgressPage() {
       setIsLoadingUser(false);
     };
 
-    getUserAndProfile();
+    loadProgress();
   }, []);
 
-  const openPhotoPicker = (day: number) => {
-    setPhotoTargetDay(day);
-    setPhotoError(null);
-    photoInputRef.current?.click();
-  };
+  let currentDay = 1;
+  let startDate: Date | null = null;
+  let endDate: Date | null = null;
 
-  const handlePhotoUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
+  if (challengeStartDate) {
+    startDate = parseChallengeDate(challengeStartDate);
+    endDate = getChallengeEndDate(challengeStartDate);
+    currentDay = getCurrentChallengeDay(
+      challengeStartDate,
+      new Date()
+    );
+  }
+
+  const safeCurrentDay = Math.max(1, currentDay);
+  const dayNumber = String(safeCurrentDay).padStart(2, "0");
+
+  const startLabel = startDate ? formatShortDate(startDate) : "—";
+  const endLabel = endDate ? formatShortDate(endDate) : "—";
+
+  const currentWeek = Math.max(1, Math.ceil(safeCurrentDay / 7));
+  const currentWeekComplete = Boolean(weeklyCheckins[currentWeek]);
+
+  const completedCheckins = Object.keys(weeklyCheckins).length;
+
+  const initial =
+    !isLoadingUser && firstName !== "there"
+      ? firstName.charAt(0).toUpperCase()
+      : "♡";
+
+  const customWins = Object.keys(completedWins)
+    .filter((key) => key.startsWith("custom:"))
+    .map((key) => ({
+      key,
+      label: key
+        .replace(/^custom:/, "")
+        .split("-")
+        .filter(Boolean)
+        .map(
+          (word) => word.charAt(0).toUpperCase() + word.slice(1)
+        )
+        .join(" "),
+    }));
+
+  /*
+   * ============================================================
+   * PHOTO UPLOAD
+   * ============================================================
+   *
+   * WEB:
+   * Uses a normal file input.
+   *
+   * NATIVE iOS:
+   * Uses Capacitor Camera.
+   */
+
+  const uploadPhotoFile = async (
+    file: File,
+    day: number
   ) => {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
     setIsUploadingPhoto(true);
     setPhotoError(null);
 
-    const targetDay = photoTargetDay;
-    const oldPath = photoPaths[targetDay];
+    let newFilePath: string | null = null;
 
     try {
       const {
         data: { user },
         error: userError,
-      } = await withPhotoTimeout(
-        supabase.auth.getUser(),
-        "Your session could not be verified. Please refresh the page and try again."
-      );
+      } = await supabase.auth.getUser();
 
       if (userError || !user) {
         throw new Error(
@@ -238,23 +339,31 @@ export default function ProgressPage() {
         );
       }
 
-      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const day = String(targetDay).padStart(2, "0");
-      const filePath = `${user.id}/day-${day}-${Date.now()}.${extension}`;
+      if (!file.type.startsWith("image/")) {
+        throw new Error("Please choose an image file.");
+      }
 
-      /*
-       * Upload the new photo FIRST.
-       *
-       * We don't remove the existing photo until the new upload
-       * has succeeded. That way a failed replacement doesn't
-       * accidentally delete the photo they already have.
-       */
-      const { error: uploadError } = await withPhotoTimeout(
-        supabase.storage.from("progress-photos").upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: false,
-        }),
-        "The photo upload timed out. Please check your connection and try again."
+      const extension =
+        file.name
+          .split(".")
+          .pop()
+          ?.toLowerCase()
+          .replace(/[^a-z0-9]/g, "") || "jpg";
+
+      const paddedDay = String(day).padStart(2, "0");
+
+      newFilePath =
+        `${user.id}/day-${paddedDay}-${Date.now()}.${extension}`;
+
+      const { error: uploadError } = await withTimeout(
+        supabase.storage
+          .from("progress-photos")
+          .upload(newFilePath, file, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: file.type,
+          }),
+        "The photo upload timed out. Please try again."
       );
 
       if (uploadError) {
@@ -262,66 +371,252 @@ export default function ProgressPage() {
       }
 
       const { data: signedData, error: signedError } =
-        await withPhotoTimeout(
+        await withTimeout(
           supabase.storage
             .from("progress-photos")
-            .createSignedUrl(filePath, 60 * 60),
-          "The photo uploaded, but its preview could not be created. Please try again."
+            .createSignedUrl(newFilePath, 60 * 60),
+          "The photo uploaded, but the preview could not be created."
         );
 
       if (signedError || !signedData?.signedUrl) {
         throw (
           signedError ??
           new Error(
-            "The photo uploaded, but its preview could not be created."
+            "The photo uploaded, but the preview could not be created."
           )
         );
       }
 
+      const { error: recordError } = await withTimeout(
+        supabase
+          .from("progress_photos")
+          .upsert(
+            {
+              user_id: user.id,
+              challenge_day: day,
+              storage_path: newFilePath,
+              photo_type: "progress",
+              caption: null,
+              updated_at: new Date().toISOString(),
+            },
+            {
+              onConflict:
+                "user_id,challenge_day,photo_type",
+            }
+          ),
+        "The photo uploaded, but it could not be saved to your progress."
+      );
+
+      if (recordError) {
+        throw recordError;
+      }
+
+      const oldPath = photoPaths[day];
+
       setPhotoUrls((previous) => ({
         ...previous,
-        [targetDay]: signedData.signedUrl,
+        [day]: signedData.signedUrl,
       }));
 
       setPhotoPaths((previous) => ({
         ...previous,
-        [targetDay]: filePath,
+        [day]: newFilePath!,
       }));
 
       setEditingPhotoDay(null);
 
-      /*
-       * Now that the new photo is safely uploaded,
-       * remove the previous version if there was one.
-       */
-      if (oldPath && oldPath !== filePath) {
-        const { error: removeOldError } = await supabase.storage
-          .from("progress-photos")
-          .remove([oldPath]);
+      if (oldPath && oldPath !== newFilePath) {
+        const { error: removeError } =
+          await supabase.storage
+            .from("progress-photos")
+            .remove([oldPath]);
 
-        if (removeOldError) {
+        if (removeError) {
           console.warn(
-            "New photo saved, but the previous photo could not be removed:",
-            removeOldError
+            "New photo saved, but old photo could not be removed:",
+            removeError
           );
         }
       }
     } catch (error) {
-      console.error("Could not upload progress photo:", error);
+      console.error("Progress photo upload error:", error);
 
       setPhotoError(
         error instanceof Error
           ? error.message
-          : "Could not upload photo. Please try again."
+          : "Could not upload your photo. Please try again."
       );
+
+      if (newFilePath) {
+        await supabase.storage
+          .from("progress-photos")
+          .remove([newFilePath])
+          .catch(() => {});
+      }
     } finally {
       setIsUploadingPhoto(false);
-      event.target.value = "";
     }
   };
 
+  const openPhotoPicker = async (day: number) => {
+    if (isUploadingPhoto) return;
+
+    setPhotoTargetDay(day);
+    setPhotoError(null);
+
+    /*
+     * WEB
+     *
+     * Do NOT use Capacitor Camera here.
+     * Let the browser handle the file picker.
+     */
+    if (!Capacitor.isNativePlatform()) {
+      webPhotoInputRef.current?.click();
+      return;
+    }
+
+    /*
+     * NATIVE iOS
+     */
+    setIsUploadingPhoto(true);
+
+    try {
+      const photo = await Camera.getPhoto({
+        resultType: CameraResultType.Base64,
+        source: CameraSource.Prompt,
+        quality: 90,
+        width: 1600,
+        height: 2000,
+        allowEditing: false,
+        correctOrientation: true,
+      });
+
+      if (!photo.base64String) {
+        throw new Error(
+          "No photo was selected. Please try again."
+        );
+      }
+
+      const byteCharacters = atob(photo.base64String);
+      const byteNumbers = new Array(byteCharacters.length);
+
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+
+      const byteArray = new Uint8Array(byteNumbers);
+
+      const isPng = photo.format === "png";
+      const mimeType = isPng ? "image/png" : "image/jpeg";
+      const extension = isPng ? "png" : "jpg";
+
+      const file = new File(
+        [byteArray],
+        `progress-day-${day}.${extension}`,
+        {
+          type: mimeType,
+        }
+      );
+
+      setIsUploadingPhoto(false);
+
+      await uploadPhotoFile(file, day);
+    } catch (error) {
+      setIsUploadingPhoto(false);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not select the photo.";
+
+      const lower = message.toLowerCase();
+
+      if (
+        !lower.includes("cancel") &&
+        !lower.includes("cancelled") &&
+        !lower.includes("canceled")
+      ) {
+        console.error("Camera error:", error);
+        setPhotoError(message);
+      }
+    }
+  };
+
+  const handleWebPhotoChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+
+    /*
+     * Reset the input so selecting the same photo again
+     * still triggers onChange.
+     */
+    event.target.value = "";
+
+    if (!file) return;
+
+    await uploadPhotoFile(file, photoTargetDay);
+  };
+
+  const removeProgressPhoto = async (day: number) => {
+    const path = photoPaths[day];
+
+    if (!path) return;
+
+    setPhotoError(null);
+
+    const { data: userData } = await supabase.auth.getUser();
+
+    if (!userData.user) {
+      setPhotoError("You need to be signed in.");
+      return;
+    }
+
+    const { error: storageError } = await supabase.storage
+      .from("progress-photos")
+      .remove([path]);
+
+    if (storageError) {
+      setPhotoError(storageError.message);
+      return;
+    }
+
+    const { error: recordError } = await supabase
+      .from("progress_photos")
+      .delete()
+      .eq("user_id", userData.user.id)
+      .eq("challenge_day", day)
+      .eq("photo_type", "progress");
+
+    if (recordError) {
+      setPhotoError(recordError.message);
+      return;
+    }
+
+    setPhotoUrls((previous) => {
+      const next = { ...previous };
+      delete next[day];
+      return next;
+    });
+
+    setPhotoPaths((previous) => {
+      const next = { ...previous };
+      delete next[day];
+      return next;
+    });
+
+    setEditingPhotoDay(null);
+  };
+
+  /*
+   * ============================================================
+   * MEASUREMENTS
+   * ============================================================
+   */
+
   const openMeasurementModal = () => {
     setMeasurementError(null);
+
     setMeasurementForm({
       weight: measurementRow?.weight?.toString() ?? "",
       waist: measurementRow?.waist?.toString() ?? "",
@@ -330,6 +625,7 @@ export default function ProgressPage() {
       thigh: measurementRow?.thigh?.toString() ?? "",
       arm: measurementRow?.arm?.toString() ?? "",
     });
+
     setIsMeasurementModalOpen(true);
   };
 
@@ -340,10 +636,9 @@ export default function ProgressPage() {
     try {
       const {
         data: { user },
-        error: userError,
       } = await supabase.auth.getUser();
 
-      if (userError || !user) {
+      if (!user) {
         throw new Error(
           "You need to be signed in to save measurements."
         );
@@ -354,7 +649,7 @@ export default function ProgressPage() {
 
       const payload = {
         user_id: user.id,
-        challenge_day: currentDay,
+        challenge_day: safeCurrentDay,
         weight: toNumber(measurementForm.weight),
         waist: toNumber(measurementForm.waist),
         hips: toNumber(measurementForm.hips),
@@ -379,7 +674,9 @@ export default function ProgressPage() {
             (!Number.isFinite(value) || value < 0)
         )
       ) {
-        throw new Error("Please enter valid positive numbers.");
+        throw new Error(
+          "Please enter valid positive numbers."
+        );
       }
 
       const { data, error } = await supabase
@@ -390,107 +687,248 @@ export default function ProgressPage() {
         )
         .single();
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
       setMeasurementRow(data);
       setIsMeasurementModalOpen(false);
     } catch (error) {
-      console.error("Could not save measurements:", error);
+      console.error(error);
 
       setMeasurementError(
         error instanceof Error
           ? error.message
-          : "Could not save measurements. Please try again."
+          : "Could not save measurements."
       );
     } finally {
       setIsSavingMeasurements(false);
     }
   };
 
-  const removeProgressPhoto = async (day: number) => {
-    const path = photoPaths[day];
+  /*
+   * ============================================================
+   * LITTLE WINS
+   * ============================================================
+   */
 
-    if (!path) {
-      return;
-    }
+  const toggleWin = async (win: string) => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    setPhotoError(null);
+    if (!user) return;
 
-    const { error } = await supabase.storage
-      .from("progress-photos")
-      .remove([path]);
+    const nextValue = !completedWins[win];
+
+    setCompletedWins((previous) => ({
+      ...previous,
+      [win]: nextValue,
+    }));
+
+    const { error } = await supabase
+      .from("little_wins")
+      .upsert(
+        {
+          user_id: user.id,
+          win_key: win,
+          label: win,
+          is_completed: nextValue,
+          challenge_day: safeCurrentDay,
+          completed_at: nextValue
+            ? new Date().toISOString()
+            : null,
+        },
+        {
+          onConflict:
+            "user_id,win_key,challenge_day",
+        }
+      );
 
     if (error) {
-      setPhotoError(error.message);
+      console.error("Could not save little win:", error);
+
+      setCompletedWins((previous) => ({
+        ...previous,
+        [win]: !nextValue,
+      }));
+    }
+  };
+
+  const saveCustomWin = async () => {
+    const label = customWin.trim();
+
+    if (!label) {
+      setCustomWinError("Write your win first. ♡");
       return;
     }
 
-    setPhotoUrls((previous) => {
-      const next = { ...previous };
-      delete next[day];
-      return next;
-    });
+    setIsSavingCustomWin(true);
+    setCustomWinError(null);
 
-    setPhotoPaths((previous) => {
-      const next = { ...previous };
-      delete next[day];
-      return next;
-    });
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    setEditingPhotoDay(null);
+      if (!user) {
+        throw new Error(
+          "You need to be signed in to add a win."
+        );
+      }
+
+      const winKey = `custom:${label
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")}`;
+
+      const { error } = await supabase
+        .from("little_wins")
+        .upsert(
+          {
+            user_id: user.id,
+            win_key: winKey,
+            label,
+            is_completed: true,
+            challenge_day: safeCurrentDay,
+            completed_at: new Date().toISOString(),
+          },
+          {
+            onConflict:
+              "user_id,win_key,challenge_day",
+          }
+        );
+
+      if (error) throw error;
+
+      setCompletedWins((previous) => ({
+        ...previous,
+        [winKey]: true,
+      }));
+
+      setCustomWin("");
+      setIsCustomWinModalOpen(false);
+    } catch (error) {
+      console.error(error);
+
+      setCustomWinError(
+        error instanceof Error
+          ? error.message
+          : "Could not save your win."
+      );
+    } finally {
+      setIsSavingCustomWin(false);
+    }
   };
 
-  const today = new Date();
+  /*
+   * ============================================================
+   * WEEKLY CHECK-IN
+   * ============================================================
+   */
 
-  let currentDay = 1;
-  let startDate: Date | null = null;
-  let endDate: Date | null = null;
+  const openWeeklyCheckin = (week: number) => {
+    const saved = weeklyCheckins[week];
 
-  if (challengeStartDate) {
-    startDate = parseChallengeDate(challengeStartDate);
-    endDate = getChallengeEndDate(challengeStartDate);
-    currentDay = getCurrentChallengeDay(challengeStartDate, today);
+    setCheckinError(null);
+
+    setCheckinForm(
+      saved
+        ? {
+            went_well: saved.went_well,
+            felt_hard: saved.felt_hard,
+            proud_of: saved.proud_of,
+            next_week_focus: saved.next_week_focus,
+          }
+        : {
+            went_well: "",
+            felt_hard: "",
+            proud_of: "",
+            next_week_focus: "",
+          }
+    );
+
+    setCheckinWeek(week);
+  };
+
+  const saveWeeklyCheckin = async () => {
+    if (checkinWeek === null) return;
+
+    setIsSavingCheckin(true);
+    setCheckinError(null);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error(
+          "You need to be signed in to save a check-in."
+        );
+      }
+
+      const payload = {
+        user_id: user.id,
+        week_number: checkinWeek,
+        ...checkinForm,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabase
+        .from("weekly_checkins")
+        .upsert(payload, {
+          onConflict: "user_id,week_number",
+        })
+        .select(
+          "week_number, went_well, felt_hard, proud_of, next_week_focus"
+        )
+        .single();
+
+      if (error) throw error;
+
+      setWeeklyCheckins((previous) => ({
+        ...previous,
+        [checkinWeek]: data,
+      }));
+
+      setCheckinWeek(null);
+    } catch (error) {
+      console.error(error);
+
+      setCheckinError(
+        error instanceof Error
+          ? error.message
+          : "Could not save check-in."
+      );
+    } finally {
+      setIsSavingCheckin(false);
+    }
+  };
+
+  if (isLoadingUser) {
+    return (
+      <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
+        <div className="flex min-h-screen">
+          <DashboardSidebar
+            firstName={firstName}
+            initial={initial}
+            isLoadingUser={isLoadingUser}
+          />
+
+          <section className="flex flex-1 items-center justify-center">
+            <div className="text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#DDB5AE] bg-[#FBF8F6] font-serif text-2xl text-[#A77B73]">
+                ♡
+              </div>
+
+              <p className="mt-5 font-serif text-2xl italic text-[#A77B73]">
+                loading your progress... ♡
+              </p>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
   }
-
-  const dayNumber = String(currentDay).padStart(2, "0");
-  const completedDayNumbers = getCompletedDayNumbers(dailyProgress);
-  const completedDays = completedDayNumbers.length;
-  const currentStreak = calculateStreak(
-    completedDayNumbers,
-    currentDay
-  );
-  const challengePercentage = getChallengePercentage(completedDays);
-
-  const startLabel = startDate
-    ? formatShortDate(startDate)
-    : "—";
-
-  const endLabel = endDate
-    ? formatShortDate(endDate)
-    : "—";
-
-  const diaryDays = Object.keys(photoUrls)
-    .map(Number)
-    .filter((day) => Number.isFinite(day))
-    .sort((a, b) => a - b);
-
-  const initial =
-    !isLoadingUser && firstName !== "there"
-      ? firstName.charAt(0).toUpperCase()
-      : "♡";
-
-  const progressMessage =
-    currentDay === 1
-      ? "we're just getting started. ♡"
-      : currentDay < 26
-        ? "keep showing up. ♡"
-        : currentDay < 51
-          ? "look how far you've come. ♡"
-          : currentDay < 75
-            ? "you're in it now. keep going. ♡"
-            : "75 days. you did that. ♡";
 
   const measurementDisplay = [
     [
@@ -531,147 +969,56 @@ export default function ProgressPage() {
     ],
   ];
 
-  const stats = [
-    {
-      value: dayNumber,
-      label: "CURRENT DAY",
-    },
-    {
-      value: String(completedDays),
-      label: "DAYS COMPLETE",
-    },
-    {
-      value: String(currentStreak),
-      label: "CURRENT STREAK",
-    },
-    {
-      value: "0",
-      label: "CHECK-INS",
-    },
-  ];
-
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
-        {/* SIDEBAR */}
         <DashboardSidebar
           firstName={firstName}
           initial={initial}
           isLoadingUser={isLoadingUser}
         />
 
-        {/* MAIN */}
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
-          {/* TOP */}
-          <header className="flex items-center justify-between">
-            <div>
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                LOCK IN WITH LAV
-              </p>
+          {/* Hidden browser picker.
+              This is ONLY used on web. */}
+          <input
+            ref={webPhotoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleWebPhotoChange}
+          />
 
-              <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                look how far you&apos;ve come. ♡
-              </p>
-            </div>
+          {/* INTRO */}
 
-            <Link
-              href="/dashboard"
-              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[7px] tracking-[0.25em] transition hover:bg-[#EAD8D3] md:hidden"
-            >
-              TODAY
-            </Link>
-          </header>
-
-          {/* HERO */}
-          <section className="mt-10 rounded-[2rem] bg-[#211C19] px-8 py-9 text-[#F7F1ED] md:px-10 md:py-10">
-            <div className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
-              <div>
-                <p className="text-[7px] tracking-[0.4em] text-[#DDB5AE]">
-                  YOUR PROGRESS
-                </p>
-
-                <h1 className="mt-4 font-serif text-4xl leading-none md:text-5xl lg:text-6xl">
-                  Day {dayNumber}
-                  <span className="italic text-[#DDB5AE]">
-                    {" "}/ 75
-                  </span>
-                </h1>
-
-                <p className="mt-3 font-serif text-xl italic text-[#DDB5AE]">
-                  {progressMessage}
-                </p>
-              </div>
-
-              <div className="w-full max-w-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-[7px] tracking-[0.2em] text-[#BFAEAA]">
-                    CHALLENGE PROGRESS
-                  </span>
-
-                  <span className="font-serif text-lg text-[#DDB5AE]">
-                    {challengePercentage}%
-                  </span>
-                </div>
-
-                <div className="mt-3 h-[5px] overflow-hidden rounded-full bg-[#493D39]">
-                  <div
-                    className="h-full rounded-full bg-[#DDB5AE] transition-all duration-500"
-                    style={{
-                      width: `${challengePercentage}%`,
-                    }}
-                  />
-                </div>
-
-                <div className="mt-2 flex justify-between text-[6px] tracking-[0.18em] text-[#8F7C76]">
-                  <span>{startLabel}</span>
-                  <span>{endLabel}</span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* STATS */}
-          <section className="grid grid-cols-2 gap-3 py-8 lg:grid-cols-4">
-            {stats.map((stat) => (
-              <div
-                key={stat.label}
-                className="rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6"
-              >
-                <p className="font-serif text-3xl text-[#A77B73]">
-                  {stat.value}
-                </p>
-
-                <p className="mt-2 text-[6px] tracking-[0.22em] text-[#806E68]">
-                  {stat.label}
-                </p>
-              </div>
-            ))}
-          </section>
-
-          {/* PROGRESS PHOTOS */}
-          <section className="border-t border-[#DED0CB] py-12">
+          <section className="pb-10">
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
-                <p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">
+                <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
+                  look how far you&apos;ve come. ♡
+                </p>
+
+                <p className="mt-10 text-[12px] tracking-[0.4em] text-[#9D6F67]">
                   PROGRESS PHOTOS
                 </p>
 
-                <h2 className="mt-3 font-serif text-4xl md:text-5xl">
-                  See the
+                <h1 className="mt-3 font-serif text-4xl md:text-5xl">
+                  See the{" "}
                   <span className="italic text-[#A77B73]">
-                    {" "}difference.
+                    difference.
                   </span>
-                </h2>
+                </h1>
               </div>
 
-              <div className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#9D6F67]">
+              <div className="flex items-center gap-2 pb-1 text-[12px] tracking-[0.18em] text-[#9D6F67]">
                 <span>♡</span>
                 <span>PRIVATE TO YOU</span>
               </div>
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {/* DAY 1 */}
+              {/* DAY 01 */}
+
               <div className="group overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
                 <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#EEE3DF]">
                   {photoUrls[1] ? (
@@ -686,10 +1033,12 @@ export default function ProgressPage() {
                         type="button"
                         onClick={() =>
                           setEditingPhotoDay(
-                            editingPhotoDay === 1 ? null : 1
+                            editingPhotoDay === 1
+                              ? null
+                              : 1
                           )
                         }
-                        className="absolute right-4 top-4 z-10 rounded-full bg-[#211C19]/90 px-4 py-2 text-[6px] tracking-[0.2em] text-[#F7F1ED]"
+                        className="absolute right-4 top-4 z-10 rounded-full bg-[#211C19]/90 px-4 py-2 text-[10px] tracking-[0.2em] text-[#F7F1ED]"
                       >
                         EDIT PHOTO
                       </button>
@@ -698,16 +1047,20 @@ export default function ProgressPage() {
                         <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
                           <button
                             type="button"
-                            onClick={() => openPhotoPicker(1)}
-                            className="block w-full px-4 py-3 text-left text-[7px] tracking-[0.15em] hover:bg-[#EADCD7]"
+                            onClick={() =>
+                              openPhotoPicker(1)
+                            }
+                            className="block w-full px-4 py-3 text-left text-[12px] tracking-[0.15em] hover:bg-[#EADCD7]"
                           >
                             REPLACE PHOTO
                           </button>
 
                           <button
                             type="button"
-                            onClick={() => removeProgressPhoto(1)}
-                            className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[7px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]"
+                            onClick={() =>
+                              removeProgressPhoto(1)
+                            }
+                            className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[12px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]"
                           >
                             REMOVE PHOTO
                           </button>
@@ -717,7 +1070,9 @@ export default function ProgressPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => openPhotoPicker(1)}
+                      onClick={() =>
+                        openPhotoPicker(1)
+                      }
                       disabled={isUploadingPhoto}
                       className="flex flex-col items-center disabled:opacity-50"
                     >
@@ -725,32 +1080,25 @@ export default function ProgressPage() {
                         +
                       </span>
 
-                      <span className="mt-3 text-[7px] tracking-[0.2em] text-[#8F655E]">
-                        {isUploadingPhoto && photoTargetDay === 1
+                      <span className="mt-3 text-[12px] tracking-[0.2em] text-[#8F655E]">
+                        {isUploadingPhoto &&
+                        photoTargetDay === 1
                           ? "UPLOADING..."
                           : "ADD PHOTO"}
                       </span>
                     </button>
                   )}
-
-                  <input
-                    ref={photoInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
                 </div>
 
                 {photoError && photoTargetDay === 1 && (
-                  <p className="px-5 pt-3 text-[9px] text-[#9D6F67]">
+                  <p className="px-5 pt-3 text-[12px] text-[#9D6F67]">
                     {photoError}
                   </p>
                 )}
 
                 <div className="flex items-center justify-between p-5">
                   <div>
-                    <p className="text-[7px] tracking-[0.25em]">
+                    <p className="text-[12px] tracking-[0.25em]">
                       DAY 01
                     </p>
 
@@ -759,151 +1107,134 @@ export default function ProgressPage() {
                     </p>
                   </div>
 
-                  <span className="text-[7px] text-[#927D76]">
+                  <span className="text-[12px] text-[#927D76]">
                     {startLabel}
                   </span>
                 </div>
               </div>
 
-              {/* CURRENT / NEXT PHOTO */}
-              <div
-                className={`group overflow-hidden rounded-[1.75rem] border bg-[#FBF8F6] ${
-                  currentDay > 1
-                    ? "border-[#CBA9A2]"
-                    : "border-[#DED0CB]"
-                }`}
-              >
-                <div
-                  className={`relative flex aspect-[4/5] items-center justify-center ${
-                    currentDay > 1
-                      ? "bg-[#EAD8D3]"
-                      : "bg-[#F1EAE7]"
-                  }`}
-                >
-                  {currentDay > 1 ? (
-                    <>
-                      <span className="absolute left-4 top-4 rounded-full bg-[#211C19] px-4 py-2 text-[6px] tracking-[0.2em] text-[#F7F1ED]">
-                        CURRENT
-                      </span>
+              {/* CURRENT DAY */}
 
-                      {photoUrls[currentDay] ? (
-                        <>
-                          <img
-                            src={photoUrls[currentDay]}
-                            alt={`Day ${currentDay} progress`}
-                            className="h-full w-full object-cover"
-                          />
+              <div className="group overflow-hidden rounded-[1.75rem] border border-[#CBA9A2] bg-[#FBF8F6]">
+                <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#EAD8D3]">
+                  <span className="absolute left-4 top-4 z-10 rounded-full bg-[#211C19] px-4 py-2 text-[10px] tracking-[0.2em] text-[#F7F1ED]">
+                    CURRENT
+                  </span>
+
+                  {photoUrls[safeCurrentDay] ? (
+                    <>
+                      <img
+                        src={photoUrls[safeCurrentDay]}
+                        alt={`Day ${safeCurrentDay} progress`}
+                        className="h-full w-full object-cover"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingPhotoDay(
+                            editingPhotoDay ===
+                              safeCurrentDay
+                              ? null
+                              : safeCurrentDay
+                          )
+                        }
+                        className="absolute right-4 top-4 z-10 rounded-full bg-[#211C19]/90 px-4 py-2 text-[10px] tracking-[0.2em] text-[#F7F1ED]"
+                      >
+                        EDIT PHOTO
+                      </button>
+
+                      {editingPhotoDay ===
+                        safeCurrentDay && (
+                        <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              openPhotoPicker(
+                                safeCurrentDay
+                              )
+                            }
+                            className="block w-full px-4 py-3 text-left text-[12px] tracking-[0.15em] hover:bg-[#EADCD7]"
+                          >
+                            REPLACE PHOTO
+                          </button>
 
                           <button
                             type="button"
                             onClick={() =>
-                              setEditingPhotoDay(
-                                editingPhotoDay === currentDay
-                                  ? null
-                                  : currentDay
+                              removeProgressPhoto(
+                                safeCurrentDay
                               )
                             }
-                            className="absolute right-4 top-4 z-10 rounded-full bg-[#211C19]/90 px-4 py-2 text-[6px] tracking-[0.2em] text-[#F7F1ED]"
+                            className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[12px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]"
                           >
-                            EDIT PHOTO
+                            REMOVE PHOTO
                           </button>
-
-                          {editingPhotoDay === currentDay && (
-                            <div className="absolute right-4 top-14 z-20 w-36 overflow-hidden rounded-2xl border border-[#D7C4BE] bg-[#F7F1ED] shadow-lg">
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openPhotoPicker(currentDay)
-                                }
-                                className="block w-full px-4 py-3 text-left text-[7px] tracking-[0.15em] hover:bg-[#EADCD7]"
-                              >
-                                REPLACE PHOTO
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  removeProgressPhoto(currentDay)
-                                }
-                                className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[7px] tracking-[0.15em] text-[#9D6F67] hover:bg-[#EADCD7]"
-                              >
-                                REMOVE PHOTO
-                              </button>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => openPhotoPicker(currentDay)}
-                          disabled={isUploadingPhoto}
-                          className="flex flex-col items-center disabled:opacity-50"
-                        >
-                          <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#B48A82] font-serif text-2xl text-[#9D6F67] transition group-hover:bg-[#DFC7C1]">
-                            +
-                          </span>
-
-                          <span className="mt-3 text-[7px] tracking-[0.2em] text-[#8F655E]">
-                            {isUploadingPhoto &&
-                            photoTargetDay === currentDay
-                              ? "UPLOADING..."
-                              : "ADD PHOTO"}
-                          </span>
-                        </button>
+                        </div>
                       )}
                     </>
                   ) : (
-                    <div className="text-center">
-                      <span className="font-serif text-4xl text-[#D0B7B1]">
-                        ♡
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openPhotoPicker(
+                          safeCurrentDay
+                        )
+                      }
+                      disabled={isUploadingPhoto}
+                      className="flex flex-col items-center disabled:opacity-50"
+                    >
+                      <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#B48A82] font-serif text-2xl text-[#9D6F67] transition group-hover:bg-[#DFC7C1]">
+                        +
                       </span>
 
-                      <p className="mt-3 text-[7px] tracking-[0.2em] text-[#A7938D]">
-                        KEEP SHOWING UP
-                      </p>
-                    </div>
+                      <span className="mt-3 text-[12px] tracking-[0.2em] text-[#8F655E]">
+                        {isUploadingPhoto &&
+                        photoTargetDay ===
+                          safeCurrentDay
+                          ? "UPLOADING..."
+                          : "ADD PHOTO"}
+                      </span>
+                    </button>
                   )}
                 </div>
 
                 <div className="flex items-center justify-between p-5">
                   <div>
-                    <p className="text-[7px] tracking-[0.25em]">
-                      {currentDay === 1
-                        ? "YOUR NEXT PHOTO"
-                        : `DAY ${dayNumber}`}
+                    <p className="text-[12px] tracking-[0.25em]">
+                      DAY {dayNumber}
                     </p>
 
                     <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                      {currentDay === 1
-                        ? "keep going."
-                        : "right now."}
+                      right now.
                     </p>
                   </div>
 
-                  <span className="text-[7px] text-[#927D76]">
-                    {currentDay === 1 ? "LOCKED" : "TODAY"}
+                  <span className="text-[12px] text-[#927D76]">
+                    TODAY
                   </span>
                 </div>
               </div>
 
-              {/* DAY 75 */}
+              {/* FINISH */}
+
               <div className="overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
-                <div className="flex aspect-[4/5] items-center justify-center bg-[#F1EAE7]">
+                <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#F1EAE7]">
                   <div className="text-center">
                     <span className="font-serif text-4xl text-[#D0B7B1]">
                       ♡
                     </span>
 
-                    <p className="mt-3 text-[7px] tracking-[0.2em] text-[#A7938D]">
-                      SEE YOU ON DAY 75
+                    <p className="mt-3 text-[12px] tracking-[0.2em] text-[#A7938D]">
+                      KEEP GOING
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between p-5">
                   <div>
-                    <p className="text-[7px] tracking-[0.25em]">
-                      DAY 75
+                    <p className="text-[12px] tracking-[0.25em]">
+                      YOUR FINISH
                     </p>
 
                     <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
@@ -911,7 +1242,7 @@ export default function ProgressPage() {
                     </p>
                   </div>
 
-                  <span className="text-[7px] text-[#927D76]">
+                  <span className="text-[12px] text-[#927D76]">
                     {endLabel}
                   </span>
                 </div>
@@ -919,250 +1250,13 @@ export default function ProgressPage() {
             </div>
           </section>
 
-          {/* PROGRESS DIARY */}
-          <section className="border-t border-[#DED0CB] py-12">
-            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-              <div>
-                <p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">
-                  YOUR PROGRESS DIARY
-                </p>
+          {/* MEASUREMENTS + LITTLE WINS */}
 
-                <h2 className="mt-3 font-serif text-4xl md:text-5xl">
-                  Every day you
-                  <span className="italic text-[#A77B73]">
-                    {" "}showed up. ♡
-                  </span>
-                </h2>
-              </div>
-
-              <p className="text-[7px] tracking-[0.18em] text-[#927D76]">
-                {diaryDays.length}{" "}
-                {diaryDays.length === 1 ? "PHOTO" : "PHOTOS"} SAVED
-              </p>
-            </div>
-
-            {diaryDays.length > 0 ? (
-              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-                {diaryDays.map((day) => (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => setSelectedDiaryDay(day)}
-                    className="group overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] text-left transition hover:-translate-y-0.5 hover:border-[#CBA9A2]"
-                  >
-                    <div className="relative aspect-[4/5] overflow-hidden bg-[#EEE3DF]">
-                      <img
-                        src={photoUrls[day]}
-                        alt={`Day ${day} progress`}
-                        className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                      />
-
-                      {day === currentDay && (
-                        <span className="absolute left-3 top-3 rounded-full bg-[#211C19] px-3 py-1.5 text-[5px] tracking-[0.18em] text-[#F7F1ED]">
-                          CURRENT
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between px-4 py-4">
-                      <div>
-                        <p className="text-[6px] tracking-[0.22em] text-[#806E68]">
-                          DAY {String(day).padStart(2, "0")}
-                        </p>
-
-                        <p className="mt-1 font-serif text-base italic text-[#A77B73]">
-                          {day === 1
-                            ? "the beginning."
-                            : day === 75
-                              ? "the finish."
-                              : "kept showing up."}
-                        </p>
-                      </div>
-
-                      <span className="text-[#A77B73]">♡</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-8 rounded-[1.75rem] border border-dashed border-[#D8C7C1] bg-[#FBF8F6] px-6 py-12 text-center">
-                <p className="font-serif text-2xl italic text-[#A77B73]">
-                  your story starts with the first photo. ♡
-                </p>
-              </div>
-            )}
-          </section>
-
-          {/* DIARY PHOTO VIEWER */}
-          {selectedDiaryDay !== null &&
-            photoUrls[selectedDiaryDay] && (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/75 p-5 backdrop-blur-sm"
-                onClick={() => setSelectedDiaryDay(null)}
-              >
-                <div
-                  className="w-full max-w-lg overflow-hidden rounded-[2rem] bg-[#F7F1ED] shadow-2xl"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <div className="relative max-h-[70vh] overflow-hidden bg-[#EEE3DF]">
-                    <img
-                      src={photoUrls[selectedDiaryDay]}
-                      alt={`Day ${selectedDiaryDay} progress`}
-                      className="max-h-[70vh] w-full object-contain"
-                    />
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedDiaryDay(null)}
-                      className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19]/90 text-sm text-[#F7F1ED]"
-                      aria-label="Close photo"
-                    >
-                      ×
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-4 p-6">
-                    <div>
-                      <p className="text-[7px] tracking-[0.25em] text-[#806E68]">
-                        PROGRESS PHOTO
-                      </p>
-
-                      <p className="mt-1 font-serif text-2xl italic text-[#A77B73]">
-                        Day{" "}
-                        {String(selectedDiaryDay).padStart(2, "0")} ♡
-                      </p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedDiaryDay(null);
-                          openPhotoPicker(selectedDiaryDay);
-                        }}
-                        className="rounded-full border border-[#CBA9A2] px-4 py-2.5 text-[6px] tracking-[0.18em] text-[#8F655E]"
-                      >
-                        REPLACE
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await removeProgressPhoto(
-                            selectedDiaryDay
-                          );
-                          setSelectedDiaryDay(null);
-                        }}
-                        className="rounded-full bg-[#211C19] px-4 py-2.5 text-[6px] tracking-[0.18em] text-[#F7F1ED]"
-                      >
-                        REMOVE
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-          {isMeasurementModalOpen && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
-              onClick={() => setIsMeasurementModalOpen(false)}
-            >
-              <div
-                className="w-full max-w-xl rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[7px] tracking-[0.35em] text-[#9D6F67]">
-                      MEASUREMENTS
-                    </p>
-
-                    <h2 className="mt-2 font-serif text-3xl">
-                      Update your numbers. ♡
-                    </h2>
-
-                    <p className="mt-2 text-[8px] tracking-[0.15em] text-[#927D76]">
-                      DAY {String(currentDay).padStart(2, "0")}
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsMeasurementModalOpen(false)}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="mt-7 grid grid-cols-2 gap-3">
-                  {[
-                    ["weight", "WEIGHT", "lb"],
-                    ["waist", "WAIST", "in"],
-                    ["hips", "HIPS", "in"],
-                    ["chest", "CHEST", "in"],
-                    ["thigh", "THIGH", "in"],
-                    ["arm", "ARM", "in"],
-                  ].map(([field, label, unit]) => (
-                    <label
-                      key={field}
-                      className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
-                    >
-                      <span className="text-[6px] tracking-[0.2em] text-[#806E68]">
-                        {label} ({unit})
-                      </span>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        inputMode="decimal"
-                        value={
-                          measurementForm[
-                            field as keyof typeof measurementForm
-                          ]
-                        }
-                        onChange={(event) =>
-                          setMeasurementForm((previous) => ({
-                            ...previous,
-                            [field]: event.target.value,
-                          }))
-                        }
-                        className="mt-2 w-full bg-transparent font-serif text-2xl text-[#A77B73] outline-none"
-                        placeholder="—"
-                      />
-                    </label>
-                  ))}
-                </div>
-
-                {measurementError && (
-                  <p className="mt-4 text-[9px] text-[#9D6F67]">
-                    {measurementError}
-                  </p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={saveMeasurements}
-                  disabled={isSavingMeasurements}
-                  className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[7px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
-                >
-                  {isSavingMeasurements
-                    ? "SAVING..."
-                    : "SAVE MEASUREMENTS"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* MEASUREMENTS + WINS */}
-          <section className="grid gap-5 border-t border-[#DED0CB] py-12 lg:grid-cols-2">
-            {/* MEASUREMENTS */}
+          <section className="grid gap-5 border-t border-[#DED0CB] py-10 lg:grid-cols-2">
             <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-8">
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[7px] tracking-[0.35em] text-[#9D6F67]">
+                  <p className="text-[12px] tracking-[0.35em] text-[#9D6F67]">
                     MEASUREMENTS
                   </p>
 
@@ -1174,37 +1268,40 @@ export default function ProgressPage() {
                 <button
                   type="button"
                   onClick={openMeasurementModal}
-                  className="rounded-full border border-[#CBA9A2] px-4 py-2 text-[6px] tracking-[0.2em] text-[#8F655E]"
+                  className="rounded-full border border-[#CBA9A2] px-4 py-2 text-[10px] tracking-[0.2em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
                 >
                   + UPDATE
                 </button>
               </div>
 
               <div className="mt-7">
-                {measurementDisplay.map(([label, value]) => (
-                  <div
-                    key={label}
-                    className="flex items-center justify-between border-t border-[#E1D3CE] py-4"
-                  >
-                    <span className="text-[7px] tracking-[0.2em] text-[#806E68]">
-                      {label}
-                    </span>
+                {measurementDisplay.map(
+                  ([label, value]) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between border-t border-[#E1D3CE] py-4"
+                    >
+                      <span className="text-[12px] tracking-[0.2em] text-[#806E68]">
+                        {label}
+                      </span>
 
-                    <span className="font-serif text-xl text-[#A77B73]">
-                      {value}
-                    </span>
-                  </div>
-                ))}
+                      <span className="font-serif text-xl text-[#A77B73]">
+                        {value}
+                      </span>
+                    </div>
+                  )
+                )}
               </div>
 
-              <p className="mt-2 text-[9px] italic text-[#9A8780]">
+              <p className="mt-2 text-[12px] italic text-[#9A8780]">
                 Optional — track what matters to you. ♡
               </p>
             </div>
 
-            {/* WINS */}
+            {/* LITTLE WINS */}
+
             <div className="rounded-[2rem] bg-[#EAD8D3] p-7 md:p-8">
-              <p className="text-[7px] tracking-[0.35em] text-[#8F655E]">
+              <p className="text-[12px] tracking-[0.35em] text-[#8F655E]">
                 LITTLE WINS
               </p>
 
@@ -1212,154 +1309,468 @@ export default function ProgressPage() {
                 What&apos;s changing?
               </h2>
 
-              <div className="mt-7 space-y-3">
-                {wins.map((win) => (
-                  <button
-                    key={win}
-                    className="flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] bg-[#F1E2DE]/50 px-5 py-4 text-left transition hover:bg-[#F1E2DE]"
-                  >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] text-[#9D6F67]">
-                      ♡
-                    </span>
+              <p className="mt-2 font-serif text-base italic text-[#A77B73]">
+                the little things count too. ♡
+              </p>
 
-                    <span className="font-serif text-lg italic">
-                      {win}
-                    </span>
-                  </button>
-                ))}
+              <div className="mt-7 space-y-3">
+                {wins.map((win) => {
+                  const checked = Boolean(
+                    completedWins[win]
+                  );
+
+                  return (
+                    <button
+                      key={win}
+                      type="button"
+                      onClick={() => toggleWin(win)}
+                      className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition ${
+                        checked
+                          ? "bg-[#F1E2DE]"
+                          : "bg-[#F1E2DE]/50 hover:bg-[#F1E2DE]"
+                      }`}
+                    >
+                      <span
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] ${
+                          checked
+                            ? "bg-[#211C19] text-[#F7F1ED]"
+                            : "text-[#9D6F67]"
+                        }`}
+                      >
+                        {checked ? "✓" : "♡"}
+                      </span>
+
+                      <span className="font-serif text-lg italic">
+                        {win}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
-              <button className="mt-5 text-[7px] tracking-[0.2em] text-[#8F655E]">
-                + ADD YOUR OWN
+              {customWins.length > 0 && (
+                <div className="mt-3 space-y-3">
+                  {customWins.map(({ key, label }) => {
+                    const checked = Boolean(
+                      completedWins[key]
+                    );
+
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => toggleWin(key)}
+                        className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition ${
+                          checked
+                            ? "bg-[#F1E2DE]"
+                            : "bg-[#F1E2DE]/50 hover:bg-[#F1E2DE]"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] ${
+                            checked
+                              ? "bg-[#211C19] text-[#F7F1ED]"
+                              : "text-[#9D6F67]"
+                          }`}
+                        >
+                          {checked ? "✓" : "♡"}
+                        </span>
+
+                        <span className="font-serif text-lg italic">
+                          {label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomWin("");
+                  setCustomWinError(null);
+                  setIsCustomWinModalOpen(true);
+                }}
+                className="mt-6 rounded-full border border-[#B9948C] px-5 py-3 text-[11px] tracking-[0.2em] text-[#8F655E] transition hover:bg-[#F1E2DE]"
+              >
+                + ADD A LITTLE WIN
               </button>
             </div>
           </section>
 
-          {/* WEEKLY CHECK-INS */}
-          <section className="border-t border-[#DED0CB] py-12">
-            <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+          {/* WEEKLY CHECK-IN */}
+
+          <section className="border-t border-[#DED0CB] py-10">
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
-                <p className="text-[7px] tracking-[0.4em] text-[#9D6F67]">
-                  WEEKLY CHECK-INS
+                <p className="text-[12px] tracking-[0.4em] text-[#9D6F67]">
+                  WEEKLY CHECK-IN
                 </p>
 
-                <h2 className="mt-3 font-serif text-4xl">
-                  Check in with
+                <h2 className="mt-3 font-serif text-4xl md:text-5xl">
+                  Check in with{" "}
                   <span className="italic text-[#A77B73]">
-                    {" "}yourself. ♡
+                    yourself. ♡
                   </span>
                 </h2>
               </div>
 
-              <p className="text-[7px] tracking-[0.18em] text-[#927D76]">
-                0 OF 11 COMPLETE
+              <p className="text-[11px] tracking-[0.18em] text-[#927D76]">
+                {completedCheckins} OF {currentWeek} COMPLETE
               </p>
             </div>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {/* WEEK 1 */}
-              <button className="group rounded-[1.5rem] border border-[#CBA9A2] bg-[#FBF8F6] p-5 text-left transition hover:bg-[#F3EAE6]">
-                <div className="flex items-center justify-between">
-                  <span className="font-serif text-2xl text-[#A77B73]">
-                    01
-                  </span>
-
-                  <span className="rounded-full bg-[#EAD8D3] px-3 py-1.5 text-[6px] tracking-[0.18em] text-[#8F655E]">
-                    {currentDay >= 7 ? "READY" : "UPCOMING"}
-                  </span>
-                </div>
-
-                <p className="mt-5 text-[7px] tracking-[0.22em]">
-                  WEEK ONE
-                </p>
-
-                <p className="mt-1 font-serif text-xl italic text-[#A77B73]">
-                  how are we feeling?
-                </p>
-
-                <div className="mt-5 border-t border-[#E1D3CE] pt-4">
-                  <span className="text-[6px] tracking-[0.2em] text-[#9D6F67]">
-                    DAY 07 →
-                  </span>
-                </div>
-              </button>
-
-              {/* LOCKED FUTURE CHECK-INS */}
-              {Array.from(
-                { length: 10 },
-                (_, index) => index + 2
-              ).map((week) => (
-                <div
-                  key={week}
-                  className="rounded-[1.5rem] border border-[#DED0CB] bg-[#F5EFEC] p-5 opacity-60"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-serif text-2xl text-[#BDA6A0]">
-                      {String(week).padStart(2, "0")}
-                    </span>
-
-                    <span className="text-[10px] text-[#AA9690]">
-                      ♡
-                    </span>
+            <div className="mt-8 overflow-hidden rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6]">
+              <div className="flex flex-col gap-7 p-7 md:p-8 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-5">
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[#EAD8D3] font-serif text-xl text-[#A77B73]">
+                    {String(currentWeek).padStart(2, "0")}
                   </div>
 
-                  <p className="mt-5 text-[7px] tracking-[0.22em] text-[#806E68]">
-                    WEEK {String(week).padStart(2, "0")}
-                  </p>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <p className="text-[12px] tracking-[0.25em] text-[#806E68]">
+                        WEEK {String(currentWeek).padStart(2, "0")}
+                      </p>
 
-                  <p className="mt-1 font-serif text-lg italic text-[#A7938D]">
-                    keep going.
-                  </p>
+                      <span
+                        className={`rounded-full px-3 py-1.5 text-[9px] tracking-[0.18em] ${
+                          currentWeekComplete
+                            ? "bg-[#211C19] text-[#F7F1ED]"
+                            : "bg-[#EAD8D3] text-[#8F655E]"
+                        }`}
+                      >
+                        {currentWeekComplete
+                          ? "COMPLETE"
+                          : "READY"}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 font-serif text-2xl italic text-[#A77B73]">
+                      {currentWeekComplete
+                        ? "you checked in. ♡"
+                        : "how are you feeling?"}
+                    </p>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </section>
 
-          {/* PROGRESS REMINDER */}
-          <section className="rounded-[2rem] bg-[#211C19] px-8 py-10 text-center text-[#F7F1ED] md:px-12">
-            <p className="text-[7px] tracking-[0.4em] text-[#DDB5AE]">
-              REMEMBER
-            </p>
-
-            <h2 className="mx-auto mt-4 max-w-3xl font-serif text-4xl leading-none md:text-5xl">
-              Progress is more than
-              <span className="block italic text-[#DDB5AE]">
-                a photo.
-              </span>
-            </h2>
-
-            <div className="mt-7 flex flex-wrap justify-center gap-2">
-              {[
-                "STRONGER",
-                "MORE CONSISTENT",
-                "MORE ENERGY",
-                "BETTER HABITS",
-              ].map((item) => (
-                <span
-                  key={item}
-                  className="rounded-full border border-[#51433F] px-4 py-2 text-[6px] tracking-[0.18em] text-[#C8B9B4]"
+                <button
+                  type="button"
+                  onClick={() =>
+                    openWeeklyCheckin(currentWeek)
+                  }
+                  className="shrink-0 rounded-full bg-[#211C19] px-7 py-3.5 text-[11px] tracking-[0.22em] text-[#F7F1ED]"
                 >
-                  {item}
-                </span>
-              ))}
+                  {currentWeekComplete
+                    ? "VIEW CHECK-IN"
+                    : "CHECK IN →"}
+                </button>
+              </div>
             </div>
           </section>
 
-          {/* END */}
-          <section className="py-14 text-center">
+          <section className="border-t border-[#DED0CB] py-12 text-center">
             <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
               keep going. ♡
             </p>
-
-            <Link
-              href="/dashboard"
-              className="mt-7 inline-block rounded-full bg-[#211C19] px-9 py-3.5 text-[7px] tracking-[0.28em] text-[#F7F1ED] transition hover:-translate-y-0.5"
-            >
-              BACK TO TODAY
-            </Link>
           </section>
         </section>
       </div>
+
+      {/* MEASUREMENTS MODAL */}
+
+      {isMeasurementModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
+          onClick={() =>
+            setIsMeasurementModalOpen(false)
+          }
+        >
+          <div
+            className="w-full max-w-xl rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[12px] tracking-[0.35em] text-[#9D6F67]">
+                  MEASUREMENTS
+                </p>
+
+                <h2 className="mt-2 font-serif text-3xl">
+                  Update your numbers. ♡
+                </h2>
+
+                <p className="mt-2 text-[12px] tracking-[0.15em] text-[#927D76]">
+                  DAY {dayNumber}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setIsMeasurementModalOpen(false)
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-7 grid grid-cols-2 gap-3">
+              {[
+                ["weight", "WEIGHT", "lb"],
+                ["waist", "WAIST", "in"],
+                ["hips", "HIPS", "in"],
+                ["chest", "CHEST", "in"],
+                ["thigh", "THIGH", "in"],
+                ["arm", "ARM", "in"],
+              ].map(([field, label, unit]) => (
+                <label
+                  key={field}
+                  className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
+                >
+                  <span className="text-[10px] tracking-[0.2em] text-[#806E68]">
+                    {label} ({unit})
+                  </span>
+
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    inputMode="decimal"
+                    value={
+                      measurementForm[
+                        field as keyof typeof measurementForm
+                      ]
+                    }
+                    onChange={(event) =>
+                      setMeasurementForm(
+                        (previous) => ({
+                          ...previous,
+                          [field]: event.target.value,
+                        })
+                      )
+                    }
+                    className="mt-2 w-full bg-transparent font-serif text-2xl text-[#A77B73] outline-none"
+                    placeholder="—"
+                  />
+                </label>
+              ))}
+            </div>
+
+            {measurementError && (
+              <p className="mt-4 text-[12px] text-[#9D6F67]">
+                {measurementError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={saveMeasurements}
+              disabled={isSavingMeasurements}
+              className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[12px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
+            >
+              {isSavingMeasurements
+                ? "SAVING..."
+                : "SAVE MEASUREMENTS"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* LITTLE WIN MODAL */}
+
+      {isCustomWinModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
+          onClick={() =>
+            setIsCustomWinModalOpen(false)
+          }
+        >
+          <div
+            className="w-full max-w-lg rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[12px] tracking-[0.35em] text-[#9D6F67]">
+                  LITTLE WINS
+                </p>
+
+                <h2 className="mt-2 font-serif text-3xl">
+                  Add your own. ♡
+                </h2>
+
+                <p className="mt-2 font-serif text-base italic text-[#A77B73]">
+                  What are you noticing about yourself?
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setIsCustomWinModalOpen(false)
+                }
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
+              >
+                ×
+              </button>
+            </div>
+
+            <label className="mt-7 block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4">
+              <span className="text-[12px] tracking-[0.18em] text-[#806E68]">
+                MY WIN
+              </span>
+
+              <input
+                type="text"
+                value={customWin}
+                onChange={(event) => {
+                  setCustomWin(event.target.value);
+                  setCustomWinError(null);
+                }}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    !isSavingCustomWin
+                  ) {
+                    saveCustomWin();
+                  }
+                }}
+                autoFocus
+                maxLength={80}
+                className="mt-3 w-full bg-transparent font-serif text-xl italic text-[#A77B73] outline-none"
+                placeholder="I..."
+              />
+            </label>
+
+            {customWinError && (
+              <p className="mt-4 text-[12px] text-[#9D6F67]">
+                {customWinError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={saveCustomWin}
+              disabled={
+                isSavingCustomWin ||
+                !customWin.trim()
+              }
+              className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[12px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
+            >
+              {isSavingCustomWin
+                ? "SAVING..."
+                : "SAVE MY WIN"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* WEEKLY CHECK-IN MODAL */}
+
+      {checkinWeek !== null && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
+          onClick={() => setCheckinWeek(null)}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[2rem] bg-[#F7F1ED] p-7 shadow-2xl md:p-8"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[12px] tracking-[0.35em] text-[#9D6F67]">
+                  WEEK{" "}
+                  {String(checkinWeek).padStart(
+                    2,
+                    "0"
+                  )}{" "}
+                  CHECK-IN
+                </p>
+
+                <h2 className="mt-2 font-serif text-3xl">
+                  Check in with yourself. ♡
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCheckinWeek(null)
+                }
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#211C19] text-[#F7F1ED]"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-7 space-y-3">
+              {[
+                ["went_well", "What went well?"],
+                ["felt_hard", "What felt hard?"],
+                ["proud_of", "What are you proud of?"],
+                [
+                  "next_week_focus",
+                  "What do you want to focus on next week?",
+                ],
+              ].map(([field, label]) => (
+                <label
+                  key={field}
+                  className="block rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
+                >
+                  <span className="text-[12px] tracking-[0.16em] text-[#806E68]">
+                    {label}
+                  </span>
+
+                  <textarea
+                    rows={2}
+                    value={
+                      checkinForm[
+                        field as keyof typeof checkinForm
+                      ]
+                    }
+                    onChange={(event) =>
+                      setCheckinForm(
+                        (previous) => ({
+                          ...previous,
+                          [field]: event.target.value,
+                        })
+                      )
+                    }
+                    className="mt-2 w-full resize-none bg-transparent font-serif text-lg italic text-[#A77B73] outline-none"
+                    placeholder="write it here..."
+                  />
+                </label>
+              ))}
+            </div>
+
+            {checkinError && (
+              <p className="mt-4 text-[12px] text-[#9D6F67]">
+                {checkinError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={saveWeeklyCheckin}
+              disabled={isSavingCheckin}
+              className="mt-6 w-full rounded-full bg-[#211C19] px-6 py-4 text-[12px] tracking-[0.25em] text-[#F7F1ED] disabled:opacity-50"
+            >
+              {isSavingCheckin
+                ? "SAVING..."
+                : "SAVE CHECK-IN"}
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

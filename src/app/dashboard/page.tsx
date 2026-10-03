@@ -1,13 +1,9 @@
 "use client";
 
 import Link from "next/link";
-
 import { useEffect, useState } from "react";
-
 import { createClient } from "@/lib/supabase/client";
-
 import { getCurrentChallengeDay } from "@/lib/challenge";
-
 import DashboardSidebar from "@/components/DashboardSidebar";
 
 const commitments = [
@@ -55,8 +51,7 @@ const commitments = [
   },
 ] as const;
 
-type CommitmentColumn =
-  (typeof commitments)[number]["column"];
+type CommitmentColumn = (typeof commitments)[number]["column"];
 
 type DailyProgress = {
   move: boolean;
@@ -91,10 +86,7 @@ const emptyProgress: DailyProgress = {
 function formatDateForDatabase(date: Date) {
   const year = date.getFullYear();
 
-  const month = String(date.getMonth() + 1).padStart(
-    2,
-    "0"
-  );
+  const month = String(date.getMonth() + 1).padStart(2, "0");
 
   const day = String(date.getDate()).padStart(2, "0");
 
@@ -344,62 +336,25 @@ export default function DashboardPage() {
           progressError
         );
       } else if (savedProgress) {
-        const waterKey =
-          `water-bottles-${user.id}-${calculatedDay}`;
-
-        const savedWaterCount = Number(
-          localStorage.getItem(waterKey) || "0"
-        );
-
-        const hydrateComplete =
-          savedProgress.hydrate === true ||
-          savedWaterCount >= 8;
-
-        if (hydrateComplete) {
+        if (
+          savedProgress.hydrate &&
+          !localStorage.getItem(
+            `water-bottles-${user.id}-${calculatedDay}`
+          )
+        ) {
           setWaterBottles(8);
 
           localStorage.setItem(
-            waterKey,
+            `water-bottles-${user.id}-${calculatedDay}`,
             "8"
           );
-
-          if (!savedProgress.hydrate) {
-            await supabase
-              .from("daily_progress")
-              .upsert(
-                {
-                  user_id: user.id,
-                  challenge_day: calculatedDay,
-                  progress_date:
-                    formatDateForDatabase(
-                      new Date()
-                    ),
-                  move: savedProgress.move,
-                  get_outside:
-                    savedProgress.get_outside,
-                  hydrate: true,
-                  read: savedProgress.read,
-                  nourish: savedProgress.nourish,
-                  document: savedProgress.document,
-                  no_alcohol:
-                    savedProgress.no_alcohol ??
-                    false,
-                  updated_at:
-                    new Date().toISOString(),
-                },
-                {
-                  onConflict:
-                    "user_id,challenge_day",
-                }
-              );
-          }
         }
 
         setProgress({
           move: savedProgress.move,
           get_outside:
             savedProgress.get_outside,
-          hydrate: hydrateComplete,
+          hydrate: savedProgress.hydrate,
           read: savedProgress.read,
           nourish: savedProgress.nourish,
           document: savedProgress.document,
@@ -408,14 +363,13 @@ export default function DashboardPage() {
         });
       }
 
-      /**
+      /*
        * A progress photo now completes the DOCUMENT
        * commitment automatically.
        *
        * We check the progress_photos table for the
        * current challenge day. This means the dashboard
-       * does not need the user to manually check off
-       * the commitment after uploading their photo.
+       * will automatically recognize a saved photo.
        */
 
       const {
@@ -527,7 +481,7 @@ export default function DashboardPage() {
     );
 
     const hydrateComplete =
-      clampedCount >= 8;
+      clampedCount === 8;
 
     setWaterBottles(clampedCount);
 
@@ -556,7 +510,7 @@ export default function DashboardPage() {
           move: updatedProgress.move,
           get_outside:
             updatedProgress.get_outside,
-          hydrate: hydrateComplete,
+          hydrate: updatedProgress.hydrate,
           read: updatedProgress.read,
           nourish: updatedProgress.nourish,
           document:
@@ -577,8 +531,6 @@ export default function DashboardPage() {
         "Could not save water progress:",
         error
       );
-
-      setProgress(progress);
     }
   };
 
@@ -854,9 +806,9 @@ export default function DashboardPage() {
                               onClick={() =>
                                 updateWaterBottles(
                                   filled &&
-                                    index ===
-                                      waterBottles -
-                                        1
+                                  index ===
+                                    waterBottles -
+                                      1
                                     ? index
                                     : index + 1
                                 )
@@ -906,7 +858,9 @@ export default function DashboardPage() {
                             isLoadingProgress
                           }
                           onClick={() =>
-                            toggleCommitment("move")
+                            toggleCommitment(
+                              "move"
+                            )
                           }
                           aria-label={
                             isComplete
@@ -971,17 +925,13 @@ export default function DashboardPage() {
                                     {workout.type.toUpperCase()}
                                   </span>
 
-                                  <span>
-                                    •
-                                  </span>
+                                  <span>•</span>
 
                                   <span>
                                     {workout.time}
                                   </span>
 
-                                  <span>
-                                    •
-                                  </span>
+                                  <span>•</span>
 
                                   <span>
                                     {
@@ -1121,6 +1071,19 @@ export default function DashboardPage() {
                   );
                 }
 
+                /*
+                 * DOCUMENT / PROGRESS PHOTO
+                 *
+                 * IMPORTANT:
+                 * The check circle is now a real button.
+                 *
+                 * This means the DOCUMENT commitment can be
+                 * manually checked/un-checked from TODAY,
+                 * while the Progress page can still
+                 * automatically set it to complete when
+                 * a photo is uploaded.
+                 */
+
                 if (item.column === "document") {
                   return (
                     <div
@@ -1132,8 +1095,26 @@ export default function DashboardPage() {
                       }`}
                     >
                       <div className="flex items-center gap-3.5">
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-[11px] ${
+                        <button
+                          type="button"
+                          disabled={
+                            isLoadingProgress
+                          }
+                          onClick={() =>
+                            toggleCommitment(
+                              "document"
+                            )
+                          }
+                          aria-label={
+                            isComplete
+                              ? "Mark Document incomplete"
+                              : "Mark Document complete"
+                          }
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-[11px] transition ${
+                            isLoadingProgress
+                              ? "cursor-wait opacity-70"
+                              : "cursor-pointer hover:-translate-y-0.5 hover:bg-[#F1E6E2]"
+                          } ${
                             isComplete
                               ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
                               : "border-[#CBA9A2] text-[#A77B73]"
@@ -1142,7 +1123,7 @@ export default function DashboardPage() {
                           {isComplete
                             ? "✓"
                             : item.number}
-                        </div>
+                        </button>
 
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-3">
@@ -1273,14 +1254,10 @@ export default function DashboardPage() {
 
               <div>
                 <p className="max-w-3xl font-serif text-xl italic leading-snug text-[#A77B73] sm:text-2xl md:text-3xl">
-                  You don&apos;t have to have the whole
-                  journey figured out. You just have to
-                  show up for today.
+                  consistency over perfection ♡
                 </p>
 
-                <p className="mt-4 text-[7px] tracking-[0.2em] text-[#8F655E]">
-                  ONE DAY AT A TIME ♡
-                </p>
+                
               </div>
             </div>
           </section>

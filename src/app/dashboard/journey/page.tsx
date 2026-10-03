@@ -1,9 +1,7 @@
 "use client";
 
 import Link from "next/link";
-
 import DashboardSidebar from "@/components/DashboardSidebar";
-
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -80,6 +78,70 @@ function formatMeasurement(value: number | string | null | undefined) {
   return value;
 }
 
+/**
+ * The photo is displayed inside this heart shape.
+ * The SVG makes the user's actual progress photo visible
+ * while keeping the calendar clean.
+ */
+function PhotoHeart({
+  src,
+  complete,
+}: {
+  src: string;
+  complete: boolean;
+}) {
+  return (
+    <svg
+      viewBox="0 0 100 92"
+      className="h-[34px] w-[38px] sm:h-[39px] sm:w-[43px]"
+      aria-hidden="true"
+    >
+      <defs>
+        <clipPath id="journey-photo-heart">
+          <path
+            d="
+              M50 88
+              C46 84 7 61 7 29
+              C7 12 18 3 31 3
+              C40 3 47 8 50 17
+              C53 8 60 3 69 3
+              C82 3 93 12 93 29
+              C93 61 54 84 50 88
+              Z
+            "
+          />
+        </clipPath>
+      </defs>
+
+      <image
+        href={src}
+        x="0"
+        y="0"
+        width="100"
+        height="92"
+        preserveAspectRatio="xMidYMid slice"
+        clipPath="url(#journey-photo-heart)"
+      />
+
+      <path
+        d="
+          M50 88
+          C46 84 7 61 7 29
+          C7 12 18 3 31 3
+          C40 3 47 8 50 17
+          C53 8 60 3 69 3
+          C82 3 93 12 93 29
+          C93 61 54 84 50 88
+          Z
+        "
+        fill="none"
+        stroke={complete ? "#F7F1ED" : "#A77B73"}
+        strokeWidth="3"
+      />
+    </svg>
+  );
+}
+
 export default function JourneyPage() {
   const supabase = useMemo(() => createClient(), []);
 
@@ -91,26 +153,40 @@ export default function JourneyPage() {
     null
   );
 
-  const [challengeLength, setChallengeLength] = useState(75);
+  const [challengeLength, setChallengeLength] = useState(0);
 
   const [dailyProgress, setDailyProgress] = useState<DailyProgressRow[]>([]);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
-  // Day Details modal
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [dayDetailsOpen, setDayDetailsOpen] = useState(false);
   const [dayDetailsLoading, setDayDetailsLoading] = useState(false);
 
-  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
+  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(
+    null
+  );
+
   const [selectedPhotoPath, setSelectedPhotoPath] = useState<string | null>(
     null
   );
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
 
-  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  /**
+   * Stores the actual signed photo URL for every day that has a photo.
+   *
+   * Example:
+   * {
+   *   1: "https://...",
+   *   3: "https://..."
+   * }
+   */
+  const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
 
   const [selectedMeasurement, setSelectedMeasurement] =
     useState<MeasurementRow | null>(null);
+
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const loadJourney = async () => {
@@ -143,6 +219,7 @@ export default function JourneyPage() {
       const [
         { data: profile, error: profileError },
         { data: progressRows, error: progressError },
+        { data: photoRows, error: photoRowsError },
       ] = await Promise.all([
         supabase
           .from("profiles")
@@ -157,19 +234,67 @@ export default function JourneyPage() {
           )
           .eq("user_id", user.id)
           .order("challenge_day", { ascending: true }),
+
+        supabase
+          .from("progress_photos")
+          .select(
+            "id, challenge_day, storage_path, photo_type, created_at"
+          )
+          .eq("user_id", user.id)
+          .eq("photo_type", "progress")
+          .order("challenge_day", { ascending: true }),
       ]);
 
       if (profileError) {
         console.error("Could not load profile:", profileError);
       } else if (profile) {
         setChallengeStartDate(profile.challenge_start_date);
-        setChallengeLength(profile.challenge_length ?? 75);
+        setChallengeLength(profile.challenge_length ?? 0);
       }
 
       if (progressError) {
         console.error("Could not load daily progress:", progressError);
       } else {
         setDailyProgress(progressRows ?? []);
+      }
+
+      /**
+       * Load signed URLs for all saved progress photos.
+       * This is what allows the actual photos to appear
+       * inside the heart shapes on the calendar.
+       */
+      if (photoRowsError) {
+        console.error(
+          "Could not load progress photos:",
+          photoRowsError
+        );
+
+        setPhotoUrls({});
+      } else {
+        const nextPhotoUrls: Record<number, string> = {};
+
+        for (const row of (photoRows ?? []) as ProgressPhotoRow[]) {
+          if (!row.storage_path || !row.challenge_day) continue;
+
+          const { data: signedPhoto, error: signedPhotoError } =
+            await supabase.storage
+              .from("progress-photos")
+              .createSignedUrl(row.storage_path, 60 * 60);
+
+          if (signedPhotoError) {
+            console.error(
+              `Could not create photo URL for day ${row.challenge_day}:`,
+              signedPhotoError
+            );
+            continue;
+          }
+
+          if (signedPhoto?.signedUrl) {
+            nextPhotoUrls[row.challenge_day] = signedPhoto.signedUrl;
+          }
+        }
+
+        setPhotoUrls(nextPhotoUrls);
       }
 
       setIsLoadingUser(false);
@@ -185,23 +310,21 @@ export default function JourneyPage() {
   if (challengeStartDate) {
     startDate = parseChallengeDate(challengeStartDate);
 
-    currentDay = getCurrentChallengeDay(
-      challengeStartDate,
-      challengeLength
-    );
+    if (challengeLength > 0) {
+      currentDay = getCurrentChallengeDay(
+        challengeStartDate,
+        challengeLength
+      );
+    }
   }
 
-  const safeCurrentDay = Math.min(
-    Math.max(currentDay, 1),
-    challengeLength
-  );
+  const safeCurrentDay =
+    challengeLength > 0
+      ? Math.min(Math.max(currentDay, 1), challengeLength)
+      : 0;
 
   const dayNumber = String(safeCurrentDay).padStart(2, "0");
 
-  /**
-   * A day only counts as complete when all 7
-   * commitments for that day are complete.
-   */
   const completedDayNumbers = dailyProgress
     .filter(
       (row) =>
@@ -212,28 +335,25 @@ export default function JourneyPage() {
 
   const completedDays = completedDayNumbers.length;
 
-  const challengeProgress = getChallengePercentage(
-    completedDays,
-    challengeLength
-  );
+  const challengeProgress =
+    challengeLength > 0
+      ? getChallengePercentage(completedDays, challengeLength)
+      : 0;
 
   const initial =
     !isLoadingUser && firstName !== "there"
       ? firstName.charAt(0).toUpperCase()
       : "♡";
 
-  /**
-   * Journey defaults to today.
-   * Clicking an available calendar day changes the summary card.
-   */
-  const activeSelectedDay = Math.min(
-    selectedDay ?? safeCurrentDay,
-    challengeLength
-  );
+  const activeSelectedDay =
+    challengeLength > 0
+      ? Math.min(selectedDay ?? safeCurrentDay, challengeLength)
+      : 0;
 
-  const selectedDate = startDate
-    ? getChallengeDate(startDate, activeSelectedDay)
-    : null;
+  const selectedDate =
+    startDate && activeSelectedDay > 0
+      ? getChallengeDate(startDate, activeSelectedDay)
+      : null;
 
   const selectedProgress = dailyProgress.find(
     (row) => row.challenge_day === activeSelectedDay
@@ -271,20 +391,21 @@ export default function JourneyPage() {
 
     if (userError || !user) {
       if (userError) {
-        console.error("Could not load user for day details:", userError);
+        console.error(
+          "Could not load user for day details:",
+          userError
+        );
       }
 
       setDayDetailsLoading(false);
       return;
     }
 
-    /**
-     * PHOTO
-     * Grab the newest progress photo saved for this challenge day.
-     */
     const { data: photoRows, error: photoError } = await supabase
       .from("progress_photos")
-      .select("id, challenge_day, storage_path, created_at, photo_type")
+      .select(
+        "id, challenge_day, storage_path, created_at, photo_type"
+      )
       .eq("user_id", user.id)
       .eq("challenge_day", day)
       .eq("photo_type", "progress")
@@ -292,7 +413,10 @@ export default function JourneyPage() {
       .limit(1);
 
     if (photoError) {
-      console.error("Could not load progress photo:", photoError);
+      console.error(
+        "Could not load progress photo:",
+        photoError
+      );
     } else {
       const photo = (photoRows?.[0] ?? null) as ProgressPhotoRow | null;
 
@@ -309,17 +433,17 @@ export default function JourneyPage() {
             "Could not create progress photo URL:",
             signedPhotoError
           );
-        } else {
-          setSelectedPhotoUrl(signedPhoto?.signedUrl ?? null);
+        } else if (signedPhoto?.signedUrl) {
+          setSelectedPhotoUrl(signedPhoto.signedUrl);
+
+          setPhotoUrls((previous) => ({
+            ...previous,
+            [day]: signedPhoto.signedUrl,
+          }));
         }
       }
     }
 
-    /**
-     * MEASUREMENTS
-     * There may be more than one entry on the same day,
-     * so use the newest measurement entry for that day.
-     */
     const { data: measurementRows, error: measurementError } =
       await supabase
         .from("measurements")
@@ -332,7 +456,10 @@ export default function JourneyPage() {
         .limit(1);
 
     if (measurementError) {
-      console.error("Could not load measurements:", measurementError);
+      console.error(
+        "Could not load measurements:",
+        measurementError
+      );
     } else {
       setSelectedMeasurement(
         (measurementRows?.[0] as MeasurementRow | undefined) ?? null
@@ -356,6 +483,14 @@ export default function JourneyPage() {
 
     const day = activeSelectedDay;
 
+    if (!day || day < 1 || day > challengeLength) {
+      setPhotoError(
+        "Please select a valid challenge day first."
+      );
+      event.target.value = "";
+      return;
+    }
+
     setIsUploadingPhoto(true);
     setPhotoError(null);
 
@@ -378,12 +513,16 @@ export default function JourneyPage() {
       }
 
       const extension =
-        file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ||
-        "jpg";
+        file.name
+          .split(".")
+          .pop()
+          ?.toLowerCase()
+          .replace(/[^a-z0-9]/g, "") || "jpg";
 
       const paddedDay = String(day).padStart(2, "0");
 
-      newFilePath = `${user.id}/day-${paddedDay}-${Date.now()}.${extension}`;
+      newFilePath =
+        `${user.id}/day-${paddedDay}-${Date.now()}.${extension}`;
 
       const oldPath = selectedPhotoPath;
 
@@ -405,7 +544,10 @@ export default function JourneyPage() {
           .createSignedUrl(newFilePath, 60 * 60);
 
       if (signedError || !signedData?.signedUrl) {
-        throw signedError ?? new Error("Could not create the photo preview.");
+        throw (
+          signedError ??
+          new Error("Could not create the photo preview.")
+        );
       }
 
       const { error: photoRecordError } = await supabase
@@ -432,8 +574,13 @@ export default function JourneyPage() {
       setSelectedPhotoPath(newFilePath);
 
       /**
-       * A saved progress photo counts as the DOCUMENT commitment.
+       * Immediately put the new photo into the calendar.
        */
+      setPhotoUrls((previous) => ({
+        ...previous,
+        [day]: signedData.signedUrl,
+      }));
+
       const existingProgress = dailyProgress.find(
         (row) => row.challenge_day === day
       );
@@ -473,7 +620,10 @@ export default function JourneyPage() {
           );
         }
 
-        return [...previous, updatedProgress as DailyProgressRow].sort(
+        return [
+          ...previous,
+          updatedProgress as DailyProgressRow,
+        ].sort(
           (a, b) => a.challenge_day - b.challenge_day
         );
       });
@@ -489,14 +639,11 @@ export default function JourneyPage() {
         );
       }
 
-      /**
-       * Only remove the old file after the new photo and database
-       * record have both succeeded.
-       */
       if (oldPath && oldPath !== newFilePath) {
-        const { error: removeOldError } = await supabase.storage
-          .from("progress-photos")
-          .remove([oldPath]);
+        const { error: removeOldError } =
+          await supabase.storage
+            .from("progress-photos")
+            .remove([oldPath]);
 
         if (removeOldError) {
           console.warn(
@@ -518,7 +665,11 @@ export default function JourneyPage() {
         !lowerMessage.includes("canceled") &&
         !lowerMessage.includes("cancelled")
       ) {
-        console.error("Could not upload journey progress photo:", error);
+        console.error(
+          "Could not upload journey progress photo:",
+          error
+        );
+
         setPhotoError(errorMessage);
       }
 
@@ -554,16 +705,13 @@ export default function JourneyPage() {
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
-        {/* SIDEBAR */}
         <DashboardSidebar
           firstName={firstName}
           initial={initial}
           isLoadingUser={isLoadingUser}
         />
 
-        {/* MAIN CONTENT */}
         <section className="flex-1 px-6 py-8 md:px-10 lg:px-14">
-          {/* MOBILE TODAY BUTTON */}
           <div className="flex justify-end md:hidden">
             <Link
               href="/dashboard"
@@ -573,19 +721,20 @@ export default function JourneyPage() {
             </Link>
           </div>
 
-          {/* JOURNEY SUMMARY */}
           <section className="mt-4 overflow-hidden rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6]">
-            {/* TOP */}
             <div className="px-7 pb-8 pt-7 md:px-10 md:pb-9 md:pt-9">
               <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
                 <div>
                   <p className="text-[9px] tracking-[0.34em] text-[#9D6F67]">
-                    {selectedIsCurrent ? "YOU ARE HERE" : "YOUR JOURNEY"}
+                    {selectedIsCurrent
+                      ? "YOU ARE HERE"
+                      : "YOUR JOURNEY"}
                   </p>
 
                   <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-2">
                     <h1 className="font-serif text-5xl leading-none md:text-6xl">
-                      Day {String(activeSelectedDay).padStart(2, "0")}
+                      Day{" "}
+                      {String(activeSelectedDay).padStart(2, "0")}
                     </h1>
 
                     {selectedDate && (
@@ -608,7 +757,6 @@ export default function JourneyPage() {
               </div>
             </div>
 
-            {/* STATS */}
             <div className="grid border-t border-[#E7DCD7] sm:grid-cols-3">
               <div className="px-7 py-5 md:px-10">
                 <p className="text-[8px] tracking-[0.25em] text-[#9D6F67]">
@@ -626,7 +774,9 @@ export default function JourneyPage() {
                 </p>
 
                 <p className="mt-2 font-serif text-xl italic">
-                  {isLoadingProgress ? "—" : `${challengeProgress}%`}
+                  {isLoadingProgress
+                    ? "—"
+                    : `${challengeProgress}%`}
                 </p>
               </div>
 
@@ -641,7 +791,6 @@ export default function JourneyPage() {
               </div>
             </div>
 
-            {/* TIMELINE */}
             <div className="border-t border-[#E7DCD7] px-7 pb-7 pt-6 md:px-10 md:pb-8">
               <div className="relative h-[4px] overflow-hidden rounded-full bg-[#E7DCD7]">
                 <div
@@ -659,17 +808,14 @@ export default function JourneyPage() {
             </div>
           </section>
 
-          {/* JOURNEY CALENDAR */}
           <section className="mt-8">
             <div className="relative overflow-hidden rounded-[2rem] border border-[#D5BBB5] bg-[#EAD8D3] px-5 pb-8 pt-10 sm:px-8 md:px-10 md:pb-10 md:pt-12">
-              {/* CALENDAR BINDING */}
               <div className="absolute -top-3 left-0 right-0 flex justify-center gap-12">
                 <span className="h-7 w-[2px] rounded-full bg-[#A77B73]" />
                 <span className="h-7 w-[2px] rounded-full bg-[#A77B73]" />
                 <span className="h-7 w-[2px] rounded-full bg-[#A77B73]" />
               </div>
 
-              {/* CALENDAR HEADER */}
               <div className="flex flex-col gap-6 border-b border-[#CFB5AE] pb-7 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-[9px] tracking-[0.38em] text-[#8F655E]">
@@ -692,9 +838,7 @@ export default function JourneyPage() {
                 </div>
               </div>
 
-              {/* LEGEND */}
               <div className="mt-7 flex flex-wrap gap-x-8 gap-y-4">
-                {/* COMPLETE */}
                 <div className="flex items-center gap-2">
                   <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#A77B73] text-[9px] text-[#F7F1ED]">
                     ✓
@@ -705,7 +849,6 @@ export default function JourneyPage() {
                   </span>
                 </div>
 
-                {/* TODAY */}
                 <div className="flex items-center gap-2">
                   <span className="h-5 w-5 rounded-md border-2 border-[#8F655E] bg-[#F7F1ED]" />
 
@@ -714,7 +857,6 @@ export default function JourneyPage() {
                   </span>
                 </div>
 
-                {/* UPCOMING */}
                 <div className="flex items-center gap-2">
                   <span className="h-5 w-5 rounded-md border border-[#D7C2BC] bg-[#F7F1ED]/30" />
 
@@ -722,9 +864,18 @@ export default function JourneyPage() {
                     UPCOMING
                   </span>
                 </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="overflow-hidden rounded-full">
+                    <span className="block h-5 w-5 bg-[#A77B73]" />
+                  </span>
+
+                  <span className="text-[8px] tracking-[0.18em] text-[#806E68]">
+                    PHOTO SAVED
+                  </span>
+                </div>
               </div>
 
-              {/* CHALLENGE DAYS */}
               <div className="mt-8 grid grid-cols-5 gap-2 sm:grid-cols-10 sm:gap-3 lg:grid-cols-[repeat(15,minmax(0,1fr))]">
                 {challengeDays.map((day) => {
                   const progressForDay = dailyProgress.find(
@@ -739,6 +890,9 @@ export default function JourneyPage() {
                   const isUpcoming = day > safeCurrentDay;
                   const isSelected = day === activeSelectedDay;
 
+                  const dayPhotoUrl = photoUrls[day];
+                  const hasPhoto = Boolean(dayPhotoUrl);
+
                   const dayDate = startDate
                     ? getChallengeDate(startDate, day)
                     : null;
@@ -751,10 +905,14 @@ export default function JourneyPage() {
                       disabled={isUpcoming}
                       aria-label={
                         dayDate
-                          ? `Day ${day}, ${formatFullDate(dayDate)}`
+                          ? `Day ${day}, ${formatFullDate(dayDate)}${
+                              hasPhoto
+                                ? ", progress photo saved"
+                                : ""
+                            }`
                           : `Day ${day}`
                       }
-                      className={`group relative flex aspect-square min-h-[52px] flex-col items-center justify-center rounded-xl border transition duration-200 sm:min-h-[58px] ${
+                      className={`group relative flex aspect-square min-h-[64px] flex-col items-center justify-center rounded-xl border transition duration-200 sm:min-h-[76px] ${
                         isComplete
                           ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
                           : isCurrent
@@ -768,9 +926,29 @@ export default function JourneyPage() {
                           : ""
                       }`}
                     >
-                      <span className="font-serif text-base sm:text-lg">
+                      <span
+                        className={`font-serif text-sm sm:text-base ${
+                          hasPhoto ? "absolute left-2 top-2" : ""
+                        }`}
+                      >
                         {String(day).padStart(2, "0")}
                       </span>
+
+                      {hasPhoto && dayPhotoUrl && (
+                        <span
+                          className={`mt-3 block ${
+                            isComplete
+                              ? "drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+                              : ""
+                          }`}
+                          title="Progress photo saved — click to view"
+                        >
+                          <PhotoHeart
+                            src={dayPhotoUrl}
+                            complete={isComplete}
+                          />
+                        </span>
+                      )}
 
                       {isComplete && (
                         <span className="absolute right-1.5 top-1 text-[8px]">
@@ -782,14 +960,14 @@ export default function JourneyPage() {
                 })}
               </div>
 
-              {/* CALENDAR FOOTER */}
               <div className="mt-8 flex flex-col gap-2 border-t border-[#CFB5AE] pt-6 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-[8px] tracking-[0.28em] text-[#8F655E]">
                   {completedDays} DAYS COMPLETE
                 </p>
 
                 <p className="font-serif text-lg italic text-[#A77B73]">
-                  {completedDays === challengeLength
+                  {challengeLength > 0 &&
+                  completedDays === challengeLength
                     ? `${challengeLength} days. you did it. ♡`
                     : "keep going. one day at a time. ♡"}
                 </p>
@@ -797,7 +975,6 @@ export default function JourneyPage() {
             </div>
           </section>
 
-          {/* BOTTOM QUOTE */}
           <div className="py-16 text-center">
             <p className="font-serif text-3xl italic text-[#A77B73]">
               imagine what choosing yourself, one day at a time, can do. ♡
@@ -806,7 +983,6 @@ export default function JourneyPage() {
         </section>
       </div>
 
-      {/* DAY DETAILS MODAL */}
       {dayDetailsOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/45 px-4 py-6 backdrop-blur-[2px]"
@@ -817,7 +993,6 @@ export default function JourneyPage() {
           }}
         >
           <div className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] border border-[#D8C5BF] bg-[#FBF8F6] shadow-2xl">
-            {/* CLOSE */}
             <button
               type="button"
               onClick={closeDayDetails}
@@ -827,7 +1002,6 @@ export default function JourneyPage() {
               ×
             </button>
 
-            {/* MODAL HEADER */}
             <div className="border-b border-[#E5D8D3] px-7 pb-7 pt-8 md:px-10 md:pb-8 md:pt-10">
               <p className="text-[9px] tracking-[0.34em] text-[#9D6F67]">
                 YOUR JOURNEY
@@ -835,7 +1009,8 @@ export default function JourneyPage() {
 
               <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-2 pr-12">
                 <h2 className="font-serif text-4xl leading-none md:text-5xl">
-                  Day {String(activeSelectedDay).padStart(2, "0")}
+                  Day{" "}
+                  {String(activeSelectedDay).padStart(2, "0")}
                 </h2>
 
                 {selectedDate && (
@@ -853,7 +1028,9 @@ export default function JourneyPage() {
                       : "border border-[#D5BBB5] bg-[#F7F1ED] text-[#8F655E]"
                   }`}
                 >
-                  {selectedIsComplete ? "DAY COMPLETE" : "DAY IN PROGRESS"}
+                  {selectedIsComplete
+                    ? "DAY COMPLETE"
+                    : "DAY IN PROGRESS"}
                 </span>
 
                 <span className="text-[9px] tracking-[0.18em] text-[#8F655E]">
@@ -874,7 +1051,6 @@ export default function JourneyPage() {
               </div>
             ) : (
               <div className="grid md:grid-cols-[1.05fr_0.95fr]">
-                {/* PHOTO */}
                 <div className="border-b border-[#E5D8D3] p-7 md:border-b-0 md:border-r md:p-10">
                   <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
                     PROGRESS PHOTO
@@ -949,7 +1125,6 @@ export default function JourneyPage() {
                   </div>
                 </div>
 
-                {/* DETAILS */}
                 <div className="p-7 md:p-10">
                   <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
                     MEASUREMENTS
@@ -967,7 +1142,9 @@ export default function JourneyPage() {
                         </p>
 
                         <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(selectedMeasurement.weight)}
+                          {formatMeasurement(
+                            selectedMeasurement.weight
+                          )}
                         </p>
                       </div>
 
@@ -977,7 +1154,9 @@ export default function JourneyPage() {
                         </p>
 
                         <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(selectedMeasurement.waist)}
+                          {formatMeasurement(
+                            selectedMeasurement.waist
+                          )}
                         </p>
                       </div>
 
@@ -987,7 +1166,9 @@ export default function JourneyPage() {
                         </p>
 
                         <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(selectedMeasurement.hips)}
+                          {formatMeasurement(
+                            selectedMeasurement.hips
+                          )}
                         </p>
                       </div>
 
@@ -997,7 +1178,9 @@ export default function JourneyPage() {
                         </p>
 
                         <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(selectedMeasurement.chest)}
+                          {formatMeasurement(
+                            selectedMeasurement.chest
+                          )}
                         </p>
                       </div>
 
@@ -1007,7 +1190,9 @@ export default function JourneyPage() {
                         </p>
 
                         <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(selectedMeasurement.thigh)}
+                          {formatMeasurement(
+                            selectedMeasurement.thigh
+                          )}
                         </p>
                       </div>
 
@@ -1017,7 +1202,9 @@ export default function JourneyPage() {
                         </p>
 
                         <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(selectedMeasurement.arm)}
+                          {formatMeasurement(
+                            selectedMeasurement.arm
+                          )}
                         </p>
                       </div>
                     </div>
@@ -1033,7 +1220,6 @@ export default function JourneyPage() {
                     </div>
                   )}
 
-                  {/* COMMITMENT SUMMARY */}
                   <div className="mt-7 rounded-[1.5rem] bg-[#EAD8D3] p-6">
                     <p className="text-[8px] tracking-[0.25em] text-[#8F655E]">
                       SHOWING UP
