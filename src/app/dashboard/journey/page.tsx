@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+
 import DashboardSidebar from "@/components/DashboardSidebar";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
@@ -78,11 +80,6 @@ function formatMeasurement(value: number | string | null | undefined) {
   return value;
 }
 
-/**
- * The photo is displayed inside this heart shape.
- * The SVG makes the user's actual progress photo visible
- * while keeping the calendar clean.
- */
 function PhotoHeart({
   src,
   complete,
@@ -172,15 +169,6 @@ export default function JourneyPage() {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
-  /**
-   * Stores the actual signed photo URL for every day that has a photo.
-   *
-   * Example:
-   * {
-   *   1: "https://...",
-   *   3: "https://..."
-   * }
-   */
   const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
 
   const [selectedMeasurement, setSelectedMeasurement] =
@@ -258,11 +246,6 @@ export default function JourneyPage() {
         setDailyProgress(progressRows ?? []);
       }
 
-      /**
-       * Load signed URLs for all saved progress photos.
-       * This is what allows the actual photos to appear
-       * inside the heart shapes on the calendar.
-       */
       if (photoRowsError) {
         console.error(
           "Could not load progress photos:",
@@ -487,6 +470,7 @@ export default function JourneyPage() {
       setPhotoError(
         "Please select a valid challenge day first."
       );
+
       event.target.value = "";
       return;
     }
@@ -573,9 +557,6 @@ export default function JourneyPage() {
       setSelectedPhotoUrl(signedData.signedUrl);
       setSelectedPhotoPath(newFilePath);
 
-      /**
-       * Immediately put the new photo into the calendar.
-       */
       setPhotoUrls((previous) => ({
         ...previous,
         [day]: signedData.signedUrl,
@@ -876,7 +857,7 @@ export default function JourneyPage() {
                 </div>
               </div>
 
-              <div className="mt-8 grid grid-cols-5 gap-2 sm:grid-cols-10 sm:gap-3 lg:grid-cols-[repeat(15,minmax(0,1fr))]">
+              <div className="mt-8 grid grid-cols-4 gap-4 sm:grid-cols-10 sm:gap-3 lg:grid-cols-[repeat(15,minmax(0,1fr))]">
                 {challengeDays.map((day) => {
                   const progressForDay = dailyProgress.find(
                     (row) => row.challenge_day === day
@@ -1229,6 +1210,7 @@ export default function JourneyPage() {
                       <div>
                         <p className="font-serif text-4xl">
                           {selectedCommitmentCount}
+
                           <span className="text-xl text-[#A77B73]">
                             {" "}
                             / 7
