@@ -14,6 +14,11 @@ type SwapOption = {
   note: string;
 };
 
+type SwapExerciseDetails = {
+  cue: string;
+  modification: string;
+};
+
 const exerciseSwaps: Record<string, SwapOption[]> = {
   "Goblet Squat": [
     {
@@ -96,6 +101,79 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
       note: "Low-equipment glute-focused option.",
     },
   ],
+};
+
+/* SWAP EXERCISE INSTRUCTIONS */
+
+const swapExerciseDetails: Record<
+  string,
+  SwapExerciseDetails
+> = {
+  "Leg Press": {
+    cue: "Sit back into the machine with your feet about shoulder-width apart. Lower the platform with control, then drive through your whole foot to press it away without locking your knees.",
+    modification:
+      "Use a lighter weight or reduce your range of motion.",
+  },
+
+  "Dumbbell Squat": {
+    cue: "Hold a dumbbell at your sides or at your shoulders, brace your core, sit your hips down and back, then drive through your feet to stand tall.",
+    modification:
+      "Use lighter dumbbells or perform the movement with bodyweight.",
+  },
+
+  "Split Squat": {
+    cue: "Stand in a staggered stance, lower your back knee toward the floor while keeping your front foot planted, then drive through your front foot to return to standing.",
+    modification:
+      "Hold onto a stable surface or reduce your range of motion.",
+  },
+
+  "Dumbbell RDL": {
+    cue: "Hold the dumbbells close to your legs, soften your knees, push your hips back, then squeeze your glutes to return to standing while keeping your back neutral.",
+    modification:
+      "Use lighter dumbbells or shorten your range of motion.",
+  },
+
+  "Cable Pull-Through": {
+    cue: "Stand facing away from the cable with the handle between your legs. Push your hips back, then drive your hips forward and squeeze your glutes to stand tall.",
+    modification:
+      "Use a lighter cable weight or shorten your range of motion.",
+  },
+
+  "Good Morning": {
+    cue: "Stand tall with a soft bend in your knees. Push your hips back while keeping your spine neutral, then squeeze your glutes to return to standing.",
+    modification:
+      "Reduce your range of motion or perform the movement without added resistance.",
+  },
+
+  "Single-Leg RDL": {
+    cue: "Balance on one leg, push your hips back while reaching the opposite leg behind you, then drive through your standing foot to return to the starting position.",
+    modification:
+      "Keep the toes of your non-working leg lightly on the floor or hold onto a stable surface.",
+  },
+
+  "Step-Up": {
+    cue: "Place one foot on a stable box, step, or bench. Drive through that foot to stand tall, then lower yourself back down with control.",
+    modification:
+      "Use a lower step or hold onto a stable surface for balance.",
+  },
+
+  "Hip Thrust": {
+    cue: "Rest your upper back against a stable bench or couch. Drive through your heels to lift your hips, squeeze your glutes at the top, then lower with control.",
+    modification:
+      "Use bodyweight only or reduce the range of motion.",
+  },
+
+  "Dumbbell Hip Thrust": {
+    cue: "Rest your upper back against a stable bench or couch with a dumbbell across your hips. Drive through your heels, squeeze your glutes at the top, then lower with control.",
+    modification:
+      "Use a lighter dumbbell or perform the movement with bodyweight.",
+  },
+
+  "Frog Pump": {
+    cue: "Lie on your back with the soles of your feet together and knees open. Drive your hips upward, squeeze your glutes at the top, then lower with control.",
+    modification:
+      "Use a smaller range of motion or slow the movement down.",
+  },
 };
 
 type WorkoutExercise = {
@@ -199,9 +277,15 @@ const cooldown = [
 
 export default function LowerBodyFoundationPage() {
   const [firstName, setFirstName] = useState("there");
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [workoutExercises, setWorkoutExercises] = useState(exercises);
-  const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
+
+  const [isLoadingUser, setIsLoadingUser] =
+    useState(true);
+
+  const [workoutExercises, setWorkoutExercises] =
+    useState(exercises);
+
+  const [openSwapFor, setOpenSwapFor] =
+    useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -244,6 +328,7 @@ export default function LowerBodyFoundationPage() {
 
         <section className="min-w-0 flex-1 px-5 py-6 sm:px-6 md:px-10 md:py-8 lg:px-14">
           {/* TOP NAV */}
+
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.34em] text-[#9D6F67]">
@@ -264,6 +349,7 @@ export default function LowerBodyFoundationPage() {
           </header>
 
           {/* WORKOUT HEADER */}
+
           <section className="mt-9 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6 sm:px-7 sm:py-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -290,6 +376,7 @@ export default function LowerBodyFoundationPage() {
             </div>
 
             {/* STATS */}
+
             <div className="mt-6 grid grid-cols-2 border-t border-[#E1D3CE] sm:grid-cols-4">
               <div className="border-b border-r border-[#E1D3CE] py-4 pr-3 sm:border-b-0">
                 <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
@@ -334,6 +421,7 @@ export default function LowerBodyFoundationPage() {
           </section>
 
           {/* WARM UP */}
+
           <section className="mt-5 rounded-[1.5rem] bg-[#EAD8D3] px-5 py-5 sm:px-6">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
               <div>
@@ -373,6 +461,7 @@ export default function LowerBodyFoundationPage() {
           </section>
 
           {/* WORKOUT */}
+
           <section className="mt-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -395,6 +484,7 @@ export default function LowerBodyFoundationPage() {
             </div>
 
             {/* ONE WORKOUT CARD */}
+
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
               {workoutExercises.map((exercise, index) => (
                 <article
@@ -406,6 +496,7 @@ export default function LowerBodyFoundationPage() {
                   }`}
                 >
                   {/* MAIN ROW */}
+
                   <div className="grid gap-4 md:grid-cols-[42px_minmax(0,1fr)_auto] md:items-start">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-[11px] text-[#A77B73]">
                       {exercise.number}
@@ -433,6 +524,7 @@ export default function LowerBodyFoundationPage() {
                   </div>
 
                   {/* OPTIONS */}
+
                   <div className="mt-5 md:ml-[58px]">
                     <div className="grid gap-3 border-t border-[#E7DAD6] pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#E1D3CE]">
                       <div className="sm:pr-5">
@@ -468,7 +560,10 @@ export default function LowerBodyFoundationPage() {
                   </div>
 
                   {/* SWAP */}
-                  {exerciseSwaps[exercise.swapKey ?? exercise.name] && (
+
+                  {exerciseSwaps[
+                    exercise.swapKey ?? exercise.name
+                  ] && (
                     <div className="mt-4 md:ml-[58px]">
                       <button
                         type="button"
@@ -486,7 +581,9 @@ export default function LowerBodyFoundationPage() {
                         </span>
 
                         <span className="text-sm text-[#A77B73]">
-                          {openSwapFor === exercise.number ? "−" : "+"}
+                          {openSwapFor === exercise.number
+                            ? "−"
+                            : "+"}
                         </span>
                       </button>
 
@@ -494,24 +591,38 @@ export default function LowerBodyFoundationPage() {
                         <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
                           <div className="divide-y divide-[#D8C3BD]">
                             {exerciseSwaps[
-                              exercise.swapKey ?? exercise.name
+                              exercise.swapKey ??
+                                exercise.name
                             ].map((swap) => (
                               <button
                                 key={`${exercise.number}-${swap.name}`}
                                 type="button"
                                 onClick={() => {
-                                  setWorkoutExercises((current) =>
-                                    current.map((item) =>
-                                      item.number === exercise.number
-                                        ? {
-                                            ...item,
-                                            name: swap.name,
-                                            cue: swap.note,
-                                            home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                            gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                          }
-                                        : item,
-                                    ),
+                                  const swapDetails =
+                                    swapExerciseDetails[
+                                      swap.name
+                                    ];
+
+                                  setWorkoutExercises(
+                                    (current) =>
+                                      current.map(
+                                        (item) =>
+                                          item.number ===
+                                          exercise.number
+                                            ? {
+                                                ...item,
+                                                name: swap.name,
+                                                cue:
+                                                  swapDetails?.cue ??
+                                                  swap.note,
+                                                modification:
+                                                  swapDetails?.modification ??
+                                                  item.modification,
+                                                home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                                gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                              }
+                                            : item,
+                                      ),
                                   );
 
                                   setOpenSwapFor(null);
@@ -548,6 +659,7 @@ export default function LowerBodyFoundationPage() {
           </section>
 
           {/* COOL DOWN */}
+
           <section className="mt-8 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-5 sm:px-6">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
               <div>
@@ -587,6 +699,7 @@ export default function LowerBodyFoundationPage() {
           </section>
 
           {/* FINISH */}
+
           <section className="py-10 text-center">
             <p className="text-[7px] tracking-[0.25em] text-[#9D6F67]">
               LOWER BODY FOUNDATION

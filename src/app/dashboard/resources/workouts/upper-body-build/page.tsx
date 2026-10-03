@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -151,34 +152,243 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
 };
 
 /*
- * This expands the swap system so every exercise that can be selected
+ * Expand the swap system so every exercise that can be selected
  * can also be swapped again.
  *
  * Example:
+ *
  * Lat Pulldown
  *   → Dumbbell Pullover
  *      → Lat Pulldown / Resistance Band Pulldown / Assisted Pull-Up
  *
- * This means users can keep swapping as many times as they want.
+ * This allows users to keep swapping as needed.
  */
+
 const expandedExerciseSwaps: Record<string, SwapOption[]> = {
   ...exerciseSwaps,
 };
 
-Object.entries(exerciseSwaps).forEach(([originalExercise, options]) => {
-  options.forEach((option) => {
-    if (!expandedExerciseSwaps[option.name]) {
-      expandedExerciseSwaps[option.name] = [
-        {
-          name: originalExercise,
-          location: "BOTH",
-          note: `Swap back to ${originalExercise}.`,
-        },
-        ...options.filter((item) => item.name !== option.name),
-      ];
-    }
-  });
-});
+Object.entries(exerciseSwaps).forEach(
+  ([originalExercise, options]) => {
+    options.forEach((option) => {
+      if (!expandedExerciseSwaps[option.name]) {
+        expandedExerciseSwaps[option.name] = [
+          {
+            name: originalExercise,
+            location: "BOTH",
+            note: `Swap back to ${originalExercise}.`,
+          },
+          ...options.filter(
+            (item) => item.name !== option.name,
+          ),
+        ];
+      }
+    });
+  },
+);
+
+/* ---------------------------------
+   SWAPPED EXERCISE INSTRUCTIONS
+--------------------------------- */
+
+const swapExerciseDetails: Record<
+  string,
+  {
+    cue: string;
+    modification: string;
+  }
+> = {
+  "Dumbbell Pullover": {
+    cue: "Lie on a bench or the floor with a dumbbell held over your chest. Keep a slight bend in your elbows as you lower the dumbbell overhead, then pull it back over your chest using your lats.",
+    modification:
+      "Use a lighter dumbbell or reduce the range of motion.",
+  },
+
+  "Resistance Band Pulldown": {
+    cue: "Anchor the band securely overhead. Pull your elbows down toward your ribs while keeping your chest lifted, then return slowly.",
+    modification:
+      "Use a lighter band or reduce the range of motion.",
+  },
+
+  "Assisted Pull-Up": {
+    cue: "Set the assistance so you can control the movement. Pull your elbows down toward your sides to lift your body, then lower slowly.",
+    modification:
+      "Increase the assistance or use a smaller range of motion.",
+  },
+
+  "Dumbbell Bent-Over Row": {
+    cue: "Hinge at your hips with a neutral spine. Pull the dumbbells toward your ribs while keeping your elbows close, then lower with control.",
+    modification:
+      "Use lighter dumbbells or support one hand on a bench.",
+  },
+
+  "Chest-Supported Dumbbell Row": {
+    cue: "Lie face down on an incline bench with a dumbbell in each hand. Pull the weights toward your ribs while keeping your chest supported, then lower slowly.",
+    modification:
+      "Use lighter dumbbells or reduce the range of motion.",
+  },
+
+  "Machine Row": {
+    cue: "Set the seat so the handles are within comfortable reach. Keep your chest supported and pull the handles toward your torso, then return slowly.",
+    modification:
+      "Use a lighter weight and keep the movement controlled.",
+  },
+
+  "Arnold Press": {
+    cue: "Start with the dumbbells in front of your shoulders, palms facing you. Rotate your palms outward as you press overhead, then reverse the movement as you lower.",
+    modification:
+      "Use lighter dumbbells or press one arm at a time.",
+  },
+
+  "Single-Arm Shoulder Press": {
+    cue: "Hold one dumbbell at shoulder height and brace your core. Press the weight overhead without leaning, then lower it with control.",
+    modification:
+      "Use a lighter dumbbell or perform the movement seated.",
+  },
+
+  "Machine Shoulder Press": {
+    cue: "Adjust the seat so the handles start around shoulder height. Press the handles overhead without locking your elbows, then return slowly.",
+    modification:
+      "Use a lighter weight or reduce the range of motion.",
+  },
+
+  "Dumbbell Floor Press": {
+    cue: "Lie on your back with a dumbbell in each hand. Lower your upper arms toward the floor with control, then press the dumbbells back up over your chest.",
+    modification:
+      "Use lighter dumbbells or perform one arm at a time.",
+  },
+
+  "Dumbbell Bench Press": {
+    cue: "Lie on a stable bench with the dumbbells over your chest. Lower them toward the sides of your chest with control, then press them back up.",
+    modification:
+      "Use lighter dumbbells or reduce the range of motion.",
+  },
+
+  "Push-Up": {
+    cue: "Place your hands slightly wider than your shoulders and keep your body in one straight line. Lower your chest with control, then press the floor away.",
+    modification:
+      "Perform the push-up from your knees or use an elevated surface.",
+  },
+
+  "Cable Lateral Raise": {
+    cue: "Stand beside the cable with the handle in the hand farthest from the machine. Raise your arm out to the side to about shoulder height, then lower slowly.",
+    modification:
+      "Use lighter resistance or reduce the range of motion.",
+  },
+
+  "Band Lateral Raise": {
+    cue: "Stand on the band and hold the handles or ends at your sides. Raise your arms out to the sides with control, then slowly lower.",
+    modification:
+      "Use a lighter band or raise one arm at a time.",
+  },
+
+  "Lean-Away Lateral Raise": {
+    cue: "Hold onto a stable support and lean slightly away from it. Raise the dumbbell out to the side with control, then lower slowly.",
+    modification:
+      "Use a lighter dumbbell or reduce the range of motion.",
+  },
+
+  "Overhead Dumbbell Triceps Extension": {
+    cue: "Hold one dumbbell overhead with both hands. Bend your elbows to lower the weight behind your head, then extend your arms to return overhead.",
+    modification:
+      "Use a lighter dumbbell or perform the movement seated.",
+  },
+
+  "Close-Grip Push-Up": {
+    cue: "Set your hands slightly narrower than shoulder-width and keep your elbows close to your sides. Lower your chest with control, then press back up.",
+    modification:
+      "Perform the movement from your knees or use an elevated surface.",
+  },
+
+  "Bench Dip": {
+    cue: "Place your hands on the edge of a stable bench or chair and keep your shoulders down. Bend your elbows to lower your body slightly, then press through your hands to rise.",
+    modification:
+      "Keep your feet closer to the bench and use a smaller range of motion.",
+  },
+
+  "Hammer Curl": {
+    cue: "Hold the dumbbells with your palms facing each other. Keep your elbows near your sides and curl the weights without swinging, then lower slowly.",
+    modification:
+      "Use lighter dumbbells or alternate arms.",
+  },
+
+  "Resistance Band Curl": {
+    cue: "Stand on the band and hold the handles or ends with your palms facing forward. Keep your elbows close to your sides as you curl, then lower slowly.",
+    modification:
+      "Use a lighter band or reduce the range of motion.",
+  },
+
+  "Cable Curl": {
+    cue: "Stand tall facing the cable with the handle in your hands. Keep your elbows close to your sides and curl the handle upward, then lower with control.",
+    modification:
+      "Use a lighter weight or reduce the range of motion.",
+  },
+};
+
+/* ---------------------------------
+   ORIGINAL EXERCISE INSTRUCTIONS
+--------------------------------- */
+
+const originalExerciseDetails: Record<
+  string,
+  {
+    cue: string;
+    modification: string;
+  }
+> = {
+  "Lat Pulldown": {
+    cue: "Keep your chest tall and pull your elbows down toward your ribs without swinging or leaning far back.",
+    modification:
+      "Use a lighter weight and focus on a smooth, controlled pull.",
+  },
+
+  "Seated Cable Row": {
+    cue: "Brace your core, keep your shoulders down, and pull the handle toward your torso while squeezing your shoulder blades together.",
+    modification:
+      "Reduce the weight and shorten the range slightly if needed.",
+  },
+
+  "Dumbbell Shoulder Press": {
+    cue: "Keep your ribs stacked over your hips and press the dumbbells overhead without arching your lower back.",
+    modification:
+      "Use lighter dumbbells or perform one arm at a time.",
+  },
+
+  "Chest Press Machine": {
+    cue: "Set the seat so the handles line up around mid-chest, keep your shoulders supported, and press without locking your elbows.",
+    modification:
+      "Lower the resistance and stop just before your elbows travel too far behind your body.",
+  },
+
+  "Dumbbell Lateral Raise": {
+    cue: "Keep a soft bend in your elbows and raise the dumbbells with control to about shoulder height.",
+    modification:
+      "Use lighter dumbbells or alternate one arm at a time.",
+  },
+
+  "Cable Triceps Pressdown": {
+    cue: "Keep your elbows close to your sides and straighten your arms without letting your shoulders roll forward.",
+    modification:
+      "Use a lighter weight and reduce the range if your elbows feel uncomfortable.",
+  },
+
+  "Dumbbell Biceps Curl": {
+    cue: "Keep your elbows near your sides and curl without swinging your torso or letting your shoulders take over.",
+    modification:
+      "Use lighter dumbbells or alternate arms.",
+  },
+};
+
+const exerciseDetails: Record<
+  string,
+  {
+    cue: string;
+    modification: string;
+  }
+> = {
+  ...originalExerciseDetails,
+  ...swapExerciseDetails,
+};
 
 const exercises: WorkoutExercise[] = [
   {
@@ -192,6 +402,7 @@ const exercises: WorkoutExercise[] = [
     home: "Dumbbell Pullover — 3 sets × 10–12 reps",
     gym: "Lat Pulldown — 3 sets × 10–12 reps",
   },
+
   {
     number: "02",
     name: "Seated Cable Row",
@@ -203,6 +414,7 @@ const exercises: WorkoutExercise[] = [
     home: "Dumbbell Bent-Over Row — 3 sets × 10–12 reps",
     gym: "Seated Cable Row — 3 sets × 10–12 reps",
   },
+
   {
     number: "03",
     name: "Dumbbell Shoulder Press",
@@ -214,6 +426,7 @@ const exercises: WorkoutExercise[] = [
     home: "Dumbbell Shoulder Press — 3 sets × 8–10 reps",
     gym: "Dumbbell Shoulder Press — 3 sets × 8–10 reps",
   },
+
   {
     number: "04",
     name: "Chest Press Machine",
@@ -225,6 +438,7 @@ const exercises: WorkoutExercise[] = [
     home: "Dumbbell Floor Press — 3 sets × 10–12 reps",
     gym: "Chest Press Machine — 3 sets × 10–12 reps",
   },
+
   {
     number: "05",
     name: "Dumbbell Lateral Raise",
@@ -236,6 +450,7 @@ const exercises: WorkoutExercise[] = [
     home: "Dumbbell Lateral Raise — 3 sets × 12–15 reps",
     gym: "Dumbbell Lateral Raise — 3 sets × 12–15 reps",
   },
+
   {
     number: "06",
     name: "Cable Triceps Pressdown",
@@ -247,13 +462,15 @@ const exercises: WorkoutExercise[] = [
     home: "Overhead Dumbbell Triceps Extension — 3 sets × 10–12 reps",
     gym: "Cable Triceps Pressdown — 3 sets × 10–12 reps",
   },
+
   {
     number: "07",
     name: "Dumbbell Biceps Curl",
     prescription: "3 SETS × 10–12 REPS",
     rest: "45 SEC REST",
     cue: "Keep your elbows near your sides and curl without swinging your torso or letting your shoulders take over.",
-    modification: "Use lighter dumbbells or alternate arms.",
+    modification:
+      "Use lighter dumbbells or alternate arms.",
     home: "Dumbbell Biceps Curl — 3 sets × 10–12 reps",
     gym: "Dumbbell Biceps Curl — 3 sets × 10–12 reps",
   },
@@ -275,10 +492,15 @@ const cooldown = [
 
 export default function UpperBodyBuildPage() {
   const [firstName, setFirstName] = useState("there");
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  const [isLoadingUser, setIsLoadingUser] =
+    useState(true);
+
   const [workoutExercises, setWorkoutExercises] =
     useState<WorkoutExercise[]>(exercises);
-  const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
+
+  const [openSwapFor, setOpenSwapFor] =
+    useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -321,6 +543,7 @@ export default function UpperBodyBuildPage() {
 
         <section className="min-w-0 flex-1 px-5 py-6 sm:px-6 md:px-10 md:py-8 lg:px-14">
           {/* TOP NAV */}
+
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.34em] text-[#9D6F67]">
@@ -341,6 +564,7 @@ export default function UpperBodyBuildPage() {
           </header>
 
           {/* WORKOUT HEADER */}
+
           <section className="mt-9 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6 sm:px-7 sm:py-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -356,8 +580,9 @@ export default function UpperBodyBuildPage() {
                 </h1>
 
                 <p className="mt-3 max-w-xl text-sm leading-6 text-[#806E68]">
-                  Build strength through your back, shoulders, chest,
-                  and arms with controlled, steady working sets.
+                  Build strength through your back, shoulders,
+                  chest, and arms with controlled, steady
+                  working sets.
                 </p>
               </div>
 
@@ -367,6 +592,7 @@ export default function UpperBodyBuildPage() {
             </div>
 
             {/* STATS */}
+
             <div className="mt-6 grid grid-cols-2 border-t border-[#E1D3CE] sm:grid-cols-4">
               <div className="border-b border-r border-[#E1D3CE] py-4 pr-3 sm:border-b-0">
                 <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
@@ -411,6 +637,7 @@ export default function UpperBodyBuildPage() {
           </section>
 
           {/* WARM UP */}
+
           <section className="mt-5 rounded-[1.5rem] bg-[#EAD8D3] px-5 py-5 sm:px-6">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
               <div>
@@ -426,8 +653,8 @@ export default function UpperBodyBuildPage() {
                 </h2>
 
                 <p className="mt-2 text-xs leading-5 text-[#806E68]">
-                  Warm up your shoulders, upper back, and arms before
-                  moving into your working sets.
+                  Warm up your shoulders, upper back, and arms
+                  before moving into your working sets.
                 </p>
               </div>
 
@@ -451,6 +678,7 @@ export default function UpperBodyBuildPage() {
           </section>
 
           {/* WORKOUT */}
+
           <section className="mt-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -467,131 +695,166 @@ export default function UpperBodyBuildPage() {
               </div>
 
               <p className="max-w-sm text-xs leading-5 text-[#806E68]">
-                Work through each movement in order. Choose the setup
-                that fits where you&apos;re training today.
+                Work through each movement in order. Choose the
+                setup that fits where you&apos;re training today.
               </p>
             </div>
 
             {/* ONE WORKOUT CARD */}
+
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
-              {workoutExercises.map((exercise, index) => (
-                <article
-                  key={exercise.number}
-                  className={`px-4 py-6 sm:px-6 ${
-                    index !== workoutExercises.length - 1
-                      ? "border-b border-[#DED0CB]"
-                      : ""
-                  }`}
-                >
-                  {/* MAIN ROW */}
-                  <div className="grid gap-4 md:grid-cols-[42px_minmax(0,1fr)_auto] md:items-start">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-[11px] text-[#A77B73]">
-                      {exercise.number}
-                    </div>
+              {workoutExercises.map(
+                (exercise, index) => (
+                  <article
+                    key={exercise.number}
+                    className={`px-4 py-6 sm:px-6 ${
+                      index !==
+                      workoutExercises.length - 1
+                        ? "border-b border-[#DED0CB]"
+                        : ""
+                    }`}
+                  >
+                    {/* MAIN ROW */}
 
-                    <div className="min-w-0">
-                      <h3 className="font-serif text-xl leading-tight sm:text-2xl">
-                        {exercise.name}
-                      </h3>
+                    <div className="grid gap-4 md:grid-cols-[42px_minmax(0,1fr)_auto] md:items-start">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-[11px] text-[#A77B73]">
+                        {exercise.number}
+                      </div>
 
-                      <p className="mt-2 max-w-2xl text-xs leading-5 text-[#806E68]">
-                        {exercise.cue}
-                      </p>
-                    </div>
+                      <div className="min-w-0">
+                        <h3 className="font-serif text-xl leading-tight sm:text-2xl">
+                          {exercise.name}
+                        </h3>
 
-                    <div className="flex flex-wrap gap-2 md:max-w-[240px] md:justify-end">
-                      <span className="rounded-full bg-[#EAD8D3] px-3 py-2 text-[8px] tracking-[0.11em] text-[#6F514B]">
-                        {exercise.prescription}
-                      </span>
-
-                      <span className="rounded-full border border-[#D6C3BD] px-3 py-2 text-[8px] tracking-[0.11em] text-[#806E68]">
-                        {exercise.rest}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* OPTIONS */}
-                  <div className="mt-5 md:ml-[58px]">
-                    <div className="grid gap-3 border-t border-[#E7DAD6] pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#E1D3CE]">
-                      <div className="sm:pr-5">
-                        <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                          HOME
-                        </p>
-
-                        <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
-                          {exercise.home}
+                        <p className="mt-2 max-w-2xl text-xs leading-5 text-[#806E68]">
+                          {exercise.cue}
                         </p>
                       </div>
 
-                      <div className="sm:px-5">
-                        <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                          GYM
-                        </p>
-
-                        <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
-                          {exercise.gym}
-                        </p>
-                      </div>
-
-                      <div className="sm:pl-5">
-                        <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                          EASIER OPTION
-                        </p>
-
-                        <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
-                          {exercise.modification}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SWAP */}
-                  {expandedExerciseSwaps[exercise.name] && (
-                    <div className="mt-4 md:ml-[58px]">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setOpenSwapFor((current) =>
-                            current === exercise.number
-                              ? null
-                              : exercise.number,
-                          )
-                        }
-                        className="flex w-full items-center justify-between rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:bg-[#EAD8D3]"
-                      >
-                        <span className="text-[8px] tracking-[0.18em] text-[#8F655E]">
-                          ↔ SWAP EXERCISE
+                      <div className="flex flex-wrap gap-2 md:max-w-[240px] md:justify-end">
+                        <span className="rounded-full bg-[#EAD8D3] px-3 py-2 text-[8px] tracking-[0.11em] text-[#6F514B]">
+                          {exercise.prescription}
                         </span>
 
-                        <span className="text-sm text-[#A77B73]">
-                          {openSwapFor === exercise.number ? "−" : "+"}
+                        <span className="rounded-full border border-[#D6C3BD] px-3 py-2 text-[8px] tracking-[0.11em] text-[#806E68]">
+                          {exercise.rest}
                         </span>
-                      </button>
+                      </div>
+                    </div>
 
-                      {openSwapFor === exercise.number && (
-                        <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
-                          <div className="divide-y divide-[#D8C3BD]">
-                            {expandedExerciseSwaps[exercise.name].map(
-                              (swap) => (
+                    {/* OPTIONS */}
+
+                    <div className="mt-5 md:ml-[58px]">
+                      <div className="grid gap-3 border-t border-[#E7DAD6] pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#E1D3CE]">
+                        <div className="sm:pr-5">
+                          <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                            HOME
+                          </p>
+
+                          <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
+                            {exercise.home}
+                          </p>
+                        </div>
+
+                        <div className="sm:px-5">
+                          <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                            GYM
+                          </p>
+
+                          <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
+                            {exercise.gym}
+                          </p>
+                        </div>
+
+                        <div className="sm:pl-5">
+                          <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                            EASIER OPTION
+                          </p>
+
+                          <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
+                            {exercise.modification}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SWAP */}
+
+                    {expandedExerciseSwaps[
+                      exercise.name
+                    ] && (
+                      <div className="mt-4 md:ml-[58px]">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenSwapFor(
+                              (current) =>
+                                current ===
+                                exercise.number
+                                  ? null
+                                  : exercise.number,
+                            )
+                          }
+                          className="flex w-full items-center justify-between rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:bg-[#EAD8D3]"
+                        >
+                          <span className="text-[8px] tracking-[0.18em] text-[#8F655E]">
+                            ↔ SWAP EXERCISE
+                          </span>
+
+                          <span className="text-sm text-[#A77B73]">
+                            {openSwapFor ===
+                            exercise.number
+                              ? "−"
+                              : "+"}
+                          </span>
+                        </button>
+
+                        {openSwapFor ===
+                          exercise.number && (
+                          <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
+                            <div className="divide-y divide-[#D8C3BD]">
+                              {expandedExerciseSwaps[
+                                exercise.name
+                              ].map((swap) => (
                                 <button
                                   key={`${exercise.number}-${swap.name}`}
                                   type="button"
                                   onClick={() => {
-                                    setWorkoutExercises((current) =>
-                                      current.map((item) =>
-                                        item.number === exercise.number
-                                          ? {
-                                              ...item,
-                                              name: swap.name,
-                                              cue: swap.note,
-                                              home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                              gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                            }
-                                          : item,
-                                      ),
+                                    const details =
+                                      exerciseDetails[
+                                        swap.name
+                                      ];
+
+                                    setWorkoutExercises(
+                                      (current) =>
+                                        current.map(
+                                          (item) =>
+                                            item.number ===
+                                            exercise.number
+                                              ? {
+                                                  ...item,
+
+                                                  name: swap.name,
+
+                                                  cue:
+                                                    details?.cue ??
+                                                    swap.note,
+
+                                                  modification:
+                                                    details?.modification ??
+                                                    item.modification,
+
+                                                  home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+
+                                                  gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                                }
+                                              : item,
+                                        ),
                                     );
 
-                                    setOpenSwapFor(null);
+                                    setOpenSwapFor(
+                                      null,
+                                    );
                                   }}
                                   className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
                                 >
@@ -613,19 +876,20 @@ export default function UpperBodyBuildPage() {
                                     →
                                   </span>
                                 </button>
-                              ),
-                            )}
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </article>
-              ))}
+                        )}
+                      </div>
+                    )}
+                  </article>
+                ),
+              )}
             </div>
           </section>
 
           {/* COOL DOWN */}
+
           <section className="mt-8 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-5 sm:px-6">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
               <div>
@@ -666,6 +930,7 @@ export default function UpperBodyBuildPage() {
           </section>
 
           {/* FINISH */}
+
           <section className="py-10 text-center">
             <p className="text-[7px] tracking-[0.25em] text-[#9D6F67]">
               UPPER BODY BUILD

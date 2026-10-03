@@ -158,24 +158,185 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
  * This means users can keep swapping the same exercise
  * as many times as they want.
  */
+
 const expandedExerciseSwaps: Record<string, SwapOption[]> = {
   ...exerciseSwaps,
 };
 
-Object.entries(exerciseSwaps).forEach(([originalExercise, options]) => {
-  options.forEach((option) => {
-    if (!expandedExerciseSwaps[option.name]) {
-      expandedExerciseSwaps[option.name] = [
-        {
-          name: originalExercise,
-          location: "BOTH",
-          note: `Swap back to ${originalExercise}.`,
-        },
-        ...options.filter((item) => item.name !== option.name),
-      ];
-    }
-  });
-});
+Object.entries(exerciseSwaps).forEach(
+  ([originalExercise, options]) => {
+    options.forEach((option) => {
+      if (!expandedExerciseSwaps[option.name]) {
+        expandedExerciseSwaps[option.name] = [
+          {
+            name: originalExercise,
+            location: "BOTH",
+            note: `Swap back to ${originalExercise}.`,
+          },
+          ...options.filter(
+            (item) => item.name !== option.name,
+          ),
+        ];
+      }
+    });
+  },
+);
+
+/* ---------------------------------
+   EXERCISE INSTRUCTIONS
+--------------------------------- */
+
+const exerciseDetails: Record<
+  string,
+  {
+    cue: string;
+    modification: string;
+  }
+> = {
+  "Steady Cardio": {
+    cue: "Move at a pace that raises your heart rate while still letting you stay in control of your breathing.",
+    modification:
+      "Slow the pace or shorten the interval to 3 minutes.",
+  },
+
+  "Walking Pad": {
+    cue: "Walk at a steady pace with an upright posture, relaxed shoulders, and a pace that keeps your heart rate elevated without making you lose control of your breathing.",
+    modification:
+      "Slow the walking speed or shorten the interval.",
+  },
+
+  "Outdoor Walk": {
+    cue: "Walk at a steady, purposeful pace while keeping your posture tall and your arms moving naturally.",
+    modification:
+      "Slow your pace or choose a shorter route.",
+  },
+
+  Elliptical: {
+    cue: "Stand tall with your core gently braced and pedal smoothly while moving the handles naturally with your arms.",
+    modification:
+      "Lower the resistance or slow your pace.",
+  },
+
+  "Squat to Reach": {
+    cue: "Sit into a comfortable squat, stand tall, and reach overhead without rushing the movement.",
+    modification:
+      "Use a shallower squat or squat to a chair.",
+  },
+
+  "Bodyweight Squat": {
+    cue: "Stand with your feet about shoulder-width apart. Sit your hips back and down, keep your chest lifted, then drive through your feet to stand.",
+    modification:
+      "Use a shallower range of motion or squat to a chair.",
+  },
+
+  "Step-Up": {
+    cue: "Place one foot firmly on a stable step or platform. Drive through that foot to stand tall, then step down with control and alternate sides.",
+    modification:
+      "Use a lower step or hold onto a stable surface for balance.",
+  },
+
+  "March to Reach": {
+    cue: "Stand tall and alternate lifting your knees while reaching your arms overhead in a smooth, controlled rhythm.",
+    modification:
+      "Lower the knee height or keep the arm reach smaller.",
+  },
+
+  "Low-Impact Cardio Push": {
+    cue: "Keep a steady rhythm and stay light on your feet while maintaining good posture.",
+    modification:
+      "Reduce the pace and keep one foot on the floor at all times.",
+  },
+
+  "Fast March": {
+    cue: "Stand tall and quickly alternate lifting your knees while pumping your arms naturally to increase your heart rate.",
+    modification:
+      "Slow the pace or reduce the height of each knee lift.",
+  },
+
+  "Step Jacks": {
+    cue: "Step one foot out to the side while reaching your arms overhead, then return to center and alternate sides without jumping.",
+    modification:
+      "Make the steps smaller or slow the tempo.",
+  },
+
+  "Bike Push": {
+    cue: "Pedal at a challenging but controlled pace while keeping your torso stable and your breathing rhythmic.",
+    modification:
+      "Lower the resistance or reduce your speed.",
+  },
+
+  "Alternating Reverse Lunge": {
+    cue: "Step back with control, keep your front foot planted, and drive through it to return to standing.",
+    modification:
+      "Hold a stable surface or use a smaller range of motion.",
+  },
+
+  "Low Step Touch": {
+    cue: "Step gently from side to side, keeping your knees soft and your torso upright while maintaining a steady rhythm.",
+    modification:
+      "Take smaller steps or slow the pace.",
+  },
+
+  "Cardio Interval": {
+    cue: "Increase your effort for the work interval, then deliberately bring the pace down during recovery.",
+    modification:
+      "Keep both intervals at a moderate pace instead of pushing intensity.",
+  },
+
+  "Walking Pad Intervals": {
+    cue: "Alternate between an easier walking pace and a faster controlled pace. Increase speed during the work interval and slow down for recovery.",
+    modification:
+      "Use a smaller speed difference between the work and recovery intervals.",
+  },
+
+  "Outdoor Walk Intervals": {
+    cue: "Alternate between an easy walking pace and a faster purposeful pace, using the change in speed to create your intervals.",
+    modification:
+      "Keep the pace moderate throughout instead of pushing the faster interval.",
+  },
+
+  "Bike Intervals": {
+    cue: "Alternate between a faster or higher-resistance effort and an easier recovery pace while keeping your pedaling smooth.",
+    modification:
+      "Use a smaller resistance or speed difference between intervals.",
+  },
+
+  "Standing Knee Drive": {
+    cue: "Brace your core and drive one knee up at a time while staying tall through your torso.",
+    modification:
+      "Slow the tempo and hold a wall or rail for balance.",
+  },
+
+  "March in Place": {
+    cue: "Stand tall and alternate lifting your knees in place while keeping your core gently braced and your arms moving naturally.",
+    modification:
+      "Lower your knee height or slow the pace.",
+  },
+
+  "Step Touch": {
+    cue: "Step one foot out to the side, bring the other foot in, and continue alternating while keeping a comfortable rhythm.",
+    modification:
+      "Take smaller steps or slow the movement.",
+  },
+
+  "Final Cardio Finish": {
+    cue: "Finish at a challenging but controlled pace, then gradually slow down during the final 30 seconds.",
+    modification:
+      "Keep the entire interval at a comfortable steady pace.",
+  },
+
+  "Brisk Walk": {
+    cue: "Walk at a purposeful pace that raises your heart rate while keeping your breathing controlled and your posture tall.",
+    modification:
+      "Reduce your pace and keep the walk comfortable.",
+  },
+
+  Bike: {
+    cue: "Pedal at a controlled pace and gradually reduce your speed and resistance as you approach the end of the interval.",
+    modification:
+      "Use very light resistance and an easy pace.",
+  },
+};
 
 const exercises: WorkoutExercise[] = [
   {
@@ -184,7 +345,8 @@ const exercises: WorkoutExercise[] = [
     prescription: "1 ROUND × 5 MIN",
     rest: "30 SEC RESET",
     cue: "Move at a pace that raises your heart rate while still letting you stay in control of your breathing.",
-    modification: "Slow the pace or shorten the interval to 3 minutes.",
+    modification:
+      "Slow the pace or shorten the interval to 3 minutes.",
     home: "Brisk march, walking pad, stairs, or outdoor walk — 5 min",
     gym: "Treadmill, bike, elliptical, or stair climber — 5 min",
   },
@@ -195,7 +357,8 @@ const exercises: WorkoutExercise[] = [
     prescription: "3 SETS × 40 SEC",
     rest: "20 SEC REST",
     cue: "Sit into a comfortable squat, stand tall, and reach overhead without rushing the movement.",
-    modification: "Use a shallower squat or squat to a chair.",
+    modification:
+      "Use a shallower squat or squat to a chair.",
     home: "Bodyweight Squat to Reach — 40 sec",
     gym: "Bodyweight Squat to Reach — 40 sec",
   },
@@ -282,7 +445,8 @@ export default function CardioLockInPage() {
   const [workoutExercises, setWorkoutExercises] =
     useState<WorkoutExercise[]>(exercises);
 
-  const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
+  const [openSwapFor, setOpenSwapFor] =
+    useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -325,6 +489,7 @@ export default function CardioLockInPage() {
 
         <section className="min-w-0 flex-1 px-5 py-6 sm:px-6 md:px-10 md:py-8 lg:px-14">
           {/* TOP NAV */}
+
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.34em] text-[#9D6F67]">
@@ -345,6 +510,7 @@ export default function CardioLockInPage() {
           </header>
 
           {/* WORKOUT HEADER */}
+
           <section className="mt-9 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6 sm:px-7 sm:py-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -371,6 +537,7 @@ export default function CardioLockInPage() {
             </div>
 
             {/* STATS */}
+
             <div className="mt-6 grid grid-cols-2 border-t border-[#E1D3CE] sm:grid-cols-4">
               <div className="border-b border-r border-[#E1D3CE] py-4 pr-3 sm:border-b-0">
                 <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
@@ -415,6 +582,7 @@ export default function CardioLockInPage() {
           </section>
 
           {/* WARM UP */}
+
           <section className="mt-5 rounded-[1.5rem] bg-[#EAD8D3] px-5 py-5 sm:px-6">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
               <div>
@@ -455,6 +623,7 @@ export default function CardioLockInPage() {
           </section>
 
           {/* WORKOUT */}
+
           <section className="mt-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -477,6 +646,7 @@ export default function CardioLockInPage() {
             </div>
 
             {/* ONE WORKOUT CARD */}
+
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
               {workoutExercises.map((exercise, index) => (
                 <article
@@ -488,6 +658,7 @@ export default function CardioLockInPage() {
                   }`}
                 >
                   {/* MAIN ROW */}
+
                   <div className="grid gap-4 md:grid-cols-[42px_minmax(0,1fr)_auto] md:items-start">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-[11px] text-[#A77B73]">
                       {exercise.number}
@@ -515,6 +686,7 @@ export default function CardioLockInPage() {
                   </div>
 
                   {/* OPTIONS */}
+
                   <div className="mt-5 md:ml-[58px]">
                     <div className="grid gap-3 border-t border-[#E7DAD6] pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#E1D3CE]">
                       <div className="sm:pr-5">
@@ -550,6 +722,7 @@ export default function CardioLockInPage() {
                   </div>
 
                   {/* SWAP */}
+
                   {expandedExerciseSwaps[exercise.name] && (
                     <div className="mt-4 md:ml-[58px]">
                       <button
@@ -577,50 +750,63 @@ export default function CardioLockInPage() {
                       {openSwapFor === exercise.number && (
                         <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
                           <div className="divide-y divide-[#D8C3BD]">
-                            {expandedExerciseSwaps[exercise.name].map(
-                              (swap) => (
-                                <button
-                                  key={`${exercise.number}-${swap.name}`}
-                                  type="button"
-                                  onClick={() => {
-                                    setWorkoutExercises((current) =>
-                                      current.map((item) =>
-                                        item.number === exercise.number
-                                          ? {
-                                              ...item,
-                                              name: swap.name,
-                                              cue: swap.note,
-                                              home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                              gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                            }
-                                          : item,
+                            {expandedExerciseSwaps[
+                              exercise.name
+                            ].map((swap) => (
+                              <button
+                                key={`${exercise.number}-${swap.name}`}
+                                type="button"
+                                onClick={() => {
+                                  const details =
+                                    exerciseDetails[
+                                      swap.name
+                                    ];
+
+                                  setWorkoutExercises(
+                                    (current) =>
+                                      current.map(
+                                        (item) =>
+                                          item.number ===
+                                          exercise.number
+                                            ? {
+                                                ...item,
+                                                name: swap.name,
+                                                cue:
+                                                  details?.cue ??
+                                                  swap.note,
+                                                modification:
+                                                  details?.modification ??
+                                                  item.modification,
+                                                home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                                gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                              }
+                                            : item,
                                       ),
-                                    );
+                                  );
 
-                                    setOpenSwapFor(null);
-                                  }}
-                                  className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
-                                >
-                                  <span className="min-w-0">
-                                    <span className="block font-serif text-base text-[#211C19]">
-                                      {swap.name}
-                                    </span>
-
-                                    <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
-                                      {swap.note}
-                                    </span>
-
-                                    <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                                      {swap.location}
-                                    </span>
+                                  setOpenSwapFor(null);
+                                }}
+                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block font-serif text-base text-[#211C19]">
+                                    {swap.name}
                                   </span>
 
-                                  <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
-                                    →
+                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                    {swap.note}
                                   </span>
-                                </button>
-                              ),
-                            )}
+
+                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                    {swap.location}
+                                  </span>
+                                </span>
+
+                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                  →
+                                </span>
+                              </button>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -632,6 +818,7 @@ export default function CardioLockInPage() {
           </section>
 
           {/* COOL DOWN */}
+
           <section className="mt-8 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-5 sm:px-6">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
               <div>
@@ -672,6 +859,7 @@ export default function CardioLockInPage() {
           </section>
 
           {/* FINISH */}
+
           <section className="py-10 text-center">
             <p className="text-[7px] tracking-[0.25em] text-[#9D6F67]">
               CARDIO LOCK IN

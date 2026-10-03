@@ -140,31 +140,148 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
  * Example:
  *
  * Dead Bug
- * → Heel Taps
- * → Bird Dog
- * → Marching Dead Bug
- * → Dead Bug
+ *   → Heel Taps
+ *      → Dead Bug / Bird Dog / Marching Dead Bug
  *
- * This keeps the swap button available after every replacement.
+ * This keeps swapping available after every replacement.
  */
+
 const expandedExerciseSwaps: Record<string, SwapOption[]> = {
   ...exerciseSwaps,
 };
 
-Object.entries(exerciseSwaps).forEach(([originalExercise, options]) => {
-  options.forEach((option) => {
-    if (!expandedExerciseSwaps[option.name]) {
-      expandedExerciseSwaps[option.name] = [
-        {
-          name: originalExercise,
-          location: "BOTH",
-          note: `Swap back to ${originalExercise}.`,
-        },
-        ...options.filter((item) => item.name !== option.name),
-      ];
-    }
-  });
-});
+Object.entries(exerciseSwaps).forEach(
+  ([originalExercise, options]) => {
+    options.forEach((option) => {
+      if (!expandedExerciseSwaps[option.name]) {
+        expandedExerciseSwaps[option.name] = [
+          {
+            name: originalExercise,
+            location: "BOTH",
+            note: `Swap back to ${originalExercise}.`,
+          },
+          ...options.filter(
+            (item) => item.name !== option.name,
+          ),
+        ];
+      }
+    });
+  },
+);
+
+/* ---------------------------------
+   EXERCISE INSTRUCTIONS
+--------------------------------- */
+
+const exerciseDetails: Record<
+  string,
+  {
+    cue: string;
+    modification: string;
+  }
+> = {
+  "Dead Bug": {
+    cue: "Lie on your back with your arms reaching toward the ceiling and your knees bent at 90 degrees. Brace your core and slowly extend the opposite arm and leg without letting your lower back lift from the floor.",
+    modification:
+      "Move only your legs or shorten the range of motion.",
+  },
+
+  "Heel Taps": {
+    cue: "Lie on your back with your knees bent and feet lifted. Brace your core as you slowly lower one heel toward the floor, then bring it back up before switching sides.",
+    modification:
+      "Keep the movement smaller or keep your feet closer to the floor.",
+  },
+
+  "Bird Dog": {
+    cue: "Start on your hands and knees with your core braced. Slowly reach one arm and the opposite leg away from you while keeping your hips square, then return with control.",
+    modification:
+      "Move only one limb at a time until you feel stable.",
+  },
+
+  "Marching Dead Bug": {
+    cue: "Lie on your back with your knees bent and feet lifted. Brace your core and slowly lower one foot toward the floor, then return it to the starting position before switching sides.",
+    modification:
+      "Keep the range smaller or keep one foot on the floor for extra support.",
+  },
+
+  Plank: {
+    cue: "Stack your shoulders over your elbows, squeeze your glutes, and keep your body in one strong line while bracing your core.",
+    modification:
+      "Drop your knees to the floor or shorten the hold.",
+  },
+
+  "Incline Plank": {
+    cue: "Place your hands on a stable elevated surface and step your feet back. Brace your core, squeeze your glutes, and keep your body in one straight line.",
+    modification:
+      "Use a higher surface to reduce the amount of bodyweight you need to control.",
+  },
+
+  "Pallof Press": {
+    cue: "Stand perpendicular to the resistance with your hands held at your chest. Brace your core and press your hands straight away from your body without allowing your torso to rotate.",
+    modification:
+      "Use lighter resistance or reduce the pressing distance.",
+  },
+
+  "Quadruped Leg Extension": {
+    cue: "Start on your hands and knees with your core braced. Slowly extend one leg straight behind you while keeping your hips level, then return with control.",
+    modification:
+      "Keep the leg lower or perform smaller movements.",
+  },
+
+  "Core Press": {
+    cue: "Keep your ribs stacked over your hips and resist rotation as you press your hands straight away from your chest.",
+    modification:
+      "Use lighter resistance or hold the press for less time.",
+  },
+
+  "Banded Pallof Press": {
+    cue: "Anchor a resistance band securely at about chest height. Stand sideways to the anchor, hold the band at your chest, and press your hands straight forward while resisting rotation.",
+    modification:
+      "Use a lighter band or stand closer to the anchor.",
+  },
+
+  "Cable Pallof Press": {
+    cue: "Set a cable at about chest height and stand sideways to the machine. Hold the handle at your chest and press it straight forward while keeping your torso still.",
+    modification:
+      "Use lighter cable resistance or reduce the pressing distance.",
+  },
+
+  "Reverse Crunch": {
+    cue: "Lie on your back with your knees bent and feet lifted. Brace your abs and gently curl your hips off the floor instead of swinging your legs for momentum.",
+    modification:
+      "Keep your knees bent and use a smaller range of motion.",
+  },
+
+  "Bent-Knee Leg Raise": {
+    cue: "Lie on your back and keep your knees bent as you lift your legs toward your torso. Lower them slowly while keeping your core braced.",
+    modification:
+      "Keep the range smaller or place your hands underneath your hips for support.",
+  },
+
+  "Captain's Chair Knee Raise": {
+    cue: "Support yourself on the captain's chair with your back against the pad. Brace your core and bring your knees toward your chest, then lower them slowly.",
+    modification:
+      "Raise your knees only partway or use a slower range of motion.",
+  },
+
+  "Side Plank": {
+    cue: "Keep your shoulder stacked over your elbow, lift through your bottom waist, and keep your hips from rotating forward or dropping toward the floor.",
+    modification:
+      "Keep your bottom knee on the floor for support.",
+  },
+
+  "Knee Side Plank": {
+    cue: "Set up on your side with your bottom knee bent and your elbow underneath your shoulder. Lift your hips and maintain a straight line from your knee through your head.",
+    modification:
+      "Keep the hold shorter or place more weight through your bottom knee.",
+  },
+
+  "Side-Lying Leg Raise": {
+    cue: "Lie on your side with your legs stacked. Brace your core and lift your top leg without rolling your hips backward, then lower slowly.",
+    modification:
+      "Bend your bottom knee or use a smaller range of motion.",
+  },
+};
 
 const exercises: WorkoutExercise[] = [
   {
@@ -173,7 +290,8 @@ const exercises: WorkoutExercise[] = [
     prescription: "3 SETS × 8–10 / SIDE",
     rest: "30 SEC REST",
     cue: "Keep your lower back gently pressed into the floor and move slowly as you extend the opposite arm and leg.",
-    modification: "Move only your legs or shorten the range of motion.",
+    modification:
+      "Move only your legs or shorten the range of motion.",
     home: "Dead Bug — 3 sets × 8–10 / side",
     gym: "Dead Bug — 3 sets × 8–10 / side",
   },
@@ -184,7 +302,8 @@ const exercises: WorkoutExercise[] = [
     prescription: "3 SETS × 30–45 SEC",
     rest: "45 SEC REST",
     cue: "Stack your shoulders over your elbows, squeeze your glutes, and keep your body in one strong line.",
-    modification: "Drop your knees to the floor or shorten the hold.",
+    modification:
+      "Drop your knees to the floor or shorten the hold.",
     home: "Forearm Plank — 3 sets × 30–45 sec",
     gym: "Forearm Plank — 3 sets × 30–45 sec",
   },
@@ -195,7 +314,8 @@ const exercises: WorkoutExercise[] = [
     prescription: "3 SETS × 8 / SIDE",
     rest: "30 SEC REST",
     cue: "Reach long through the opposite arm and leg while keeping your hips square and your core braced.",
-    modification: "Move only one limb at a time until you feel stable.",
+    modification:
+      "Move only one limb at a time until you feel stable.",
     home: "Bird Dog — 3 sets × 8 / side",
     gym: "Bird Dog — 3 sets × 8 / side",
   },
@@ -206,7 +326,8 @@ const exercises: WorkoutExercise[] = [
     prescription: "3 SETS × 10 / SIDE",
     rest: "45 SEC REST",
     cue: "Keep your ribs stacked over your hips and resist rotation as you press your hands straight away from your chest.",
-    modification: "Use lighter resistance or hold the press for less time.",
+    modification:
+      "Use lighter resistance or hold the press for less time.",
     home: "Banded Pallof Press — 3 sets × 10 / side",
     gym: "Cable Pallof Press — 3 sets × 10 / side",
   },
@@ -217,7 +338,8 @@ const exercises: WorkoutExercise[] = [
     prescription: "3 SETS × 10–12 REPS",
     rest: "45 SEC REST",
     cue: "Use your abs to gently curl your hips off the floor instead of swinging your legs for momentum.",
-    modification: "Keep your knees bent and use a smaller range of motion.",
+    modification:
+      "Keep your knees bent and use a smaller range of motion.",
     home: "Reverse Crunch — 3 sets × 10–12 reps",
     gym: "Bench Reverse Crunch — 3 sets × 10–12 reps",
   },
@@ -228,7 +350,8 @@ const exercises: WorkoutExercise[] = [
     prescription: "3 SETS × 20–30 SEC / SIDE",
     rest: "30 SEC REST",
     cue: "Keep your shoulder stacked, lift through your bottom waist, and keep your hips from rotating forward.",
-    modification: "Keep your bottom knee on the floor for support.",
+    modification:
+      "Keep your bottom knee on the floor for support.",
     home: "Side Plank — 3 sets × 20–30 sec / side",
     gym: "Side Plank — 3 sets × 20–30 sec / side",
   },
@@ -250,12 +373,15 @@ const cooldown = [
 
 export default function CoreControlPage() {
   const [firstName, setFirstName] = useState("there");
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  const [isLoadingUser, setIsLoadingUser] =
+    useState(true);
 
   const [workoutExercises, setWorkoutExercises] =
     useState<WorkoutExercise[]>(exercises);
 
-  const [openSwapFor, setOpenSwapFor] = useState<string | null>(null);
+  const [openSwapFor, setOpenSwapFor] =
+    useState<string | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -298,6 +424,7 @@ export default function CoreControlPage() {
 
         <section className="min-w-0 flex-1 px-5 py-6 sm:px-6 md:px-10 md:py-8 lg:px-14">
           {/* TOP NAV */}
+
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.34em] text-[#9D6F67]">
@@ -318,6 +445,7 @@ export default function CoreControlPage() {
           </header>
 
           {/* WORKOUT HEADER */}
+
           <section className="mt-9 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6 sm:px-7 sm:py-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -344,6 +472,7 @@ export default function CoreControlPage() {
             </div>
 
             {/* STATS */}
+
             <div className="mt-6 grid grid-cols-2 border-t border-[#E1D3CE] sm:grid-cols-4">
               <div className="border-b border-r border-[#E1D3CE] py-4 pr-3 sm:border-b-0">
                 <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
@@ -388,6 +517,7 @@ export default function CoreControlPage() {
           </section>
 
           {/* WARM UP */}
+
           <section className="mt-5 rounded-[1.5rem] bg-[#EAD8D3] px-5 py-5 sm:px-6">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
               <div>
@@ -428,6 +558,7 @@ export default function CoreControlPage() {
           </section>
 
           {/* WORKOUT */}
+
           <section className="mt-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -450,6 +581,7 @@ export default function CoreControlPage() {
             </div>
 
             {/* ONE WORKOUT CARD */}
+
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
               {workoutExercises.map((exercise, index) => (
                 <article
@@ -461,6 +593,7 @@ export default function CoreControlPage() {
                   }`}
                 >
                   {/* MAIN ROW */}
+
                   <div className="grid gap-4 md:grid-cols-[42px_minmax(0,1fr)_auto] md:items-start">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-[11px] text-[#A77B73]">
                       {exercise.number}
@@ -488,6 +621,7 @@ export default function CoreControlPage() {
                   </div>
 
                   {/* OPTIONS */}
+
                   <div className="mt-5 md:ml-[58px]">
                     <div className="grid gap-3 border-t border-[#E7DAD6] pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#E1D3CE]">
                       <div className="sm:pr-5">
@@ -523,6 +657,7 @@ export default function CoreControlPage() {
                   </div>
 
                   {/* SWAP */}
+
                   {expandedExerciseSwaps[exercise.name] && (
                     <div className="mt-4 md:ml-[58px]">
                       <button
@@ -550,50 +685,68 @@ export default function CoreControlPage() {
                       {openSwapFor === exercise.number && (
                         <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
                           <div className="divide-y divide-[#D8C3BD]">
-                            {expandedExerciseSwaps[exercise.name].map(
-                              (swap) => (
-                                <button
-                                  key={`${exercise.number}-${swap.name}`}
-                                  type="button"
-                                  onClick={() => {
-                                    setWorkoutExercises((current) =>
-                                      current.map((item) =>
-                                        item.number === exercise.number
-                                          ? {
-                                              ...item,
-                                              name: swap.name,
-                                              cue: swap.note,
-                                              home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                              gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                            }
-                                          : item,
+                            {expandedExerciseSwaps[
+                              exercise.name
+                            ].map((swap) => (
+                              <button
+                                key={`${exercise.number}-${swap.name}`}
+                                type="button"
+                                onClick={() => {
+                                  const details =
+                                    exerciseDetails[
+                                      swap.name
+                                    ];
+
+                                  setWorkoutExercises(
+                                    (current) =>
+                                      current.map(
+                                        (item) =>
+                                          item.number ===
+                                          exercise.number
+                                            ? {
+                                                ...item,
+
+                                                name: swap.name,
+
+                                                cue:
+                                                  details?.cue ??
+                                                  swap.note,
+
+                                                modification:
+                                                  details?.modification ??
+                                                  item.modification,
+
+                                                home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+
+                                                gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                              }
+                                            : item,
                                       ),
-                                    );
+                                  );
 
-                                    setOpenSwapFor(null);
-                                  }}
-                                  className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
-                                >
-                                  <span className="min-w-0">
-                                    <span className="block font-serif text-base text-[#211C19]">
-                                      {swap.name}
-                                    </span>
-
-                                    <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
-                                      {swap.note}
-                                    </span>
-
-                                    <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                                      {swap.location}
-                                    </span>
+                                  setOpenSwapFor(null);
+                                }}
+                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                              >
+                                <span className="min-w-0">
+                                  <span className="block font-serif text-base text-[#211C19]">
+                                    {swap.name}
                                   </span>
 
-                                  <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
-                                    →
+                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                    {swap.note}
                                   </span>
-                                </button>
-                              ),
-                            )}
+
+                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                    {swap.location}
+                                  </span>
+                                </span>
+
+                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                  →
+                                </span>
+                              </button>
+                            ))}
                           </div>
                         </div>
                       )}
@@ -605,6 +758,7 @@ export default function CoreControlPage() {
           </section>
 
           {/* COOL DOWN */}
+
           <section className="mt-8 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-5 sm:px-6">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
               <div>
@@ -645,6 +799,7 @@ export default function CoreControlPage() {
           </section>
 
           {/* FINISH */}
+
           <section className="py-10 text-center">
             <p className="text-[7px] tracking-[0.25em] text-[#9D6F67]">
               CORE CONTROL
