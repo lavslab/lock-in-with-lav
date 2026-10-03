@@ -127,7 +127,8 @@ export default function ProgressPage() {
   const [isCustomWinModalOpen, setIsCustomWinModalOpen] =
     useState(false);
 
-  const [customWin, setCustomWin] = useState("");
+  const [customWin, setCustomWin] =
+    useState("");
 
   const [isSavingCustomWin, setIsSavingCustomWin] =
     useState(false);
@@ -173,12 +174,14 @@ export default function ProgressPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
-      const { data: profile, error: profileError } =
-        await supabase
-          .from("profiles")
-          .select("challenge_start_date")
-          .eq("id", user.id)
-          .single();
+      const {
+        data: profile,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select("challenge_start_date")
+        .eq("id", user.id)
+        .single();
 
       if (profileError) {
         console.error(
@@ -430,20 +433,6 @@ export default function ProgressPage() {
         .join(" "),
     }));
 
-  /*
-   * ============================================================
-   * PHOTO UPLOAD
-   * ============================================================
-   *
-   * WEB:
-   * Uses a normal file input.
-   *
-   * NATIVE iOS:
-   * Uses Capacitor Camera when available.
-   * Falls back to the normal file picker if the native
-   * Camera plugin cannot be opened.
-   */
-
   const uploadPhotoFile = async (
     file: File,
     day: number
@@ -466,7 +455,9 @@ export default function ProgressPage() {
         );
       }
 
-      if (!file.type.startsWith("image/")) {
+      if (
+        !file.type.startsWith("image/")
+      ) {
         throw new Error(
           "Please choose an image file."
         );
@@ -640,159 +631,202 @@ export default function ProgressPage() {
   ) => {
     if (isUploadingPhoto) return;
 
-  setPhotoTargetDay(day);
-  setPhotoError(null);
-
-  // WEB
-  // Keep the existing browser picker exactly as it works now.
-  if (!Capacitor.isNativePlatform()) {
-    webPhotoInputRef.current?.click();
-    return;
-  }
-
-  // NATIVE iOS
-  // Use the Capacitor Camera plugin directly.
-  // The existing Supabase upload function is NOT changed.
-  setIsUploadingPhoto(true);
-
-  try {
-    const permissions = await Camera.checkPermissions();
-
-    if (permissions.camera === "denied") {
-      throw new Error(
-        "Camera access is turned off. Please allow camera access for Lock In With Lav in Settings."
-      );
-    }
-
-    if (permissions.photos === "denied") {
-      throw new Error(
-        "Photo access is turned off. Please allow photo access for Lock In With Lav in Settings."
-      );
-    }
+    setPhotoTargetDay(day);
+    setPhotoError(null);
 
     if (
-      permissions.camera !== "granted" ||
-      permissions.photos !== "granted"
+      !Capacitor.isNativePlatform()
     ) {
-      const requested =
-        await Camera.requestPermissions({
-          permissions: ["camera", "photos"],
+      webPhotoInputRef.current?.click();
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+
+    try {
+      const permissions =
+        await Camera.checkPermissions();
+
+      if (
+        permissions.camera ===
+        "denied"
+      ) {
+        throw new Error(
+          "Camera access is turned off. Please allow camera access for Lock In With Lav in Settings."
+        );
+      }
+
+      if (
+        permissions.photos ===
+        "denied"
+      ) {
+        throw new Error(
+          "Photo access is turned off. Please allow photo access for Lock In With Lav in Settings."
+        );
+      }
+
+      if (
+        permissions.camera !==
+          "granted" ||
+        permissions.photos !==
+          "granted"
+      ) {
+        const requested =
+          await Camera.requestPermissions(
+            {
+              permissions: [
+                "camera",
+                "photos",
+              ],
+            }
+          );
+
+        if (
+          requested.camera ===
+          "denied"
+        ) {
+          throw new Error(
+            "Camera access is required to take a progress photo."
+          );
+        }
+
+        if (
+          requested.photos ===
+          "denied"
+        ) {
+          throw new Error(
+            "Photo access is required to choose a progress photo."
+          );
+        }
+      }
+
+      if (
+        !Capacitor.isPluginAvailable(
+          "Camera"
+        )
+      ) {
+        throw new Error(
+          "The camera is not available in this version of the app. Please install the newest app build."
+        );
+      }
+
+      const photo =
+        await Camera.getPhoto({
+          resultType:
+            CameraResultType.Base64,
+          source:
+            CameraSource.Prompt,
+          quality: 90,
+          width: 1600,
+          height: 2000,
+          allowEditing: false,
+          correctOrientation:
+            true,
+          promptLabelHeader:
+            "Progress Photo",
+          promptLabelPhoto:
+            "Choose from Photos",
+          promptLabelPicture:
+            "Take Photo",
         });
 
-      if (requested.camera === "denied") {
+      if (
+        !photo.base64String
+      ) {
         throw new Error(
-          "Camera access is required to take a progress photo."
+          "No photo was selected. Please try again."
         );
       }
 
-      if (requested.photos === "denied") {
-        throw new Error(
-          "Photo access is required to choose a progress photo."
+      const byteCharacters =
+        atob(
+          photo.base64String
+        );
+
+      const byteNumbers =
+        new Array(
+          byteCharacters.length
+        );
+
+      for (
+        let i = 0;
+        i <
+        byteCharacters.length;
+        i++
+      ) {
+        byteNumbers[i] =
+          byteCharacters.charCodeAt(
+            i
+          );
+      }
+
+      const byteArray =
+        new Uint8Array(
+          byteNumbers
+        );
+
+      const isPng =
+        photo.format === "png";
+
+      const mimeType = isPng
+        ? "image/png"
+        : "image/jpeg";
+
+      const extension = isPng
+        ? "png"
+        : "jpg";
+
+      const file = new File(
+        [byteArray],
+        `progress-day-${day}.${extension}`,
+        {
+          type: mimeType,
+        }
+      );
+
+      setIsUploadingPhoto(
+        false
+      );
+
+      await uploadPhotoFile(
+        file,
+        day
+      );
+    } catch (error) {
+      setIsUploadingPhoto(
+        false
+      );
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not select the photo.";
+
+      const lower =
+        message.toLowerCase();
+
+      if (
+        !lower.includes(
+          "cancel"
+        ) &&
+        !lower.includes(
+          "cancelled"
+        ) &&
+        !lower.includes(
+          "canceled"
+        )
+      ) {
+        console.error(
+          "Camera error:",
+          error
+        );
+
+        setPhotoError(
+          message
         );
       }
     }
-
-    if (!Capacitor.isPluginAvailable("Camera")) {
-      throw new Error(
-        "The camera is not available in this version of the app. Please install the newest app build."
-      );
-    }
-
-    const photo = await Camera.getPhoto({
-      resultType: CameraResultType.Base64,
-      source: CameraSource.Prompt,
-      quality: 90,
-      width: 1600,
-      height: 2000,
-      allowEditing: false,
-      correctOrientation: true,
-      promptLabelHeader: "Progress Photo",
-      promptLabelPhoto: "Choose from Photos",
-      promptLabelPicture: "Take Photo",
-    });
-
-    if (!photo.base64String) {
-      throw new Error(
-        "No photo was selected. Please try again."
-      );
-    }
-
-    const byteCharacters = atob(
-      photo.base64String
-    );
-
-    const byteNumbers = new Array(
-      byteCharacters.length
-    );
-
-    for (
-      let i = 0;
-      i < byteCharacters.length;
-      i++
-    ) {
-      byteNumbers[i] =
-        byteCharacters.charCodeAt(i);
-    }
-
-    const byteArray = new Uint8Array(
-      byteNumbers
-    );
-
-    const isPng =
-      photo.format === "png";
-
-    const mimeType = isPng
-      ? "image/png"
-      : "image/jpeg";
-
-    const extension = isPng
-      ? "png"
-      : "jpg";
-
-    const file = new File(
-      [byteArray],
-      `progress-day-${day}.${extension}`,
-      {
-        type: mimeType,
-      }
-    );
-
-    setIsUploadingPhoto(false);
-
-    // IMPORTANT:
-    // Send the native photo through the exact same
-    // upload function that already works on the web.
-    await uploadPhotoFile(
-      file,
-      day
-    );
-  } catch (error) {
-    setIsUploadingPhoto(false);
-
-    const message =
-      error instanceof Error
-        ? error.message
-        : "Could not select the photo.";
-
-    const lower =
-      message.toLowerCase();
-
-    // Don't show an error when the user simply
-    // closes/cancels the native picker.
-    if (
-      !lower.includes("cancel") &&
-      !lower.includes("cancelled") &&
-      !lower.includes("canceled")
-    ) {
-      console.error(
-        "Camera error:",
-        error
-      );
-
-      setPhotoError(message);
-    }
-  }
-};
+  };
 
   const handleWebPhotoChange =
     async (
@@ -801,11 +835,6 @@ export default function ProgressPage() {
       const file =
         event.target.files?.[0];
 
-      /*
-       * Reset the input so selecting
-       * the same photo again still
-       * triggers onChange.
-       */
       event.target.value = "";
 
       if (!file) return;
@@ -827,7 +856,8 @@ export default function ProgressPage() {
 
       const {
         data: userData,
-      } = await supabase.auth.getUser();
+      } =
+        await supabase.auth.getUser();
 
       if (!userData.user) {
         setPhotoError(
@@ -904,12 +934,6 @@ export default function ProgressPage() {
       );
     };
 
-  /*
-   * ============================================================
-   * MEASUREMENTS
-   * ============================================================
-   */
-
   const openMeasurementModal =
     () => {
       setMeasurementError(null);
@@ -953,7 +977,8 @@ export default function ProgressPage() {
       try {
         const {
           data: { user },
-        } = await supabase.auth.getUser();
+        } =
+          await supabase.auth.getUser();
 
         if (!user) {
           throw new Error(
@@ -1052,11 +1077,7 @@ export default function ProgressPage() {
       }
     };
 
-  /*
-   * ============================================================
-   * LITTLE WINS
-   * ============================================================
-   */
+  /* LITTLE WINS */
 
   const toggleWin = async (
     win: string
@@ -1212,11 +1233,50 @@ export default function ProgressPage() {
       }
     };
 
-  /*
-   * ============================================================
-   * WEEKLY CHECK-IN
-   * ============================================================
-   */
+  const deleteCustomWin =
+    async (winKey: string) => {
+      const {
+        data: { user },
+      } =
+        await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { error } =
+        await supabase
+          .from("little_wins")
+          .delete()
+          .eq(
+            "user_id",
+            user.id
+          )
+          .eq(
+            "win_key",
+            winKey
+          );
+
+      if (error) {
+        console.error(
+          "Could not delete little win:",
+          error
+        );
+        return;
+      }
+
+      setCompletedWins(
+        (previous) => {
+          const next = {
+            ...previous,
+          };
+
+          delete next[winKey];
+
+          return next;
+        }
+      );
+    };
+
+  /* LITTLE WINS */
 
   const openWeeklyCheckin =
     (week: number) => {
@@ -1260,7 +1320,9 @@ export default function ProgressPage() {
         true
       );
 
-      setCheckinError(null);
+      setCheckinError(
+        null
+      );
 
       try {
         const {
@@ -1287,7 +1349,9 @@ export default function ProgressPage() {
           data,
           error,
         } = await supabase
-          .from("weekly_checkins")
+          .from(
+            "weekly_checkins"
+          )
           .upsert(
             payload,
             {
@@ -1408,10 +1472,6 @@ export default function ProgressPage() {
         />
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
-          {/* Hidden browser picker.
-              This is used on web and also serves as
-              a fallback for the native app. */}
-
           <input
             ref={
               webPhotoInputRef
@@ -1424,8 +1484,6 @@ export default function ProgressPage() {
               handleWebPhotoChange
             }
           />
-
-          {/* INTRO */}
 
           <section className="pb-10">
             <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
@@ -1455,8 +1513,6 @@ export default function ProgressPage() {
             </div>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {/* DAY 01 */}
-
               <div className="group overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
                 <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#EEE3DF]">
                   {photoUrls[1] ? (
@@ -1565,8 +1621,6 @@ export default function ProgressPage() {
                   </span>
                 </div>
               </div>
-
-              {/* CURRENT DAY */}
 
               <div className="group overflow-hidden rounded-[1.75rem] border border-[#CBA9A2] bg-[#FBF8F6]">
                 <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#EAD8D3]">
@@ -1685,8 +1739,6 @@ export default function ProgressPage() {
                 </div>
               </div>
 
-              {/* FINISH */}
-
               <div className="overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
                 <div className="relative flex aspect-[4/5] items-center justify-center overflow-hidden bg-[#F1EAE7]">
                   <div className="text-center">
@@ -1718,8 +1770,6 @@ export default function ProgressPage() {
               </div>
             </div>
           </section>
-
-          {/* MEASUREMENTS + LITTLE WINS */}
 
           <section className="grid gap-5 border-t border-[#DED0CB] py-10 lg:grid-cols-2">
             <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-8">
@@ -1770,8 +1820,6 @@ export default function ProgressPage() {
                 ♡
               </p>
             </div>
-
-            {/* LITTLE WINS */}
 
             <div className="rounded-[2rem] bg-[#EAD8D3] p-7 md:p-8">
               <p className="text-[12px] tracking-[0.35em] text-[#8F655E]">
@@ -1848,36 +1896,53 @@ export default function ProgressPage() {
                         );
 
                       return (
-                        <button
+                        <div
                           key={key}
-                          type="button"
-                          onClick={() =>
-                            toggleWin(
-                              key
-                            )
-                          }
-                          className={`flex w-full items-center gap-4 rounded-2xl border border-[#D1B7B0] px-5 py-4 text-left transition ${
+                          className={`flex w-full items-center gap-3 rounded-2xl border border-[#D1B7B0] px-5 py-4 transition ${
                             checked
                               ? "bg-[#F1E2DE]"
-                              : "bg-[#F1E2DE]/50 hover:bg-[#F1E2DE]"
+                              : "bg-[#F1E2DE]/50"
                           }`}
                         >
-                          <span
-                            className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] ${
-                              checked
-                                ? "bg-[#211C19] text-[#F7F1ED]"
-                                : "text-[#9D6F67]"
-                            }`}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleWin(
+                                key
+                              )
+                            }
+                            className="flex min-w-0 flex-1 items-center gap-4 text-left"
                           >
-                            {checked
-                              ? "✓"
-                              : "♡"}
-                          </span>
+                            <span
+                              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#B48A82] text-[10px] ${
+                                checked
+                                  ? "bg-[#211C19] text-[#F7F1ED]"
+                                  : "text-[#9D6F67]"
+                              }`}
+                            >
+                              {checked
+                                ? "✓"
+                                : "♡"}
+                            </span>
 
-                          <span className="font-serif text-lg italic">
-                            {label}
-                          </span>
-                        </button>
+                            <span className="font-serif text-lg italic">
+                              {label}
+                            </span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              deleteCustomWin(
+                                key
+                              )
+                            }
+                            className="shrink-0 px-2 py-2 text-[10px] tracking-[0.15em] text-[#9D6F67] transition hover:text-[#211C19]"
+                            aria-label={`Delete ${label}`}
+                          >
+                            DELETE
+                          </button>
+                        </div>
                       );
                     }
                   )}
@@ -1901,8 +1966,6 @@ export default function ProgressPage() {
               </button>
             </div>
           </section>
-
-          {/* WEEKLY CHECK-IN */}
 
           <section className="border-t border-[#DED0CB] py-10">
             <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
@@ -1996,8 +2059,6 @@ export default function ProgressPage() {
         </section>
       </div>
 
-      {/* MEASUREMENTS MODAL */}
-
       {isMeasurementModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
@@ -2084,7 +2145,8 @@ export default function ProgressPage() {
                     className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-4"
                   >
                     <span className="text-[10px] tracking-[0.2em] text-[#806E68]">
-                      {label} ({unit})
+                      {label} (
+                      {unit})
                     </span>
 
                     <input
@@ -2144,8 +2206,6 @@ export default function ProgressPage() {
         </div>
       )}
 
-      {/* LITTLE WIN MODAL */}
-
       {isCustomWinModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/70 p-5 backdrop-blur-sm"
@@ -2202,6 +2262,7 @@ export default function ProgressPage() {
                     event.target
                       .value
                   );
+
                   setCustomWinError(
                     null
                   );
@@ -2248,8 +2309,6 @@ export default function ProgressPage() {
           </div>
         </div>
       )}
-
-      {/* WEEKLY CHECK-IN MODAL */}
 
       {checkinWeek !== null && (
         <div
