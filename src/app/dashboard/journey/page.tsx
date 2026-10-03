@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
+
 import DashboardSidebar from "@/components/DashboardSidebar";
-import { useEffect, useMemo, useState } from "react";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+
 import { createClient } from "@/lib/supabase/client";
+
 import {
   type DailyProgressRow,
   getChallengePercentage,
@@ -27,6 +31,7 @@ type ProgressPhotoRow = {
   id?: string;
   challenge_day: number;
   storage_path: string;
+  photo_type?: string;
   created_at?: string;
 };
 
@@ -36,6 +41,14 @@ function formatFullDate(date: Date) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function formatDateForDatabase(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function getChallengeDate(startDate: Date, challengeDay: number) {
@@ -86,7 +99,16 @@ export default function JourneyPage() {
   // Day Details modal
   const [dayDetailsOpen, setDayDetailsOpen] = useState(false);
   const [dayDetailsLoading, setDayDetailsLoading] = useState(false);
+
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(null);
+  const [selectedPhotoPath, setSelectedPhotoPath] = useState<string | null>(
+    null
+  );
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   const [selectedMeasurement, setSelectedMeasurement] =
     useState<MeasurementRow | null>(null);
 
@@ -119,36 +141,36 @@ export default function JourneyPage() {
       }
 
       const [
-  { data: profile, error: profileError },
-  { data: progressRows, error: progressError },
-] = await Promise.all([
-  supabase
-    .from("profiles")
-    .select("challenge_start_date, challenge_length")
-    .eq("id", user.id)
-    .single(),
+        { data: profile, error: profileError },
+        { data: progressRows, error: progressError },
+      ] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("challenge_start_date, challenge_length")
+          .eq("id", user.id)
+          .single(),
 
-  supabase
-    .from("daily_progress")
-    .select(
-      "challenge_day, move, get_outside, hydrate, read, nourish, document, no_alcohol"
-    )
-    .eq("user_id", user.id)
-    .order("challenge_day", { ascending: true }),
-]);
+        supabase
+          .from("daily_progress")
+          .select(
+            "challenge_day, move, get_outside, hydrate, read, nourish, document, no_alcohol"
+          )
+          .eq("user_id", user.id)
+          .order("challenge_day", { ascending: true }),
+      ]);
 
-if (profileError) {
-  console.error("Could not load profile:", profileError);
-} else if (profile) {
-  setChallengeStartDate(profile.challenge_start_date);
-  setChallengeLength(profile.challenge_length ?? 75);
-}
+      if (profileError) {
+        console.error("Could not load profile:", profileError);
+      } else if (profile) {
+        setChallengeStartDate(profile.challenge_start_date);
+        setChallengeLength(profile.challenge_length ?? 75);
+      }
 
-if (progressError) {
-  console.error("Could not load daily progress:", progressError);
-} else {
-  setDailyProgress(progressRows ?? []);
-}
+      if (progressError) {
+        console.error("Could not load daily progress:", progressError);
+      } else {
+        setDailyProgress(progressRows ?? []);
+      }
 
       setIsLoadingUser(false);
       setIsLoadingProgress(false);
@@ -236,7 +258,10 @@ if (progressError) {
     setSelectedDay(day);
     setDayDetailsOpen(true);
     setDayDetailsLoading(true);
+
     setSelectedPhotoUrl(null);
+    setSelectedPhotoPath(null);
+    setPhotoError(null);
     setSelectedMeasurement(null);
 
     const {
@@ -255,13 +280,14 @@ if (progressError) {
 
     /**
      * PHOTO
-     * Grab the newest photo saved for this challenge day.
+     * Grab the newest progress photo saved for this challenge day.
      */
     const { data: photoRows, error: photoError } = await supabase
       .from("progress_photos")
-      .select("id, challenge_day, storage_path, created_at")
+      .select("id, challenge_day, storage_path, created_at, photo_type")
       .eq("user_id", user.id)
       .eq("challenge_day", day)
+      .eq("photo_type", "progress")
       .order("created_at", { ascending: false })
       .limit(1);
 
@@ -271,6 +297,8 @@ if (progressError) {
       const photo = (photoRows?.[0] ?? null) as ProgressPhotoRow | null;
 
       if (photo?.storage_path) {
+        setSelectedPhotoPath(photo.storage_path);
+
         const { data: signedPhoto, error: signedPhotoError } =
           await supabase.storage
             .from("progress-photos")
@@ -292,15 +320,16 @@ if (progressError) {
      * There may be more than one entry on the same day,
      * so use the newest measurement entry for that day.
      */
-    const { data: measurementRows, error: measurementError } = await supabase
-      .from("measurements")
-      .select(
-        "id, challenge_day, weight, waist, hips, chest, thigh, arm, created_at"
-      )
-      .eq("user_id", user.id)
-      .eq("challenge_day", day)
-      .order("created_at", { ascending: false })
-      .limit(1);
+    const { data: measurementRows, error: measurementError } =
+      await supabase
+        .from("measurements")
+        .select(
+          "id, challenge_day, weight, waist, hips, chest, thigh, arm, created_at"
+        )
+        .eq("user_id", user.id)
+        .eq("challenge_day", day)
+        .order("created_at", { ascending: false })
+        .limit(1);
 
     if (measurementError) {
       console.error("Could not load measurements:", measurementError);
@@ -311,6 +340,203 @@ if (progressError) {
     }
 
     setDayDetailsLoading(false);
+  }
+
+  function triggerPhotoUpload() {
+    setPhotoError(null);
+    photoInputRef.current?.click();
+  }
+
+  async function handlePhotoUpload(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const day = activeSelectedDay;
+
+    setIsUploadingPhoto(true);
+    setPhotoError(null);
+
+    let newFilePath: string | null = null;
+
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        throw new Error(
+          "You need to be signed in to upload a progress photo."
+        );
+      }
+
+      if (file.type && !file.type.startsWith("image/")) {
+        throw new Error("Please choose an image file.");
+      }
+
+      const extension =
+        file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") ||
+        "jpg";
+
+      const paddedDay = String(day).padStart(2, "0");
+
+      newFilePath = `${user.id}/day-${paddedDay}-${Date.now()}.${extension}`;
+
+      const oldPath = selectedPhotoPath;
+
+      const { error: uploadError } = await supabase.storage
+        .from("progress-photos")
+        .upload(newFilePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || "image/jpeg",
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: signedData, error: signedError } =
+        await supabase.storage
+          .from("progress-photos")
+          .createSignedUrl(newFilePath, 60 * 60);
+
+      if (signedError || !signedData?.signedUrl) {
+        throw signedError ?? new Error("Could not create the photo preview.");
+      }
+
+      const { error: photoRecordError } = await supabase
+        .from("progress_photos")
+        .upsert(
+          {
+            user_id: user.id,
+            challenge_day: day,
+            storage_path: newFilePath,
+            photo_type: "progress",
+            caption: null,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id,challenge_day,photo_type",
+          }
+        );
+
+      if (photoRecordError) {
+        throw photoRecordError;
+      }
+
+      setSelectedPhotoUrl(signedData.signedUrl);
+      setSelectedPhotoPath(newFilePath);
+
+      /**
+       * A saved progress photo counts as the DOCUMENT commitment.
+       */
+      const existingProgress = dailyProgress.find(
+        (row) => row.challenge_day === day
+      );
+
+      const updatedProgress = {
+        user_id: user.id,
+        challenge_day: day,
+        progress_date: selectedDate
+          ? formatDateForDatabase(selectedDate)
+          : new Date().toISOString().slice(0, 10),
+        move: existingProgress?.move ?? false,
+        get_outside: existingProgress?.get_outside ?? false,
+        hydrate: existingProgress?.hydrate ?? false,
+        read: existingProgress?.read ?? false,
+        nourish: existingProgress?.nourish ?? false,
+        document: true,
+        no_alcohol: existingProgress?.no_alcohol ?? false,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: progressSaveError } = await supabase
+        .from("daily_progress")
+        .upsert(updatedProgress, {
+          onConflict: "user_id,challenge_day",
+        });
+
+      setDailyProgress((previous) => {
+        const alreadyExists = previous.some(
+          (row) => row.challenge_day === day
+        );
+
+        if (alreadyExists) {
+          return previous.map((row) =>
+            row.challenge_day === day
+              ? { ...row, document: true }
+              : row
+          );
+        }
+
+        return [...previous, updatedProgress as DailyProgressRow].sort(
+          (a, b) => a.challenge_day - b.challenge_day
+        );
+      });
+
+      if (progressSaveError) {
+        console.error(
+          "Photo saved, but the document commitment could not be updated:",
+          progressSaveError
+        );
+
+        setPhotoError(
+          "Photo saved ♡ The photo is there, but the document check could not be updated."
+        );
+      }
+
+      /**
+       * Only remove the old file after the new photo and database
+       * record have both succeeded.
+       */
+      if (oldPath && oldPath !== newFilePath) {
+        const { error: removeOldError } = await supabase.storage
+          .from("progress-photos")
+          .remove([oldPath]);
+
+        if (removeOldError) {
+          console.warn(
+            "New progress photo saved, but the previous photo could not be removed:",
+            removeOldError
+          );
+        }
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Could not upload photo. Please try again.";
+
+      const lowerMessage = errorMessage.toLowerCase();
+
+      if (
+        !lowerMessage.includes("cancel") &&
+        !lowerMessage.includes("canceled") &&
+        !lowerMessage.includes("cancelled")
+      ) {
+        console.error("Could not upload journey progress photo:", error);
+        setPhotoError(errorMessage);
+      }
+
+      if (newFilePath) {
+        await supabase.storage
+          .from("progress-photos")
+          .remove([newFilePath])
+          .catch((cleanupError) => {
+            console.warn(
+              "Could not clean up failed journey photo upload:",
+              cleanupError
+            );
+          });
+      }
+    } finally {
+      setIsUploadingPhoto(false);
+      event.target.value = "";
+    }
   }
 
   function closeDayDetails() {
@@ -658,14 +884,37 @@ if (progressError) {
                     this day, captured.
                   </h3>
 
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+
                   <div className="mt-6">
                     {selectedPhotoUrl ? (
-                      <div className="overflow-hidden rounded-[1.6rem] border border-[#D8C5BF] bg-[#F1E7E3]">
-                        <img
-                          src={selectedPhotoUrl}
-                          alt={`Progress photo for day ${activeSelectedDay}`}
-                          className="aspect-[4/5] w-full object-cover"
-                        />
+                      <div>
+                        <div className="overflow-hidden rounded-[1.6rem] border border-[#D8C5BF] bg-[#F1E7E3]">
+                          <img
+                            src={selectedPhotoUrl}
+                            alt={`Progress photo for day ${activeSelectedDay}`}
+                            className="aspect-[4/5] w-full object-cover"
+                          />
+                        </div>
+
+                        <div className="mt-4 flex justify-center">
+                          <button
+                            type="button"
+                            onClick={triggerPhotoUpload}
+                            disabled={isUploadingPhoto}
+                            className="rounded-full border border-[#CBA9A2] bg-[#FBF8F6] px-5 py-2.5 text-[8px] tracking-[0.20em] text-[#806E68] transition hover:bg-[#EAD8D3] disabled:cursor-wait disabled:opacity-60"
+                          >
+                            {isUploadingPhoto
+                              ? "UPLOADING..."
+                              : "CHANGE PHOTO"}
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="flex aspect-[4/5] w-full items-center justify-center rounded-[1.6rem] border border-dashed border-[#CBA9A2] bg-[#F7F1ED] px-8 text-center">
@@ -677,8 +926,25 @@ if (progressError) {
                           <p className="mx-auto mt-3 max-w-xs text-[9px] leading-5 tracking-[0.16em] text-[#8F7C76]">
                             NO PROGRESS PHOTO WAS SAVED FOR THIS DAY.
                           </p>
+
+                          <button
+                            type="button"
+                            onClick={triggerPhotoUpload}
+                            disabled={isUploadingPhoto}
+                            className="mt-6 rounded-full bg-[#A77B73] px-6 py-3 text-[8px] tracking-[0.20em] text-[#FBF8F6] transition hover:bg-[#8F655E] disabled:cursor-wait disabled:opacity-60"
+                          >
+                            {isUploadingPhoto
+                              ? "UPLOADING..."
+                              : "UPLOAD PHOTO"}
+                          </button>
                         </div>
                       </div>
+                    )}
+
+                    {photoError && (
+                      <p className="mt-4 text-center text-[8px] leading-5 tracking-[0.10em] text-[#9D6F67]">
+                        {photoError}
+                      </p>
                     )}
                   </div>
                 </div>
