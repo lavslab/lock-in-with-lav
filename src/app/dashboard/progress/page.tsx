@@ -79,6 +79,9 @@ export default function ProgressPage() {
   const [challengeStartDate, setChallengeStartDate] =
     useState<string | null>(null);
 
+  const [challengeLength, setChallengeLength] =
+    useState<number>(75);
+
   const [photoUrls, setPhotoUrls] =
     useState<Record<number, string>>({});
 
@@ -179,7 +182,7 @@ export default function ProgressPage() {
         error: profileError,
       } = await supabase
         .from("profiles")
-        .select("challenge_start_date")
+        .select("challenge_start_date, challenge_length")
         .eq("id", user.id)
         .single();
 
@@ -189,10 +192,14 @@ export default function ProgressPage() {
           profileError
         );
       } else if (profile) {
-        setChallengeStartDate(
-          profile.challenge_start_date
-        );
-      }
+  setChallengeStartDate(
+    profile.challenge_start_date
+  );
+
+  setChallengeLength(
+    profile.challenge_length ?? 75
+  );
+}
 
       const {
         data: storedPhotos,
@@ -363,20 +370,22 @@ export default function ProgressPage() {
         challengeStartDate
       );
 
-    endDate =
-      getChallengeEndDate(
-        challengeStartDate
-      );
+    endDate = getChallengeEndDate(
+  challengeStartDate,
+  challengeLength
+);
 
-    currentDay =
-      getCurrentChallengeDay(
-        challengeStartDate,
-        new Date()
-      );
+    currentDay = getCurrentChallengeDay(
+  challengeStartDate,
+  challengeLength
+);
   }
 
   const safeCurrentDay =
-    Math.max(1, currentDay);
+  Math.min(
+    challengeLength,
+    Math.max(1, currentDay)
+  );
 
   const dayNumber = String(
     safeCurrentDay
