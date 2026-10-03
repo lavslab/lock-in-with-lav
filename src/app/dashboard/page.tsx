@@ -344,25 +344,62 @@ export default function DashboardPage() {
           progressError
         );
       } else if (savedProgress) {
-        if (
-          savedProgress.hydrate &&
-          !localStorage.getItem(
-            `water-bottles-${user.id}-${calculatedDay}`
-          )
-        ) {
+        const waterKey =
+          `water-bottles-${user.id}-${calculatedDay}`;
+
+        const savedWaterCount = Number(
+          localStorage.getItem(waterKey) || "0"
+        );
+
+        const hydrateComplete =
+          savedProgress.hydrate === true ||
+          savedWaterCount >= 8;
+
+        if (hydrateComplete) {
           setWaterBottles(8);
 
           localStorage.setItem(
-            `water-bottles-${user.id}-${calculatedDay}`,
+            waterKey,
             "8"
           );
+
+          if (!savedProgress.hydrate) {
+            await supabase
+              .from("daily_progress")
+              .upsert(
+                {
+                  user_id: user.id,
+                  challenge_day: calculatedDay,
+                  progress_date:
+                    formatDateForDatabase(
+                      new Date()
+                    ),
+                  move: savedProgress.move,
+                  get_outside:
+                    savedProgress.get_outside,
+                  hydrate: true,
+                  read: savedProgress.read,
+                  nourish: savedProgress.nourish,
+                  document: savedProgress.document,
+                  no_alcohol:
+                    savedProgress.no_alcohol ??
+                    false,
+                  updated_at:
+                    new Date().toISOString(),
+                },
+                {
+                  onConflict:
+                    "user_id,challenge_day",
+                }
+              );
+          }
         }
 
         setProgress({
           move: savedProgress.move,
           get_outside:
             savedProgress.get_outside,
-          hydrate: savedProgress.hydrate,
+          hydrate: hydrateComplete,
           read: savedProgress.read,
           nourish: savedProgress.nourish,
           document: savedProgress.document,
@@ -490,7 +527,7 @@ export default function DashboardPage() {
     );
 
     const hydrateComplete =
-      clampedCount === 8;
+      clampedCount >= 8;
 
     setWaterBottles(clampedCount);
 
@@ -519,7 +556,7 @@ export default function DashboardPage() {
           move: updatedProgress.move,
           get_outside:
             updatedProgress.get_outside,
-          hydrate: updatedProgress.hydrate,
+          hydrate: hydrateComplete,
           read: updatedProgress.read,
           nourish: updatedProgress.nourish,
           document:
@@ -540,6 +577,8 @@ export default function DashboardPage() {
         "Could not save water progress:",
         error
       );
+
+      setProgress(progress);
     }
   };
 

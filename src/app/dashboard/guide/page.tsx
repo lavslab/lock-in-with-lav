@@ -216,13 +216,18 @@ const basics = [
 --------------------------------- */
 
 export default function GuidePage() {
-  const [firstName, setFirstName] =
-    useState("there");
+  const [firstName, setFirstName] = useState("there");
 
   const [isLoadingUser, setIsLoadingUser] =
     useState(true);
 
   const [expandedDay, setExpandedDay] =
+    useState<string | null>(null);
+
+  const [selectedWorkouts, setSelectedWorkouts] =
+    useState<Record<string, string>>({});
+
+  const [selectionStorageKey, setSelectionStorageKey] =
     useState<string | null>(null);
 
   useEffect(() => {
@@ -234,6 +239,30 @@ export default function GuidePage() {
       if (!user) {
         setIsLoadingUser(false);
         return;
+      }
+
+      const storageKey =
+        `lockInGuideWorkoutSelections:${user.id}`;
+
+      setSelectionStorageKey(storageKey);
+
+      try {
+        const savedSelections =
+          window.localStorage.getItem(storageKey);
+
+        if (savedSelections) {
+          const parsedSelections =
+            JSON.parse(savedSelections);
+
+          if (
+            parsedSelections &&
+            typeof parsedSelections === "object"
+          ) {
+            setSelectedWorkouts(parsedSelections);
+          }
+        }
+      } catch {
+        // Keep the guide usable if local storage is unavailable.
       }
 
       const savedName =
@@ -252,6 +281,42 @@ export default function GuidePage() {
 
     getUser();
   }, []);
+
+  const handleWorkoutSelect = (
+    dayId: string,
+    workoutTitle: string,
+  ) => {
+    const isCurrentlySelected =
+      selectedWorkouts[dayId] === workoutTitle;
+
+    const nextSelections = {
+      ...selectedWorkouts,
+    };
+
+    if (isCurrentlySelected) {
+      delete nextSelections[dayId];
+    } else {
+      nextSelections[dayId] = workoutTitle;
+    }
+
+    setSelectedWorkouts(nextSelections);
+    setExpandedDay(null);
+
+    if (selectionStorageKey) {
+      try {
+        window.localStorage.setItem(
+          selectionStorageKey,
+          JSON.stringify(nextSelections),
+        );
+      } catch {
+        // Keep the selection in state if local storage is unavailable.
+      }
+    }
+  };
+
+  const handleChangeWorkout = (dayId: string) => {
+    setExpandedDay(dayId);
+  };
 
   const initial =
     !isLoadingUser &&
@@ -372,156 +437,229 @@ export default function GuidePage() {
             </div>
 
             <div className="mt-7 overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
-              {trainingWeek.map(
-                (day, index) => {
-                  const isExpanded =
-                    expandedDay === day.day;
+              {trainingWeek.map((day, index) => {
+                const isExpanded =
+                  expandedDay === day.day;
 
-                  const isRecovery =
-                    day.workouts.length === 0;
+                const isRecovery =
+                  day.workouts.length === 0;
 
-                  return (
-                    <div
-                      key={day.day}
-                      className={`border-[#E1D3CE] ${
-                        index !== 0
-                          ? "border-t"
-                          : ""
-                      } ${
-                        day.day === "07"
-                          ? "bg-[#EAD8D3]/50"
-                          : ""
-                      }`}
-                    >
-                      {/* DAY HEADER */}
+                const selectedTitle =
+                  selectedWorkouts[day.day];
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (
-                            isRecovery
-                          ) {
-                            return;
-                          }
+                const selectedWorkout =
+                  day.workouts.find(
+                    (workout) =>
+                      workout.title === selectedTitle,
+                  );
 
-                          setExpandedDay(
-                            isExpanded
-                              ? null
-                              : day.day,
-                          );
-                        }}
-                        className={`grid w-full gap-3 px-5 py-5 text-left transition sm:grid-cols-[48px_1fr_auto] sm:items-center sm:gap-4 md:px-7 ${
-                          isRecovery
-                            ? "cursor-default"
-                            : "hover:bg-[#F7F1ED]"
-                        }`}
-                      >
-                        <span className="font-serif text-xl text-[#B48A82]">
-                          {day.day}
-                        </span>
+                return (
+                  <div
+                    key={day.day}
+                    className={`border-[#E1D3CE] ${
+                      index !== 0
+                        ? "border-t"
+                        : ""
+                    } ${
+                      day.day === "07"
+                        ? "bg-[#EAD8D3]/50"
+                        : ""
+                    }`}
+                  >
 
-                        <div>
-                          <p className="text-[10px] tracking-[0.16em]">
-                            {day.title}
-                          </p>
+                    {/* DAY HEADER */}
 
-                          <p className="mt-1 font-serif text-base italic text-[#A77B73]">
-                            {day.focus}
-                          </p>
-                        </div>
+                    <div className="grid gap-4 px-5 py-5 sm:grid-cols-[48px_1fr_auto] sm:items-start sm:gap-4 md:px-7">
 
-                        <div className="flex items-center justify-start gap-3 sm:justify-end">
-                          {isRecovery ? (
-                            <p className="text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                              REST • WALK • MOBILITY
+                      {/* DAY NUMBER */}
+
+                      <span className="font-serif text-xl text-[#B48A82]">
+                        {day.day}
+                      </span>
+
+                      {/* DAY / WORKOUT INFO */}
+
+                      <div className="min-w-0">
+                        <p className="text-[10px] tracking-[0.16em]">
+                          {day.title}
+                        </p>
+
+                        <p className="mt-1 font-serif text-base italic text-[#A77B73]">
+                          {day.focus}
+                        </p>
+
+                        {selectedWorkout && (
+                          <div className="mt-3">
+                            <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                              YOUR PICK
                             </p>
-                          ) : (
-                            <>
-                              <span className="hidden text-[7px] tracking-[0.16em] text-[#9D6F67] sm:block">
-                                {isExpanded
-                                  ? "HIDE OPTIONS"
-                                  : "CHOOSE WORKOUT"}
-                              </span>
 
-                              <span
-                                className={`flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-sm text-[#A77B73] transition ${
-                                  isExpanded
-                                    ? "rotate-90 bg-[#EAD8D3]"
-                                    : ""
-                                }`}
+                            <p className="mt-1 font-serif text-lg text-[#211C19]">
+                              {selectedWorkout.title}
+                            </p>
+
+                            <p className="mt-1 text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                              {selectedWorkout.meta}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* RIGHT-SIDE ACTIONS */}
+
+                      <div className="flex flex-col items-start gap-1.5 sm:items-end">
+
+                        {isRecovery ? (
+                          <Link
+                            href="/dashboard/resources/recovery"
+                            className="inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-3 py-1.5 text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:bg-[#EAD8D3] hover:text-[#211C19]"
+                          >
+                            MOBILITY + RECOVERY
+
+                            <span className="font-serif text-sm">
+                              →
+                            </span>
+                          </Link>
+
+                        ) : selectedWorkout ? (
+
+                          <>
+                            <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleChangeWorkout(day.day)
+                                }
+                                className="inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-3 py-1.5 text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:bg-[#EAD8D3] hover:text-[#211C19]"
                               >
-                                →
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </button>
+                                CHANGE
 
-                      {/* OPTIONS */}
-
-                      {isExpanded &&
-                        !isRecovery && (
-                          <div className="border-t border-[#E1D3CE] bg-[#F7F1ED] px-5 py-5 md:px-7">
-                            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                              <div>
-                                <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                                  CHOOSE WHAT FITS YOUR DAY
-                                </p>
-
-                                <p className="mt-2 max-w-xl text-[11px] leading-5 text-[#806E68]">
-                                  {day.description}
-                                </p>
-                              </div>
+                                <span className="font-serif text-sm">
+                                  →
+                                </span>
+                              </button>
 
                               <Link
-                                href="/dashboard/resources/workouts"
-                                className="shrink-0 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
+                                href={selectedWorkout.href}
+                                className="inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-3 py-1.5 text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:bg-[#EAD8D3] hover:text-[#211C19]"
                               >
-                                VIEW ALL WORKOUTS →
+                                GO TO WORKOUT
+
+                                <span className="font-serif text-sm">
+                                  →
+                                </span>
                               </Link>
                             </div>
 
-                            <div className="mt-5 grid gap-2 md:grid-cols-2">
-                              {day.workouts.map(
-                                (
-                                  workout,
-                                ) => (
-                                  <Link
-                                    key={
-                                      workout.href
+                            <p className="text-[8px] leading-4 text-[#A18B84] sm:text-right">
+                              Your selection stays here until you change it.
+                            </p>
+                          </>
+
+                        ) : (
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setExpandedDay(
+                                isExpanded
+                                  ? null
+                                  : day.day,
+                              )
+                            }
+                            className="inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-3 py-1.5 text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:bg-[#EAD8D3] hover:text-[#211C19]"
+                          >
+                            {isExpanded
+                              ? "HIDE OPTIONS"
+                              : "CHOOSE WORKOUT"}
+
+                            <span
+                              className={`font-serif text-sm transition ${
+                                isExpanded
+                                  ? "rotate-90"
+                                  : ""
+                              }`}
+                            >
+                              →
+                            </span>
+                          </button>
+                        )}
+
+                      </div>
+                    </div>
+
+                    {/* WORKOUT OPTIONS */}
+
+                    {isExpanded &&
+                      !isRecovery && (
+                        <div className="border-t border-[#E1D3CE] bg-[#F7F1ED] px-5 py-5 md:px-7">
+                          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                            <div>
+                              <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
+                                CHOOSE WHAT FITS YOUR DAY
+                              </p>
+
+                              <p className="mt-2 max-w-xl text-[11px] leading-5 text-[#806E68]">
+                                {day.description}
+                              </p>
+                            </div>
+
+                            <Link
+                              href="/dashboard/resources/workouts"
+                              className="shrink-0 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
+                            >
+                              VIEW ALL WORKOUTS →
+                            </Link>
+                          </div>
+
+                          <div className="mt-5 grid gap-2 md:grid-cols-2">
+                            {day.workouts.map(
+                              (workout) => {
+                                const isSelected =
+                                  selectedTitle ===
+                                  workout.title;
+
+                                return (
+                                  <button
+                                    key={workout.href}
+                                    type="button"
+                                    onClick={() =>
+                                      handleWorkoutSelect(
+                                        day.day,
+                                        workout.title,
+                                      )
                                     }
-                                    href={
-                                      workout.href
-                                    }
-                                    className="group flex items-center justify-between rounded-[1rem] border border-[#D8C7C1] bg-[#FBF8F6] px-4 py-4 transition hover:border-[#B9948B] hover:bg-[#EAD8D3]"
+                                    className={`group flex items-center justify-between rounded-[1rem] border px-4 py-4 text-left transition ${
+                                      isSelected
+                                        ? "border-[#B9948B] bg-[#EAD8D3]"
+                                        : "border-[#D8C7C1] bg-[#FBF8F6] hover:border-[#B9948B] hover:bg-[#EAD8D3]"
+                                    }`}
                                   >
                                     <div className="min-w-0">
                                       <p className="font-serif text-lg text-[#211C19]">
-                                        {
-                                          workout.title
-                                        }
+                                        {workout.title}
                                       </p>
 
                                       <p className="mt-1 text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                                        {
-                                          workout.meta
-                                        }
+                                        {workout.meta}
                                       </p>
                                     </div>
 
                                     <span className="ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-sm text-[#A77B73] transition group-hover:bg-[#F7F1ED]">
-                                      →
+                                      {isSelected
+                                        ? "✓"
+                                        : "→"}
                                     </span>
-                                  </Link>
-                                ),
-                              )}
-                            </div>
+                                  </button>
+                                );
+                              },
+                            )}
                           </div>
-                        )}
-                    </div>
-                  );
-                },
-              )}
+                        </div>
+                      )}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="mt-4 flex items-start gap-3 px-1">
