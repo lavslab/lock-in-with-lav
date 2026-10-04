@@ -308,24 +308,34 @@ export default function MealPlansPage() {
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [weekStart, setWeekStart] = useState(getTodayForInput);
+
   const [plannerMeals, setPlannerMeals] = useState<
     Record<string, PlannerMeal>
   >({});
+
   const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
   const [isLoadingPlanner, setIsLoadingPlanner] = useState(true);
   const [plannerError, setPlannerError] = useState("");
   const [activeDayIndex, setActiveDayIndex] = useState(0);
+
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerDate, setPickerDate] = useState("");
   const [pickerSlot, setPickerSlot] =
     useState<MealSlot>("BREAKFAST");
+
   const [recipeSearch, setRecipeSearch] = useState("");
   const [customMealName, setCustomMealName] = useState("");
+
   const [isSavingMeal, setIsSavingMeal] = useState(false);
   const [isSavingCustomMeal, setIsSavingCustomMeal] =
     useState(false);
+
+  const [deletingCustomMealId, setDeletingCustomMealId] =
+    useState<string | null>(null);
+
   const [activeHelperTab, setActiveHelperTab] =
     useState<HelperTab>(null);
+
   const [unit, setUnit] = useState<Unit>("imperial");
   const [sex, setSex] = useState<Sex>("female");
   const [age, setAge] = useState("");
@@ -374,6 +384,7 @@ export default function MealPlansPage() {
       (sex === "male" ? 5 : -161);
 
     const maintenance = bmr * activityValue;
+
     const calorieMultiplier =
       goal === "lose" ? 0.85 : goal === "gain" ? 1.1 : 1;
 
@@ -389,10 +400,12 @@ export default function MealPlansPage() {
     const fat = Math.round((calories * fatPercent) / 9);
     const proteinCalories = protein * 4;
     const fatCalories = fat * 9;
+
     const carbCalories = Math.max(
       calories - proteinCalories - fatCalories,
       0
     );
+
     const carbs = Math.round(carbCalories / 4);
 
     return {
@@ -607,9 +620,11 @@ export default function MealPlansPage() {
           "Could not load meal planner:",
           error
         );
+
         setPlannerError(
           "We couldn't load your saved meals."
         );
+
         setIsLoadingPlanner(false);
         return;
       }
@@ -700,15 +715,6 @@ export default function MealPlansPage() {
     setCustomMealName("");
   };
 
-  /*
-   * IMPORTANT:
-   * We do NOT delete the existing meal before saving a
-   * replacement.
-   *
-   * The planner has one row per user/date/meal slot.
-   * Supabase updates that row when it already exists and
-   * inserts it when it doesn't.
-   */
   const savePlannerMealRow = async (
     row: Omit<PlannerMeal, "id">
   ): Promise<{
@@ -764,12 +770,8 @@ export default function MealPlansPage() {
 
     const row: Omit<PlannerMeal, "id"> = {
       user_id: userId,
-
-      // Keep day + plan_date consistent with the original
-      // working planner data.
       day: getWeekdayName(pickerDate),
-plan_date: pickerDate,
-
+      plan_date: pickerDate,
       meal_slot: pickerSlot,
       recipe_id: recipe.id,
       custom_meal_name: null,
@@ -784,9 +786,11 @@ plan_date: pickerDate,
         "Could not save recipe:",
         error
       );
+
       setPlannerError(
         "We couldn't save that meal."
       );
+
       setIsSavingMeal(false);
       return;
     }
@@ -812,7 +816,7 @@ plan_date: pickerDate,
     const row: Omit<PlannerMeal, "id"> = {
       user_id: userId,
       day: getWeekdayName(pickerDate),
-plan_date: pickerDate,
+      plan_date: pickerDate,
       meal_slot: pickerSlot,
       recipe_id: null,
       custom_meal_name: meal.name,
@@ -827,9 +831,11 @@ plan_date: pickerDate,
         "Could not save custom meal:",
         error
       );
+
       setPlannerError(
         "We couldn't save that meal."
       );
+
       setIsSavingMeal(false);
       return;
     }
@@ -882,9 +888,11 @@ plan_date: pickerDate,
           "Could not create custom meal:",
           error
         );
+
         setPlannerError(
           "We couldn't save your custom meal."
         );
+
         setIsSavingCustomMeal(false);
         return;
       }
@@ -900,7 +908,7 @@ plan_date: pickerDate,
     const row: Omit<PlannerMeal, "id"> = {
       user_id: userId,
       day: getWeekdayName(pickerDate),
-plan_date: pickerDate,
+      plan_date: pickerDate,
       meal_slot: pickerSlot,
       recipe_id: null,
       custom_meal_name: customMeal.name,
@@ -915,9 +923,11 @@ plan_date: pickerDate,
         "Could not add custom meal to planner:",
         error
       );
+
       setPlannerError(
         "We saved the custom meal, but couldn't add it to this day."
       );
+
       setIsSavingCustomMeal(false);
       return;
     }
@@ -929,6 +939,41 @@ plan_date: pickerDate,
 
     setIsSavingCustomMeal(false);
     finishMealPicker();
+  };
+
+  const deleteCustomMeal = async (
+    meal: CustomMeal
+  ) => {
+    if (!userId || deletingCustomMealId) return;
+
+    setDeletingCustomMealId(meal.id);
+    setPlannerError("");
+
+    const { error } = await supabase
+      .from("custom_meals")
+      .delete()
+      .eq("id", meal.id)
+      .eq("user_id", userId);
+
+    if (error) {
+      console.error(
+        "Could not delete custom meal:",
+        error
+      );
+
+      setPlannerError(
+        "We couldn't remove that saved meal."
+      );
+
+      setDeletingCustomMealId(null);
+      return;
+    }
+
+    setCustomMeals((current) =>
+      current.filter((item) => item.id !== meal.id)
+    );
+
+    setDeletingCustomMealId(null);
   };
 
   const removeMeal = async (
@@ -981,6 +1026,7 @@ plan_date: pickerDate,
       (a, b) => {
         const aMatches =
           a.category === pickerSlot ? 0 : 1;
+
         const bMatches =
           b.category === pickerSlot ? 0 : 1;
 
@@ -1009,8 +1055,7 @@ plan_date: pickerDate,
       current === tab ? null : tab
     );
   };
-
-  return (
+    return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
         <DashboardSidebar
@@ -1056,10 +1101,9 @@ plan_date: pickerDate,
 
               <div className="md:pb-1">
                 <p className="max-w-md text-xs leading-6 text-[#75635D]">
-                  Start with a plan, build your own, or
-                  use the optional tools below when you
-                  want a little more guidance. Your week
-                  is still yours.
+                  Start with a plan, build your own, or use the
+                  optional tools below when you want a little more
+                  guidance. Your week is still yours.
                 </p>
 
                 <div className="mt-5 flex flex-wrap gap-x-4 gap-y-2">
@@ -1096,9 +1140,7 @@ plan_date: pickerDate,
               <div className="grid sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    toggleHelperTab("targets")
-                  }
+                  onClick={() => toggleHelperTab("targets")}
                   className={`group flex items-center justify-between gap-4 p-5 text-left transition md:p-6 ${
                     activeHelperTab === "targets"
                       ? "bg-[#EAD8D3]/65"
@@ -1134,9 +1176,7 @@ plan_date: pickerDate,
 
                 <button
                   type="button"
-                  onClick={() =>
-                    toggleHelperTab("plan")
-                  }
+                  onClick={() => toggleHelperTab("plan")}
                   className={`group flex items-center justify-between gap-4 border-t border-[#DED0CB] p-5 text-left transition sm:border-l sm:border-t-0 md:p-6 ${
                     activeHelperTab === "plan"
                       ? "bg-[#EAD8D3]/65"
@@ -1170,7 +1210,8 @@ plan_date: pickerDate,
                   </span>
                 </button>
               </div>
-                            {activeHelperTab === "targets" && (
+
+              {activeHelperTab === "targets" && (
                 <div className="border-t border-[#DED0CB] p-5 md:p-7">
                   <div className="flex items-start justify-between gap-5">
                     <div>
@@ -1186,9 +1227,9 @@ plan_date: pickerDate,
                       </h2>
 
                       <p className="mt-3 max-w-xl text-[11px] leading-5 text-[#806E68]">
-                        Get a practical starting estimate for
-                        calories and macros. These are general
-                        estimates, not rigid rules.
+                        Get a practical starting estimate for calories
+                        and macros. These are general estimates, not
+                        rigid rules.
                       </p>
                     </div>
 
@@ -1215,24 +1256,24 @@ plan_date: pickerDate,
                         </div>
 
                         <div className="flex w-fit rounded-full border border-[#D6C3BD] bg-[#FBF8F6] p-1">
-                          {(
-                            ["imperial", "metric"] as const
-                          ).map((option) => (
-                            <button
-                              key={option}
-                              type="button"
-                              onClick={() => setUnit(option)}
-                              className={`rounded-full px-4 py-2 text-[8px] tracking-[0.14em] transition ${
-                                unit === option
-                                  ? "bg-[#211C19] text-[#F7F1ED]"
-                                  : "text-[#8F655E]"
-                              }`}
-                            >
-                              {option === "imperial"
-                                ? "LB / FT"
-                                : "KG / CM"}
-                            </button>
-                          ))}
+                          {(["imperial", "metric"] as const).map(
+                            (option) => (
+                              <button
+                                key={option}
+                                type="button"
+                                onClick={() => setUnit(option)}
+                                className={`rounded-full px-4 py-2 text-[8px] tracking-[0.14em] transition ${
+                                  unit === option
+                                    ? "bg-[#211C19] text-[#F7F1ED]"
+                                    : "text-[#8F655E]"
+                                }`}
+                              >
+                                {option === "imperial"
+                                  ? "LB / FT"
+                                  : "KG / CM"}
+                              </button>
+                            )
+                          )}
                         </div>
                       </div>
 
@@ -1246,9 +1287,7 @@ plan_date: pickerDate,
                             type="number"
                             min="18"
                             value={age}
-                            onChange={(e) =>
-                              setAge(e.target.value)
-                            }
+                            onChange={(e) => setAge(e.target.value)}
                             placeholder="e.g. 30"
                             className={calculatorInputClass}
                           />
@@ -1260,31 +1299,29 @@ plan_date: pickerDate,
                           </span>
 
                           <div className="grid grid-cols-2 gap-2">
-                            {(
-                              ["female", "male"] as const
-                            ).map((option) => (
-                              <button
-                                key={option}
-                                type="button"
-                                onClick={() => setSex(option)}
-                                className={`rounded-xl border px-3 py-3.5 text-[9px] tracking-[0.14em] transition ${
-                                  sex === option
-                                    ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
-                                    : "border-[#D6C3BD] bg-[#FBF8F6] text-[#8F655E]"
-                                }`}
-                              >
-                                {option.toUpperCase()}
-                              </button>
-                            ))}
+                            {(["female", "male"] as const).map(
+                              (option) => (
+                                <button
+                                  key={option}
+                                  type="button"
+                                  onClick={() => setSex(option)}
+                                  className={`rounded-xl border px-3 py-3.5 text-[9px] tracking-[0.14em] transition ${
+                                    sex === option
+                                      ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
+                                      : "border-[#D6C3BD] bg-[#FBF8F6] text-[#8F655E]"
+                                  }`}
+                                >
+                                  {option.toUpperCase()}
+                                </button>
+                              )
+                            )}
                           </div>
                         </div>
 
                         <label>
                           <span className={calculatorLabelClass}>
                             WEIGHT{" "}
-                            {unit === "imperial"
-                              ? "(LB)"
-                              : "(KG)"}
+                            {unit === "imperial" ? "(LB)" : "(KG)"}
                           </span>
 
                           <input
@@ -1305,11 +1342,7 @@ plan_date: pickerDate,
 
                         {unit === "imperial" ? (
                           <div>
-                            <span
-                              className={
-                                calculatorLabelClass
-                              }
-                            >
+                            <span className={calculatorLabelClass}>
                               HEIGHT
                             </span>
 
@@ -1322,9 +1355,7 @@ plan_date: pickerDate,
                                   setFeet(e.target.value)
                                 }
                                 placeholder="Feet"
-                                className={
-                                  calculatorInputClass
-                                }
+                                className={calculatorInputClass}
                               />
 
                               <input
@@ -1336,19 +1367,13 @@ plan_date: pickerDate,
                                   setInches(e.target.value)
                                 }
                                 placeholder="Inches"
-                                className={
-                                  calculatorInputClass
-                                }
+                                className={calculatorInputClass}
                               />
                             </div>
                           </div>
                         ) : (
                           <label>
-                            <span
-                              className={
-                                calculatorLabelClass
-                              }
-                            >
+                            <span className={calculatorLabelClass}>
                               HEIGHT (CM)
                             </span>
 
@@ -1360,9 +1385,7 @@ plan_date: pickerDate,
                                 setHeightCm(e.target.value)
                               }
                               placeholder="e.g. 165"
-                              className={
-                                calculatorInputClass
-                              }
+                              className={calculatorInputClass}
                             />
                           </label>
                         )}
@@ -1462,6 +1485,7 @@ plan_date: pickerDate,
                                   g
                                 </span>
                               </p>
+
                               <p className="mt-1 text-[7px] tracking-[0.12em] text-[#8F655E]">
                                 PROTEIN
                               </p>
@@ -1474,6 +1498,7 @@ plan_date: pickerDate,
                                   g
                                 </span>
                               </p>
+
                               <p className="mt-1 text-[7px] tracking-[0.12em] text-[#8F655E]">
                                 CARBS
                               </p>
@@ -1486,6 +1511,7 @@ plan_date: pickerDate,
                                   g
                                 </span>
                               </p>
+
                               <p className="mt-1 text-[7px] tracking-[0.12em] text-[#8F655E]">
                                 FAT
                               </p>
@@ -1514,16 +1540,16 @@ plan_date: pickerDate,
                           </p>
 
                           <p className="mt-4 text-[12px] leading-5 text-[#6F5F59]">
-                            Add your age, weight and height.
-                            Your targets update automatically.
+                            Add your age, weight and height. Your
+                            targets update automatically.
                           </p>
                         </div>
                       )}
 
                       <p className="mt-5 border-t border-[#D5BBB5] pt-4 text-[9px] leading-4 text-[#806E68]">
                         General estimates only. Use these as a
-                        starting point and adjust based on
-                        progress, performance and how you feel.
+                        starting point and adjust based on progress,
+                        performance and how you feel.
                       </p>
 
                       {macroResult && (
@@ -1558,10 +1584,9 @@ plan_date: pickerDate,
                       </h2>
 
                       <p className="mt-3 max-w-xl text-[11px] leading-5 text-[#806E68]">
-                        If you completed your targets, we&apos;ll
-                        use your activity and goal to suggest a
-                        starting plan. You can always pick
-                        something else.
+                        If you completed your targets, we&apos;ll use
+                        your activity and goal to suggest a starting
+                        plan. You can always pick something else.
                       </p>
                     </div>
 
@@ -1624,6 +1649,7 @@ plan_date: pickerDate,
                           <p className="font-serif text-2xl">
                             {macroResult.calories.toLocaleString()}
                           </p>
+
                           <p className="mt-1 text-[6px] tracking-[0.14em] text-[#8F655E]">
                             CALORIES
                           </p>
@@ -1636,6 +1662,7 @@ plan_date: pickerDate,
                               g
                             </span>
                           </p>
+
                           <p className="mt-1 text-[6px] tracking-[0.14em] text-[#8F655E]">
                             PROTEIN
                           </p>
@@ -1651,8 +1678,8 @@ plan_date: pickerDate,
                       <p className="mt-2 max-w-xl text-[11px] leading-5 text-[#806E68]">
                         Complete the macro calculator first and
                         we&apos;ll suggest a plan based on your
-                        activity and goal — or skip it and choose
-                        any plan below.
+                        activity and goal — or skip it and choose any
+                        plan below.
                       </p>
 
                       <button
@@ -1674,8 +1701,8 @@ plan_date: pickerDate,
                       </p>
 
                       <p className="mt-1 font-serif text-base italic text-[#A77B73]">
-                        recommendations are a starting point, not
-                        a rule. ♡
+                        recommendations are a starting point, not a
+                        rule. ♡
                       </p>
                     </div>
 
@@ -1725,8 +1752,7 @@ plan_date: pickerDate,
               )}
             </div>
           </section>
-
-          <section className="mx-auto max-w-6xl pb-12">
+              <section className="mx-auto max-w-6xl pb-12">
             <div className="mb-7 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
               <div>
                 <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
@@ -1793,9 +1819,7 @@ plan_date: pickerDate,
                 <button
                   key={day.key}
                   type="button"
-                  onClick={() =>
-                    setActiveDayIndex(index)
-                  }
+                  onClick={() => setActiveDayIndex(index)}
                   className={`min-w-[76px] rounded-2xl border px-3 py-3 text-center transition ${
                     activeDayIndex === index
                       ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
@@ -1871,7 +1895,7 @@ plan_date: pickerDate,
                             <div className="mt-3 h-12 animate-pulse rounded-xl bg-[#EFE5E1]" />
                           ) : meal ? (
                             <div className="mt-2 flex items-center justify-between gap-3">
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 {recipe ? (
                                   <Link
                                     href={recipe.href}
@@ -1880,9 +1904,18 @@ plan_date: pickerDate,
                                     {mealName}
                                   </Link>
                                 ) : (
-                                  <p className="font-serif text-lg leading-snug">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openMealPicker(
+                                        activeDay.date,
+                                        slot
+                                      )
+                                    }
+                                    className="block w-full text-left font-serif text-lg leading-snug transition hover:text-[#A77B73]"
+                                  >
                                     {mealName}
-                                  </p>
+                                  </button>
                                 )}
                               </div>
 
@@ -1989,9 +2022,18 @@ plan_date: pickerDate,
                                   {mealName}
                                 </Link>
                               ) : (
-                                <p className="font-serif text-sm leading-snug">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    openMealPicker(
+                                      day.date,
+                                      slot
+                                    )
+                                  }
+                                  className="block w-full text-left font-serif text-sm leading-snug transition hover:text-[#A77B73]"
+                                >
                                   {mealName}
-                                </p>
+                                </button>
                               )}
 
                               <div className="mt-4 flex flex-wrap gap-1.5">
@@ -2109,10 +2151,10 @@ plan_date: pickerDate,
             <p className="max-w-4xl text-[9px] leading-5 text-[#927D76]">
               Nutrition note: Meal plans, calorie targets and
               macro estimates are general planning tools, not
-              individualized medical or nutrition
-              prescriptions. Needs vary by person, activity,
-              health needs and goals. Adjust portions and food
-              choices based on your own needs.
+              individualized medical or nutrition prescriptions.
+              Needs vary by person, activity, health needs and
+              goals. Adjust portions and food choices based on
+              your own needs.
             </p>
           </section>
 
@@ -2123,192 +2165,255 @@ plan_date: pickerDate,
           </section>
         </section>
       </div>
-
       {pickerOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-[#211C19]/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-[#211C19]/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-5"
           onMouseDown={(event) => {
-            if (
-              event.target === event.currentTarget &&
-              !isSavingMeal &&
-              !isSavingCustomMeal
-            ) {
+            if (event.target === event.currentTarget) {
               closeMealPicker();
             }
           }}
         >
-          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-[2rem] bg-[#F7F1ED] px-5 pb-7 pt-7 shadow-2xl sm:rounded-[2rem] sm:px-7 sm:pb-8">
-            <div className="flex items-start justify-between gap-5">
+          <div className="max-h-[88vh] w-full overflow-y-auto rounded-t-[2rem] border border-[#DED0CB] bg-[#F7F1ED] shadow-2xl sm:max-w-2xl sm:rounded-[2rem]">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-[#DED0CB] bg-[#F7F1ED]/95 px-5 py-5 backdrop-blur sm:px-6">
               <div>
-                <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
+                <p className="text-[7px] tracking-[0.25em] text-[#9D6F67]">
+                  {selectedPickerDay?.weekday ?? "MEAL"} ·{" "}
                   {pickerSlot}
                 </p>
 
-                <h2 className="mt-2 font-serif text-3xl leading-tight">
-                  {selectedPickerDay
-                    ? selectedPickerDay.dayLabel
-                    : "Choose a meal"}
+                <h2 className="mt-2 font-serif text-2xl">
+                  Choose your{" "}
                   <span className="italic text-[#A77B73]">
-                    . ♡
+                    meal. ♡
                   </span>
                 </h2>
+
+                {selectedPickerDay && (
+                  <p className="mt-1 text-[10px] text-[#806E68]">
+                    {selectedPickerDay.dayLabel}
+                  </p>
+                )}
               </div>
 
               <button
                 type="button"
                 onClick={closeMealPicker}
-                disabled={
-                  isSavingMeal || isSavingCustomMeal
-                }
+                disabled={isSavingMeal || isSavingCustomMeal}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D6C3BD] text-sm text-[#A77B73] transition hover:bg-[#EAD8D3] disabled:opacity-50"
                 aria-label="Close meal picker"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#CBA9A2] text-lg text-[#9D6F67] transition hover:bg-[#EAD8D3] disabled:opacity-50"
               >
                 ×
               </button>
             </div>
 
-            <div className="mt-6">
-              <label
-                htmlFor="recipe-search"
-                className="text-[7px] tracking-[0.2em] text-[#9D6F67]"
-              >
-                FIND A RECIPE
-              </label>
+            <div className="p-5 sm:p-6">
+              <section>
+                <div>
+                  <p className="text-[7px] tracking-[0.24em] text-[#9D6F67]">
+                    FROM THE RECIPE LIBRARY
+                  </p>
 
-              <input
-                id="recipe-search"
-                type="text"
-                value={recipeSearch}
-                onChange={(event) =>
-                  setRecipeSearch(event.target.value)
-                }
-                placeholder="Search recipes..."
-                className="mt-2 w-full rounded-xl border border-[#D6C3BD] bg-[#FBF8F6] px-4 py-3.5 text-[16px] outline-none transition placeholder:text-[#AA9690] focus:border-[#A77B73]"
-              />
-            </div>
+                  <p className="mt-1 font-serif text-base italic text-[#A77B73]">
+                    pick one of Lav&apos;s recipes. ♡
+                  </p>
+                </div>
 
-            <div className="mt-5">
-              <div className="flex items-center justify-between gap-4">
-                <p className="text-[7px] tracking-[0.22em] text-[#9D6F67]">
-                  RECIPE LIBRARY
-                </p>
+                <div className="mt-4">
+                  <input
+                    type="text"
+                    value={recipeSearch}
+                    onChange={(event) =>
+                      setRecipeSearch(event.target.value)
+                    }
+                    placeholder="Search recipes..."
+                    className="w-full rounded-xl border border-[#D6C3BD] bg-[#FBF8F6] px-4 py-3 text-[16px] text-[#211C19] outline-none placeholder:text-[#AA9690] focus:border-[#A77B73]"
+                  />
+                </div>
 
-                <Link
-                  href="/dashboard/resources/recipes"
-                  className="text-[6px] tracking-[0.14em] text-[#A77B73]"
-                >
-                  VIEW ALL →
-                </Link>
+                <div className="mt-4 max-h-[300px] overflow-y-auto rounded-2xl border border-[#DED0CB] bg-[#FBF8F6]">
+                  {filteredRecipes.length > 0 ? (
+                    <div className="divide-y divide-[#E8DDD9]">
+                      {filteredRecipes.map((recipe) => (
+                        <button
+                          key={recipe.id}
+                          type="button"
+                          disabled={
+                            isSavingMeal ||
+                            isSavingCustomMeal
+                          }
+                          onClick={() =>
+                            saveRecipeToPlanner(recipe)
+                          }
+                          className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F4ECE8] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <div className="min-w-0">
+                            <p className="font-serif text-base leading-snug text-[#211C19]">
+                              {recipe.title}
+                            </p>
+
+                            <p className="mt-1 text-[6px] tracking-[0.15em] text-[#9D6F67]">
+                              {recipe.category}
+                            </p>
+                          </div>
+
+                          <span className="shrink-0 font-serif text-lg text-[#A77B73]">
+                            +
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="px-4 py-8 text-center">
+                      <p className="font-serif text-base italic text-[#A77B73]">
+                        no recipes found. ♡
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              <div className="my-7 flex items-center gap-3">
+                <div className="h-px flex-1 bg-[#DED0CB]" />
+
+                <span className="text-[6px] tracking-[0.2em] text-[#9D6F67]">
+                  OR
+                </span>
+
+                <div className="h-px flex-1 bg-[#DED0CB]" />
               </div>
 
-              <div className="mt-3 max-h-[300px] divide-y divide-[#E8DDD9] overflow-y-auto rounded-2xl border border-[#DED0CB] bg-[#FBF8F6]">
-                {filteredRecipes.length > 0 ? (
-                  filteredRecipes.map((recipe) => (
-                    <button
-                      key={recipe.id}
-                      type="button"
-                      onClick={() =>
-                        saveRecipeToPlanner(recipe)
-                      }
-                      disabled={
-                        isSavingMeal ||
-                        isSavingCustomMeal
-                      }
-                      className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F4ECE8] disabled:opacity-50"
-                    >
-                      <div>
-                        <p className="text-[6px] tracking-[0.15em] text-[#9D6F67]">
-                          {recipe.category}
-                        </p>
+              <section>
+                <div>
+                  <p className="text-[7px] tracking-[0.24em] text-[#9D6F67]">
+                    ADD YOUR OWN
+                  </p>
 
-                        <p className="mt-1 font-serif text-lg">
-                          {recipe.title}
-                        </p>
-                      </div>
+                  <p className="mt-1 font-serif text-base italic text-[#A77B73]">
+                    your food still counts. ♡
+                  </p>
+                </div>
 
-                      <span className="font-serif text-xl text-[#A77B73]">
-                        +
-                      </span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-5 py-8 text-center">
-                    <p className="font-serif text-lg italic text-[#A77B73]">
-                      no recipes found. ♡
+                <div className="mt-4 rounded-[1.25rem] border border-[#DED0CB] bg-[#FBF8F6] p-4">
+                  <label
+                    htmlFor="custom-meal-name"
+                    className="text-[7px] tracking-[0.18em] text-[#9D6F67]"
+                  >
+                    MEAL NAME
+                  </label>
+
+                  <input
+                    id="custom-meal-name"
+                    type="text"
+                    value={customMealName}
+                    onChange={(event) =>
+                      setCustomMealName(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        createAndUseCustomMeal();
+                      }
+                    }}
+                    placeholder="e.g. chicken + rice bowl"
+                    className="mt-2 w-full rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-[16px] text-[#211C19] outline-none placeholder:text-[#AA9690] focus:border-[#A77B73]"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={createAndUseCustomMeal}
+                    disabled={
+                      !customMealName.trim() ||
+                      isSavingCustomMeal ||
+                      isSavingMeal
+                    }
+                    className="mt-3 w-full rounded-full bg-[#211C19] px-5 py-3.5 text-[7px] tracking-[0.18em] text-[#F7F1ED] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
+                  >
+                    {isSavingCustomMeal
+                      ? "ADDING..."
+                      : "ADD TO DAY →"}
+                  </button>
+                </div>
+              </section>
+
+              {customMeals.length > 0 && (
+                <section className="mt-7 border-t border-[#DED0CB] pt-6">
+                  <div>
+                    <p className="text-[7px] tracking-[0.24em] text-[#9D6F67]">
+                      YOUR SAVED MEALS
+                    </p>
+
+                    <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
+                      tap one to use it again. ♡
                     </p>
                   </div>
-                )}
-              </div>
-            </div>
 
-            {customMeals.length > 0 && (
-              <div className="mt-6">
-                <p className="text-[7px] tracking-[0.22em] text-[#9D6F67]">
-                  YOUR SAVED MEALS
-                </p>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {customMeals
-                    .slice(0, 8)
-                    .map((meal) => (
-                      <button
+                  <div className="mt-4 space-y-2">
+                    {customMeals.map((meal) => (
+                      <div
                         key={meal.id}
-                        type="button"
-                        onClick={() =>
-                          saveExistingCustomMeal(meal)
-                        }
-                        disabled={
-                          isSavingMeal ||
-                          isSavingCustomMeal
-                        }
-                        className="rounded-full border border-[#CBA9A2] bg-[#FBF8F6] px-4 py-2.5 text-[7px] tracking-[0.1em] text-[#806E68] transition hover:bg-[#EAD8D3] disabled:opacity-50"
+                        className="flex items-stretch overflow-hidden rounded-xl border border-[#D6C3BD] bg-[#FBF8F6]"
                       >
-                        {meal.name}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            saveExistingCustomMeal(meal)
+                          }
+                          disabled={
+                            isSavingMeal ||
+                            isSavingCustomMeal ||
+                            deletingCustomMealId === meal.id
+                          }
+                          className="min-w-0 flex-1 px-4 py-3.5 text-left transition hover:bg-[#F4ECE8] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <span className="block truncate font-serif text-base text-[#211C19]">
+                            {meal.name}
+                          </span>
+
+                          <span className="mt-1 block text-[6px] tracking-[0.15em] text-[#9D6F67]">
+                            ADD TO {pickerSlot}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            deleteCustomMeal(meal);
+                          }}
+                          disabled={
+                            deletingCustomMealId === meal.id ||
+                            isSavingMeal ||
+                            isSavingCustomMeal
+                          }
+                          className="flex w-12 shrink-0 items-center justify-center border-l border-[#D6C3BD] text-lg text-[#A77B73] transition hover:bg-[#EAD8D3] disabled:cursor-not-allowed disabled:opacity-40"
+                          aria-label={`Remove ${meal.name} from saved meals`}
+                          title="Remove from saved meals"
+                        >
+                          {deletingCustomMealId === meal.id
+                            ? "…"
+                            : "×"}
+                        </button>
+                      </div>
                     ))}
-                </div>
-              </div>
-            )}
+                  </div>
 
-            <div className="mt-7 border-t border-[#DED0CB] pt-6">
-              <p className="text-[7px] tracking-[0.22em] text-[#9D6F67]">
-                OR ADD YOUR OWN
-              </p>
+                  <p className="mt-3 text-[8px] leading-4 text-[#927D76]">
+                    Removing a saved meal here only removes it
+                    from this list. Meals already added to your
+                    weekly planner stay where you placed them.
+                  </p>
+                </section>
+              )}
 
-              <p className="mt-2 font-serif text-lg italic text-[#A77B73]">
-                not everything needs a recipe. ♡
-              </p>
-
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <input
-                  type="text"
-                  value={customMealName}
-                  onChange={(event) =>
-                    setCustomMealName(event.target.value)
-                  }
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      createAndUseCustomMeal();
-                    }
-                  }}
-                  placeholder="e.g. Mom's chicken + rice"
-                  className="min-w-0 flex-1 rounded-xl border border-[#D6C3BD] bg-[#FBF8F6] px-4 py-3.5 text-[16px] outline-none transition placeholder:text-[#AA9690] focus:border-[#A77B73]"
-                />
-
+              <div className="mt-7 border-t border-[#DED0CB] pt-5">
                 <button
                   type="button"
-                  onClick={createAndUseCustomMeal}
-                  disabled={
-                    !customMealName.trim() ||
-                    isSavingMeal ||
-                    isSavingCustomMeal
-                  }
-                  className="rounded-xl bg-[#211C19] px-5 py-3.5 text-[7px] tracking-[0.18em] text-[#F7F1ED] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:translate-y-0 disabled:opacity-50"
+                  onClick={closeMealPicker}
+                  disabled={isSavingMeal || isSavingCustomMeal}
+                  className="w-full rounded-full border border-[#CBA9A2] px-5 py-3.5 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:bg-[#EAD8D3] disabled:opacity-50"
                 >
-                  {isSavingCustomMeal
-                    ? "ADDING..."
-                    : "ADD TO DAY →"}
+                  CANCEL
                 </button>
               </div>
             </div>
@@ -2317,4 +2422,4 @@ plan_date: pickerDate,
       )}
     </main>
   );
-}
+}      
