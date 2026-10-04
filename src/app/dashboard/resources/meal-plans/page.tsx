@@ -6,10 +6,10 @@ import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
 type MealSlot = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
-
 type Sex = "female" | "male";
 type Unit = "imperial" | "metric";
 type Goal = "lose" | "maintain" | "gain";
+type HelperTab = "targets" | "plan" | null;
 
 type MacroResult = {
   calories: number;
@@ -25,8 +25,6 @@ type RecommendedPlan = {
   href: string;
   reason: string;
 };
-
-type HelperTab = "targets" | "plan" | null;
 
 type PlannerDay = {
   key: string;
@@ -250,7 +248,6 @@ function formatDateForInput(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-
   return `${year}-${month}-${day}`;
 }
 
@@ -260,30 +257,18 @@ function getTodayForInput() {
 
 function parseDateInput(value: string) {
   const [year, month, day] = value.split("-").map(Number);
-
   return new Date(year, month - 1, day);
 }
 
 function addDays(date: Date, amount: number) {
   const nextDate = new Date(date);
   nextDate.setDate(nextDate.getDate() + amount);
-
   return nextDate;
-}
-
-function getWeekdayName(date: Date) {
-  return date
-    .toLocaleDateString("en-US", {
-      weekday: "long",
-    })
-    .toUpperCase();
 }
 
 function getShortWeekday(date: Date) {
   return date
-    .toLocaleDateString("en-US", {
-      weekday: "short",
-    })
+    .toLocaleDateString("en-US", { weekday: "short" })
     .toUpperCase();
 }
 
@@ -302,10 +287,7 @@ function getLongDate(date: Date) {
 }
 
 function getRecipeById(id?: string | null) {
-  if (!id) {
-    return null;
-  }
-
+  if (!id) return null;
   return recipeLibrary.find((recipe) => recipe.id === id) ?? null;
 }
 
@@ -313,88 +295,46 @@ function getMealKey(planDate: string, mealSlot: MealSlot) {
   return `${planDate}-${mealSlot}`;
 }
 
+function getWeekdayName(dateString: string) {
+  return parseDateInput(dateString)
+    .toLocaleDateString("en-US", {
+      weekday: "long",
+    })
+    .toUpperCase();
+}
+
 export default function MealPlansPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
-
   const [userId, setUserId] = useState<string | null>(null);
-
-  const [weekStart, setWeekStart] =
-    useState(getTodayForInput);
-
-  const [plannerMeals, setPlannerMeals] =
-    useState<Record<string, PlannerMeal>>({});
-
-  const [customMeals, setCustomMeals] =
-    useState<CustomMeal[]>([]);
-
-  const [isLoadingPlanner, setIsLoadingPlanner] =
-    useState(true);
-
-  const [plannerError, setPlannerError] =
-    useState("");
-
-  const [activeDayIndex, setActiveDayIndex] =
-    useState(0);
-
-  const [pickerOpen, setPickerOpen] =
-    useState(false);
-
-  const [pickerDate, setPickerDate] =
-    useState("");
-
+  const [weekStart, setWeekStart] = useState(getTodayForInput);
+  const [plannerMeals, setPlannerMeals] = useState<
+    Record<string, PlannerMeal>
+  >({});
+  const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
+  const [isLoadingPlanner, setIsLoadingPlanner] = useState(true);
+  const [plannerError, setPlannerError] = useState("");
+  const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerDate, setPickerDate] = useState("");
   const [pickerSlot, setPickerSlot] =
     useState<MealSlot>("BREAKFAST");
-
-  const [recipeSearch, setRecipeSearch] =
-    useState("");
-
-  const [customMealName, setCustomMealName] =
-    useState("");
-
-  const [isSavingMeal, setIsSavingMeal] =
-    useState(false);
-
+  const [recipeSearch, setRecipeSearch] = useState("");
+  const [customMealName, setCustomMealName] = useState("");
+  const [isSavingMeal, setIsSavingMeal] = useState(false);
   const [isSavingCustomMeal, setIsSavingCustomMeal] =
     useState(false);
-
-  // -------------------------------------------------------
-  // OPTIONAL HELPER TABS
-  // -------------------------------------------------------
-
   const [activeHelperTab, setActiveHelperTab] =
     useState<HelperTab>(null);
-
-  // -------------------------------------------------------
-  // MACRO CALCULATOR
-  // -------------------------------------------------------
-
-  const [unit, setUnit] =
-    useState<Unit>("imperial");
-
-  const [sex, setSex] =
-    useState<Sex>("female");
-
-  const [age, setAge] =
-    useState("");
-
-  const [weight, setWeight] =
-    useState("");
-
-  const [feet, setFeet] =
-    useState("");
-
-  const [inches, setInches] =
-    useState("");
-
-  const [heightCm, setHeightCm] =
-    useState("");
-
-  const [activity, setActivity] =
-    useState("1.55");
-
-  const [goal, setGoal] =
-    useState<Goal>("maintain");
+  const [unit, setUnit] = useState<Unit>("imperial");
+  const [sex, setSex] = useState<Sex>("female");
+  const [age, setAge] = useState("");
+  const [weight, setWeight] = useState("");
+  const [feet, setFeet] = useState("");
+  const [inches, setInches] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [activity, setActivity] = useState("1.55");
+  const [goal, setGoal] = useState<Goal>("maintain");
 
   const macroResult = useMemo<MacroResult | null>(() => {
     const ageValue = Number(age);
@@ -406,14 +346,11 @@ export default function MealPlansPage() {
       !weightValue ||
       ageValue <= 0 ||
       weightValue <= 0
-    ) {
+    )
       return null;
-    }
 
     const kg =
-      unit === "imperial"
-        ? weightValue / 2.20462
-        : weightValue;
+      unit === "imperial" ? weightValue / 2.20462 : weightValue;
 
     let cm = 0;
 
@@ -421,23 +358,13 @@ export default function MealPlansPage() {
       const feetValue = Number(feet);
       const inchesValue = Number(inches || 0);
 
-      if (
-        !feetValue ||
-        feetValue <= 0 ||
-        inchesValue < 0
-      ) {
+      if (!feetValue || feetValue <= 0 || inchesValue < 0)
         return null;
-      }
 
-      cm =
-        (feetValue * 12 + inchesValue) *
-        2.54;
+      cm = (feetValue * 12 + inchesValue) * 2.54;
     } else {
       cm = Number(heightCm);
-
-      if (!cm || cm <= 0) {
-        return null;
-      }
+      if (!cm || cm <= 0) return null;
     }
 
     const bmr =
@@ -446,61 +373,34 @@ export default function MealPlansPage() {
       5 * ageValue +
       (sex === "male" ? 5 : -161);
 
-    const maintenance =
-      bmr * activityValue;
-
+    const maintenance = bmr * activityValue;
     const calorieMultiplier =
-      goal === "lose"
-        ? 0.85
-        : goal === "gain"
-          ? 1.1
-          : 1;
+      goal === "lose" ? 0.85 : goal === "gain" ? 1.1 : 1;
 
     const calories = Math.round(
       maintenance * calorieMultiplier
     );
 
     const proteinPerKg =
-      goal === "lose"
-        ? 1.8
-        : goal === "gain"
-          ? 1.8
-          : 1.6;
+      goal === "lose" ? 1.8 : goal === "gain" ? 1.8 : 1.6;
 
-    const protein = Math.round(
-      kg * proteinPerKg
-    );
-
+    const protein = Math.round(kg * proteinPerKg);
     const fatPercent = 0.3;
-
-    const fat = Math.round(
-      (calories * fatPercent) / 9
-    );
-
-    const proteinCalories =
-      protein * 4;
-
-    const fatCalories =
-      fat * 9;
-
+    const fat = Math.round((calories * fatPercent) / 9);
+    const proteinCalories = protein * 4;
+    const fatCalories = fat * 9;
     const carbCalories = Math.max(
-      calories -
-        proteinCalories -
-        fatCalories,
+      calories - proteinCalories - fatCalories,
       0
     );
-
-    const carbs = Math.round(
-      carbCalories / 4
-    );
+    const carbs = Math.round(carbCalories / 4);
 
     return {
       calories,
       protein,
       carbs,
       fat,
-      maintenance:
-        Math.round(maintenance),
+      maintenance: Math.round(maintenance),
     };
   }, [
     age,
@@ -514,99 +414,85 @@ export default function MealPlansPage() {
     goal,
   ]);
 
-  const recommendedPlan =
-    useMemo<RecommendedPlan>(() => {
-      const activityValue =
-        Number(activity);
+  const recommendedPlan = useMemo<RecommendedPlan>(() => {
+    const activityValue = Number(activity);
 
-      if (activityValue <= 1.2) {
-        if (goal === "gain") {
-          return {
-            title: "BALANCED WEEK",
-            subtitle:
-              "simple. balanced. repeatable.",
-            href: "/dashboard/resources/meal-plans/balanced-week",
-            reason:
-              "Your activity is currently lighter, but your build / gain goal may benefit from a little more consistent fuel.",
-          };
-        }
-
-        return {
-          title: "LIGHTER WEEK",
-          subtitle:
-            "keep it light, not restrictive.",
-          href: "/dashboard/resources/meal-plans/lighter-week",
-          reason:
-            "Your current activity level makes Lighter Week a simple starting framework without overcomplicating your meals.",
-        };
-      }
-
-      if (activityValue <= 1.375) {
-        if (goal === "gain") {
-          return {
-            title: "BALANCED WEEK",
-            subtitle:
-              "simple. balanced. repeatable.",
-            href: "/dashboard/resources/meal-plans/balanced-week",
-            reason:
-              "Your lighter training schedule paired with a build / gain goal makes Balanced Week a practical place to start.",
-          };
-        }
-
-        if (goal === "lose") {
-          return {
-            title: "LIGHTER WEEK",
-            subtitle:
-              "keep it light, not restrictive.",
-            href: "/dashboard/resources/meal-plans/lighter-week",
-            reason:
-              "Your activity and goal point toward a lighter, protein-forward framework while still leaving room to adjust portions.",
-          };
-        }
-
+    if (activityValue <= 1.2) {
+      if (goal === "gain")
         return {
           title: "BALANCED WEEK",
-          subtitle:
-            "simple. balanced. repeatable.",
+          subtitle: "simple. balanced. repeatable.",
           href: "/dashboard/resources/meal-plans/balanced-week",
           reason:
-            "Your activity level fits well with a balanced, flexible week that gives you structure without overdoing it.",
+            "Your activity is currently lighter, but your build / gain goal may benefit from a little more consistent fuel.",
         };
-      }
-
-      if (activityValue <= 1.55) {
-        if (goal === "gain") {
-          return {
-            title: "TRAINING WEEK",
-            subtitle:
-              "fuel the work.",
-            href: "/dashboard/resources/meal-plans/training-week",
-            reason:
-              "With regular training and a build / gain goal, Training Week gives you a stronger fueling framework.",
-          };
-        }
-
-        return {
-          title: "BALANCED WEEK",
-          subtitle:
-            "simple. balanced. repeatable.",
-          href: "/dashboard/resources/meal-plans/balanced-week",
-          reason:
-            "With regular weekly training, Balanced Week gives you enough structure and fuel while staying flexible.",
-        };
-      }
 
       return {
-        title: "TRAINING WEEK",
-        subtitle:
-          "fuel the work.",
-        href: "/dashboard/resources/meal-plans/training-week",
+        title: "LIGHTER WEEK",
+        subtitle: "keep it light, not restrictive.",
+        href: "/dashboard/resources/meal-plans/lighter-week",
         reason:
-          goal === "lose"
-            ? "You train frequently, so even with a fat-loss goal, your plan should still support performance and recovery."
-            : "Your high activity level makes Training Week the strongest starting framework for fueling performance and recovery.",
+          "Your current activity level makes Lighter Week a simple starting framework without overcomplicating your meals.",
       };
-    }, [activity, goal]);
+    }
+
+    if (activityValue <= 1.375) {
+      if (goal === "gain")
+        return {
+          title: "BALANCED WEEK",
+          subtitle: "simple. balanced. repeatable.",
+          href: "/dashboard/resources/meal-plans/balanced-week",
+          reason:
+            "Your lighter training schedule paired with a build / gain goal makes Balanced Week a practical place to start.",
+        };
+
+      if (goal === "lose")
+        return {
+          title: "LIGHTER WEEK",
+          subtitle: "keep it light, not restrictive.",
+          href: "/dashboard/resources/meal-plans/lighter-week",
+          reason:
+            "Your activity and goal point toward a lighter, protein-forward framework while still leaving room to adjust portions.",
+        };
+
+      return {
+        title: "BALANCED WEEK",
+        subtitle: "simple. balanced. repeatable.",
+        href: "/dashboard/resources/meal-plans/balanced-week",
+        reason:
+          "Your activity level fits well with a balanced, flexible week that gives you structure without overdoing it.",
+      };
+    }
+
+    if (activityValue <= 1.55) {
+      if (goal === "gain")
+        return {
+          title: "TRAINING WEEK",
+          subtitle: "fuel the work.",
+          href: "/dashboard/resources/meal-plans/training-week",
+          reason:
+            "With regular training and a build / gain goal, Training Week gives you a stronger fueling framework.",
+        };
+
+      return {
+        title: "BALANCED WEEK",
+        subtitle: "simple. balanced. repeatable.",
+        href: "/dashboard/resources/meal-plans/balanced-week",
+        reason:
+          "With regular weekly training, Balanced Week gives you enough structure and fuel while staying flexible.",
+      };
+    }
+
+    return {
+      title: "TRAINING WEEK",
+      subtitle: "fuel the work.",
+      href: "/dashboard/resources/meal-plans/training-week",
+      reason:
+        goal === "lose"
+          ? "You train frequently, so even with a fat-loss goal, your plan should still support performance and recovery."
+          : "Your high activity level makes Training Week the strongest starting framework for fueling performance and recovery.",
+    };
+  }, [activity, goal]);
 
   const calculatorInputClass =
     "w-full rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3.5 text-[16px] text-[#211C19] outline-none transition placeholder:text-[#AA9690] focus:border-[#A77B73]";
@@ -615,47 +501,34 @@ export default function MealPlansPage() {
     "mb-2 block text-[8px] tracking-[0.18em] text-[#806E68]";
 
   const plannerWeek = useMemo<PlannerDay[]>(() => {
-    if (!weekStart) {
-      return [];
-    }
+    if (!weekStart) return [];
 
-    const startDate =
-      parseDateInput(weekStart);
+    const startDate = parseDateInput(weekStart);
 
-    return Array.from(
-      { length: 7 },
-      (_, index) => {
-        const date =
-          addDays(startDate, index);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = addDays(startDate, index);
 
-        return {
-          key: formatDateForInput(date),
-          date: formatDateForInput(date),
-          shortDate: getShortDate(date),
-          weekday: getShortWeekday(date),
-          dayLabel: getLongDate(date),
-        };
-      }
-    );
+      return {
+        key: formatDateForInput(date),
+        date: formatDateForInput(date),
+        shortDate: getShortDate(date),
+        weekday: getShortWeekday(date),
+        dayLabel: getLongDate(date),
+      };
+    });
   }, [weekStart]);
 
   const weekEnd =
     plannerWeek.length > 0
-      ? plannerWeek[
-          plannerWeek.length - 1
-        ]
+      ? plannerWeek[plannerWeek.length - 1]
       : null;
 
   const activeDay =
-    plannerWeek[activeDayIndex] ??
-    plannerWeek[0];
+    plannerWeek[activeDayIndex] ?? plannerWeek[0];
 
   const initial =
-    !isLoadingUser &&
-    firstName !== "there"
-      ? firstName
-          .charAt(0)
-          .toUpperCase()
+    !isLoadingUser && firstName !== "there"
+      ? firstName.charAt(0).toUpperCase()
       : "♡";
 
   useEffect(() => {
@@ -672,26 +545,18 @@ export default function MealPlansPage() {
 
       setUserId(user.id);
 
-      const savedName =
-        user.user_metadata?.name;
+      const savedName = user.user_metadata?.name;
 
-      if (savedName) {
-        setFirstName(savedName);
-      } else if (user.email) {
-        setFirstName(
-          user.email.split("@")[0]
-        );
-      }
+      if (savedName) setFirstName(savedName);
+      else if (user.email)
+        setFirstName(user.email.split("@")[0]);
 
       try {
-        const savedWeekStart =
-          window.localStorage.getItem(
-            `lockInMealPlannerWeekStart:${user.id}`
-          );
+        const savedWeekStart = window.localStorage.getItem(
+          `lockInMealPlannerWeekStart:${user.id}`
+        );
 
-        if (savedWeekStart) {
-          setWeekStart(savedWeekStart);
-        }
+        if (savedWeekStart) setWeekStart(savedWeekStart);
       } catch (error) {
         console.warn(
           "Could not read saved planner week:",
@@ -706,9 +571,7 @@ export default function MealPlansPage() {
   }, []);
 
   useEffect(() => {
-    if (!userId || !weekStart) {
-      return;
-    }
+    if (!userId || !weekStart) return;
 
     try {
       window.localStorage.setItem(
@@ -716,70 +579,48 @@ export default function MealPlansPage() {
         weekStart
       );
     } catch (error) {
-      console.warn(
-        "Could not save planner week:",
-        error
-      );
+      console.warn("Could not save planner week:", error);
     }
   }, [userId, weekStart]);
 
   useEffect(() => {
-    if (!userId || plannerWeek.length === 0) {
-      return;
-    }
+    if (!userId || plannerWeek.length === 0) return;
 
     const loadPlanner = async () => {
       setIsLoadingPlanner(true);
       setPlannerError("");
 
-      const startDate =
-        plannerWeek[0].date;
-
+      const startDate = plannerWeek[0].date;
       const endDate =
-        plannerWeek[
-          plannerWeek.length - 1
-        ].date;
+        plannerWeek[plannerWeek.length - 1].date;
 
-      const { data, error } =
-        await supabase
-          .from("meal_plan_selections")
-          .select("*")
-          .eq("user_id", userId)
-          .gte("plan_date", startDate)
-          .lte("plan_date", endDate)
-          .order("plan_date", {
-            ascending: true,
-          });
+      const { data, error } = await supabase
+        .from("meal_plan_selections")
+        .select("*")
+        .eq("user_id", userId)
+        .gte("plan_date", startDate)
+        .lte("plan_date", endDate)
+        .order("plan_date", { ascending: true });
 
       if (error) {
         console.error(
           "Could not load meal planner:",
           error
         );
-
         setPlannerError(
           "We couldn't load your saved meals."
         );
-
         setIsLoadingPlanner(false);
         return;
       }
 
-      const nextMeals: Record<
-        string,
-        PlannerMeal
-      > = {};
+      const nextMeals: Record<string, PlannerMeal> = {};
 
-      (data ?? []).forEach(
-        (meal: PlannerMeal) => {
-          nextMeals[
-            getMealKey(
-              meal.plan_date,
-              meal.meal_slot
-            )
-          ] = meal;
-        }
-      );
+      (data ?? []).forEach((meal: PlannerMeal) => {
+        nextMeals[
+          getMealKey(meal.plan_date, meal.meal_slot)
+        ] = meal;
+      });
 
       setPlannerMeals(nextMeals);
       setIsLoadingPlanner(false);
@@ -789,32 +630,24 @@ export default function MealPlansPage() {
   }, [userId, plannerWeek]);
 
   useEffect(() => {
-    if (!userId) {
-      return;
-    }
+    if (!userId) return;
 
     const loadCustomMeals = async () => {
-      const { data, error } =
-        await supabase
-          .from("custom_meals")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", {
-            ascending: false,
-          });
+      const { data, error } = await supabase
+        .from("custom_meals")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
 
       if (error) {
         console.warn(
           "Could not load custom meals:",
           error
         );
-
         return;
       }
 
-      setCustomMeals(
-        (data ?? []) as CustomMeal[]
-      );
+      setCustomMeals((data ?? []) as CustomMeal[]);
     };
 
     loadCustomMeals();
@@ -822,17 +655,14 @@ export default function MealPlansPage() {
 
   useEffect(() => {
     if (!pickerOpen) {
-      document.body.style.overflow =
-        "";
+      document.body.style.overflow = "";
       return;
     }
 
-    document.body.style.overflow =
-      "hidden";
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.body.style.overflow =
-        "";
+      document.body.style.overflow = "";
     };
   }, [pickerOpen]);
 
@@ -840,9 +670,7 @@ export default function MealPlansPage() {
     setActiveDayIndex(0);
   }, [weekStart]);
 
-  const handleWeekStartChange = (
-    value: string
-  ) => {
+  const handleWeekStartChange = (value: string) => {
     setWeekStart(value);
     setActiveDayIndex(0);
   };
@@ -859,358 +687,320 @@ export default function MealPlansPage() {
   };
 
   const closeMealPicker = () => {
-    if (
-      isSavingMeal ||
-      isSavingCustomMeal
-    ) {
-      return;
-    }
+    if (isSavingMeal || isSavingCustomMeal) return;
 
     setPickerOpen(false);
     setRecipeSearch("");
     setCustomMealName("");
   };
 
-  const saveRecipeToPlanner =
-    async (recipe: Recipe) => {
-      if (
-        !userId ||
-        !pickerDate ||
-        isSavingMeal
-      ) {
-        return;
-      }
+  const finishMealPicker = () => {
+    setPickerOpen(false);
+    setRecipeSearch("");
+    setCustomMealName("");
+  };
 
-      setIsSavingMeal(true);
-      setPlannerError("");
-
-      const planDate =
-        parseDateInput(pickerDate);
-
-      const row = {
-        user_id: userId,
-        day: getWeekdayName(planDate),
-        plan_date: pickerDate,
-        meal_slot: pickerSlot,
-        recipe_id: recipe.id,
-        custom_meal_name: null,
-        updated_at:
-          new Date().toISOString(),
-      };
-
-      const { data, error } =
-        await supabase
-          .from("meal_plan_selections")
-          .upsert(row, {
-            onConflict:
-              "user_id,plan_date,meal_slot",
-          })
-          .select()
-          .single();
-
-      if (error) {
-        console.error(
-          "Could not save recipe:",
-          error
-        );
-
-        setPlannerError(
-          "We couldn't save that meal."
-        );
-
-        setIsSavingMeal(false);
-        return;
-      }
-
-      setPlannerMeals((current) => ({
-        ...current,
-        [getMealKey(
-          pickerDate,
-          pickerSlot
-        )]: data as PlannerMeal,
-      }));
-
-      setIsSavingMeal(false);
-      closeMealPicker();
-    };
-
-  const saveExistingCustomMeal =
-    async (meal: CustomMeal) => {
-      if (
-        !userId ||
-        !pickerDate ||
-        isSavingMeal
-      ) {
-        return;
-      }
-
-      setIsSavingMeal(true);
-      setPlannerError("");
-
-      const planDate =
-        parseDateInput(pickerDate);
-
-      const row = {
-        user_id: userId,
-        day: getWeekdayName(planDate),
-        plan_date: pickerDate,
-        meal_slot: pickerSlot,
-        recipe_id: null,
-        custom_meal_name: meal.name,
-        updated_at:
-          new Date().toISOString(),
-      };
-
-      const { data, error } =
-        await supabase
-          .from("meal_plan_selections")
-          .upsert(row, {
-            onConflict:
-              "user_id,plan_date,meal_slot",
-          })
-          .select()
-          .single();
-
-      if (error) {
-        console.error(
-          "Could not save custom meal:",
-          error
-        );
-
-        setPlannerError(
-          "We couldn't save that meal."
-        );
-
-        setIsSavingMeal(false);
-        return;
-      }
-
-      setPlannerMeals((current) => ({
-        ...current,
-        [getMealKey(
-          pickerDate,
-          pickerSlot
-        )]: data as PlannerMeal,
-      }));
-
-      setIsSavingMeal(false);
-      closeMealPicker();
-    };
-
-  const createAndUseCustomMeal =
-    async () => {
-      const trimmedName =
-        customMealName.trim();
-
-      if (
-        !userId ||
-        !pickerDate ||
-        !trimmedName ||
-        isSavingCustomMeal
-      ) {
-        return;
-      }
-
-      setIsSavingCustomMeal(true);
-      setPlannerError("");
-
-      let customMeal: CustomMeal | null =
-        null;
-
-      const existing =
-        customMeals.find(
-          (meal) =>
-            meal.name
-              .trim()
-              .toLowerCase() ===
-            trimmedName.toLowerCase()
-        );
-
-      if (existing) {
-        customMeal = existing;
-      } else {
-        const { data, error } =
-          await supabase
-            .from("custom_meals")
-            .insert({
-              user_id: userId,
-              name: trimmedName,
-            })
-            .select()
-            .single();
-
-        if (error) {
-          console.error(
-            "Could not create custom meal:",
-            error
-          );
-
-          setPlannerError(
-            "We couldn't save your custom meal."
-          );
-
-          setIsSavingCustomMeal(false);
-          return;
+  /*
+   * IMPORTANT:
+   * We do NOT delete the existing meal before saving a
+   * replacement.
+   *
+   * The planner has one row per user/date/meal slot.
+   * Supabase updates that row when it already exists and
+   * inserts it when it doesn't.
+   */
+  const savePlannerMealRow = async (
+    row: Omit<PlannerMeal, "id">
+  ): Promise<{
+    data: PlannerMeal | null;
+    error: unknown;
+  }> => {
+    const { data, error } = await supabase
+      .from("meal_plan_selections")
+      .upsert(
+        {
+          user_id: row.user_id,
+          day: row.day,
+          plan_date: row.plan_date,
+          meal_slot: row.meal_slot,
+          recipe_id: row.recipe_id ?? null,
+          custom_meal_name:
+            row.custom_meal_name ?? null,
+          updated_at: row.updated_at,
+        },
+        {
+          onConflict: "user_id,plan_date,meal_slot",
         }
+      )
+      .select()
+      .single();
 
-        customMeal =
-          data as CustomMeal;
+    if (error) {
+      console.error(
+        "Could not save planner meal:",
+        error
+      );
 
-        setCustomMeals((current) => [
-          customMeal as CustomMeal,
-          ...current,
-        ]);
-      }
-
-      const planDate =
-        parseDateInput(pickerDate);
-
-      const row = {
-        user_id: userId,
-        day: getWeekdayName(planDate),
-        plan_date: pickerDate,
-        meal_slot: pickerSlot,
-        recipe_id: null,
-        custom_meal_name:
-          customMeal.name,
-        updated_at:
-          new Date().toISOString(),
+      return {
+        data: null,
+        error,
       };
+    }
 
-      const { data, error } =
-        await supabase
-          .from("meal_plan_selections")
-          .upsert(row, {
-            onConflict:
-              "user_id,plan_date,meal_slot",
-          })
-          .select()
-          .single();
+    return {
+      data: data as PlannerMeal,
+      error: null,
+    };
+  };
+
+  const saveRecipeToPlanner = async (
+    recipe: Recipe
+  ) => {
+    if (!userId || !pickerDate || isSavingMeal)
+      return;
+
+    setIsSavingMeal(true);
+    setPlannerError("");
+
+    const row: Omit<PlannerMeal, "id"> = {
+      user_id: userId,
+
+      // Keep day + plan_date consistent with the original
+      // working planner data.
+      day: getWeekdayName(pickerDate),
+plan_date: pickerDate,
+
+      meal_slot: pickerSlot,
+      recipe_id: recipe.id,
+      custom_meal_name: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } =
+      await savePlannerMealRow(row);
+
+    if (error || !data) {
+      console.error(
+        "Could not save recipe:",
+        error
+      );
+      setPlannerError(
+        "We couldn't save that meal."
+      );
+      setIsSavingMeal(false);
+      return;
+    }
+
+    setPlannerMeals((current) => ({
+      ...current,
+      [getMealKey(pickerDate, pickerSlot)]: data,
+    }));
+
+    setIsSavingMeal(false);
+    finishMealPicker();
+  };
+
+  const saveExistingCustomMeal = async (
+    meal: CustomMeal
+  ) => {
+    if (!userId || !pickerDate || isSavingMeal)
+      return;
+
+    setIsSavingMeal(true);
+    setPlannerError("");
+
+    const row: Omit<PlannerMeal, "id"> = {
+      user_id: userId,
+      day: getWeekdayName(pickerDate),
+plan_date: pickerDate,
+      meal_slot: pickerSlot,
+      recipe_id: null,
+      custom_meal_name: meal.name,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } =
+      await savePlannerMealRow(row);
+
+    if (error || !data) {
+      console.error(
+        "Could not save custom meal:",
+        error
+      );
+      setPlannerError(
+        "We couldn't save that meal."
+      );
+      setIsSavingMeal(false);
+      return;
+    }
+
+    setPlannerMeals((current) => ({
+      ...current,
+      [getMealKey(pickerDate, pickerSlot)]: data,
+    }));
+
+    setIsSavingMeal(false);
+    finishMealPicker();
+  };
+
+  const createAndUseCustomMeal = async () => {
+    const trimmedName = customMealName.trim();
+
+    if (
+      !userId ||
+      !pickerDate ||
+      !trimmedName ||
+      isSavingCustomMeal
+    )
+      return;
+
+    setIsSavingCustomMeal(true);
+    setPlannerError("");
+
+    let customMeal: CustomMeal | null = null;
+
+    const existing = customMeals.find(
+      (meal) =>
+        meal.name.trim().toLowerCase() ===
+        trimmedName.toLowerCase()
+    );
+
+    if (existing) {
+      customMeal = existing;
+    } else {
+      const { data, error } = await supabase
+        .from("custom_meals")
+        .insert({
+          user_id: userId,
+          name: trimmedName,
+        })
+        .select()
+        .single();
 
       if (error) {
         console.error(
-          "Could not add custom meal to planner:",
+          "Could not create custom meal:",
           error
         );
-
         setPlannerError(
-          "We saved the custom meal, but couldn't add it to this day."
+          "We couldn't save your custom meal."
         );
-
         setIsSavingCustomMeal(false);
         return;
       }
 
-      setPlannerMeals((current) => ({
+      customMeal = data as CustomMeal;
+
+      setCustomMeals((current) => [
+        customMeal as CustomMeal,
         ...current,
-        [getMealKey(
-          pickerDate,
-          pickerSlot
-        )]: data as PlannerMeal,
-      }));
+      ]);
+    }
 
-      setIsSavingCustomMeal(false);
-      closeMealPicker();
+    const row: Omit<PlannerMeal, "id"> = {
+      user_id: userId,
+      day: getWeekdayName(pickerDate),
+plan_date: pickerDate,
+      meal_slot: pickerSlot,
+      recipe_id: null,
+      custom_meal_name: customMeal.name,
+      updated_at: new Date().toISOString(),
     };
 
-  const removeMeal =
-    async (
-      planDate: string,
-      slot: MealSlot
-    ) => {
-      if (!userId) {
-        return;
-      }
+    const { data, error } =
+      await savePlannerMealRow(row);
 
-      const key =
-        getMealKey(planDate, slot);
-
-      const previous =
-        plannerMeals[key];
-
-      setPlannerMeals((current) => {
-        const next = { ...current };
-        delete next[key];
-        return next;
-      });
-
-      const { error } =
-        await supabase
-          .from("meal_plan_selections")
-          .delete()
-          .eq("user_id", userId)
-          .eq("plan_date", planDate)
-          .eq("meal_slot", slot);
-
-      if (error) {
-        console.error(
-          "Could not remove meal:",
-          error
-        );
-
-        if (previous) {
-          setPlannerMeals(
-            (current) => ({
-              ...current,
-              [key]: previous,
-            })
-          );
-        }
-
-        setPlannerError(
-          "We couldn't remove that meal."
-        );
-      }
-    };
-
-  const filteredRecipes =
-    useMemo(() => {
-      const search =
-        recipeSearch
-          .trim()
-          .toLowerCase();
-
-      const sorted =
-        [...recipeLibrary].sort(
-          (a, b) => {
-            const aMatches =
-              a.category === pickerSlot
-                ? 0
-                : 1;
-
-            const bMatches =
-              b.category === pickerSlot
-                ? 0
-                : 1;
-
-            if (aMatches !== bMatches) {
-              return (
-                aMatches - bMatches
-              );
-            }
-
-            return a.title.localeCompare(
-              b.title
-            );
-          }
-        );
-
-      if (!search) {
-        return sorted;
-      }
-
-      return sorted.filter((recipe) =>
-        recipe.title
-          .toLowerCase()
-          .includes(search)
+    if (error || !data) {
+      console.error(
+        "Could not add custom meal to planner:",
+        error
       );
-    }, [recipeSearch, pickerSlot]);
+      setPlannerError(
+        "We saved the custom meal, but couldn't add it to this day."
+      );
+      setIsSavingCustomMeal(false);
+      return;
+    }
 
-  const selectedPickerDay =
-    plannerWeek.find(
-      (day) =>
-        day.date === pickerDate
+    setPlannerMeals((current) => ({
+      ...current,
+      [getMealKey(pickerDate, pickerSlot)]: data,
+    }));
+
+    setIsSavingCustomMeal(false);
+    finishMealPicker();
+  };
+
+  const removeMeal = async (
+    planDate: string,
+    slot: MealSlot
+  ) => {
+    if (!userId) return;
+
+    const key = getMealKey(planDate, slot);
+    const previous = plannerMeals[key];
+
+    setPlannerMeals((current) => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+
+    const { error } = await supabase
+      .from("meal_plan_selections")
+      .delete()
+      .eq("user_id", userId)
+      .eq("plan_date", planDate)
+      .eq("meal_slot", slot);
+
+    if (error) {
+      console.error(
+        "Could not remove meal:",
+        error
+      );
+
+      if (previous) {
+        setPlannerMeals((current) => ({
+          ...current,
+          [key]: previous,
+        }));
+      }
+
+      setPlannerError(
+        "We couldn't remove that meal."
+      );
+    }
+  };
+
+  const filteredRecipes = useMemo(() => {
+    const search = recipeSearch
+      .trim()
+      .toLowerCase();
+
+    const sorted = [...recipeLibrary].sort(
+      (a, b) => {
+        const aMatches =
+          a.category === pickerSlot ? 0 : 1;
+        const bMatches =
+          b.category === pickerSlot ? 0 : 1;
+
+        if (aMatches !== bMatches)
+          return aMatches - bMatches;
+
+        return a.title.localeCompare(b.title);
+      }
     );
+
+    if (!search) return sorted;
+
+    return sorted.filter((recipe) =>
+      recipe.title.toLowerCase().includes(search)
+    );
+  }, [recipeSearch, pickerSlot]);
+
+  const selectedPickerDay = plannerWeek.find(
+    (day) => day.date === pickerDate
+  );
 
   const toggleHelperTab = (
     tab: Exclude<HelperTab, null>
@@ -1226,14 +1016,10 @@ export default function MealPlansPage() {
         <DashboardSidebar
           firstName={firstName}
           initial={initial}
-          isLoadingUser={
-            isLoadingUser
-          }
+          isLoadingUser={isLoadingUser}
         />
 
         <section className="min-w-0 flex-1 px-5 py-8 sm:px-6 md:px-10 lg:px-14">
-          {/* HEADER */}
-
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
@@ -1241,8 +1027,7 @@ export default function MealPlansPage() {
               </p>
 
               <p className="mt-2 font-serif text-lg italic text-[#A77B73] sm:text-xl">
-                plan it once. make the
-                week easier. ♡
+                plan it once. make the week easier. ♡
               </p>
             </div>
 
@@ -1254,8 +1039,6 @@ export default function MealPlansPage() {
             </Link>
           </header>
 
-          {/* INTRO */}
-
           <section className="mx-auto max-w-6xl pb-10 pt-14 md:pb-12 md:pt-20">
             <div className="grid gap-8 border-b border-[#DED0CB] pb-10 md:grid-cols-[1.2fr_0.8fr] md:items-end md:pb-12">
               <div>
@@ -1264,7 +1047,7 @@ export default function MealPlansPage() {
                 </p>
 
                 <h1 className="mt-5 font-serif text-5xl leading-[0.95] sm:text-6xl md:text-7xl">
-                  Build your
+                  Build your{" "}
                   <span className="block italic text-[#A77B73]">
                     week. ♡
                   </span>
@@ -1273,11 +1056,9 @@ export default function MealPlansPage() {
 
               <div className="md:pb-1">
                 <p className="max-w-md text-xs leading-6 text-[#75635D]">
-                  Start with a plan,
-                  build your own, or use
-                  the optional tools below
-                  when you want a little
-                  more guidance. Your week
+                  Start with a plan, build your own, or
+                  use the optional tools below when you
+                  want a little more guidance. Your week
                   is still yours.
                 </p>
 
@@ -1300,35 +1081,26 @@ export default function MealPlansPage() {
             </div>
           </section>
 
-          {/* OPTIONAL HELPERS */}
-
           <section className="mx-auto max-w-6xl pb-10">
             <div className="mb-4">
               <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
-                NEED A LITTLE HELP
-                GETTING STARTED?
+                NEED A LITTLE HELP GETTING STARTED?
               </p>
 
               <p className="mt-2 font-serif text-lg italic text-[#A77B73]">
-                use what helps. skip what
-                doesn&apos;t. ♡
+                use what helps. skip what doesn&apos;t. ♡
               </p>
             </div>
 
             <div className="overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
-              {/* TABS */}
-
               <div className="grid sm:grid-cols-2">
                 <button
                   type="button"
                   onClick={() =>
-                    toggleHelperTab(
-                      "targets"
-                    )
+                    toggleHelperTab("targets")
                   }
                   className={`group flex items-center justify-between gap-4 p-5 text-left transition md:p-6 ${
-                    activeHelperTab ===
-                    "targets"
+                    activeHelperTab === "targets"
                       ? "bg-[#EAD8D3]/65"
                       : "hover:bg-[#F4ECE8]"
                   }`}
@@ -1344,16 +1116,14 @@ export default function MealPlansPage() {
                       </p>
 
                       <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                        calorie + macro
-                        starting point. ♡
+                        calorie + macro starting point. ♡
                       </p>
                     </div>
                   </div>
 
                   <span
                     className={`font-serif text-2xl text-[#A77B73] transition-transform duration-200 ${
-                      activeHelperTab ===
-                      "targets"
+                      activeHelperTab === "targets"
                         ? "rotate-180"
                         : ""
                     }`}
@@ -1365,13 +1135,10 @@ export default function MealPlansPage() {
                 <button
                   type="button"
                   onClick={() =>
-                    toggleHelperTab(
-                      "plan"
-                    )
+                    toggleHelperTab("plan")
                   }
                   className={`group flex items-center justify-between gap-4 border-t border-[#DED0CB] p-5 text-left transition sm:border-l sm:border-t-0 md:p-6 ${
-                    activeHelperTab ===
-                    "plan"
+                    activeHelperTab === "plan"
                       ? "bg-[#EAD8D3]/65"
                       : "hover:bg-[#F4ECE8]"
                   }`}
@@ -1387,16 +1154,14 @@ export default function MealPlansPage() {
                       </p>
 
                       <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                        get a suggested
-                        place to start. ♡
+                        get a suggested place to start. ♡
                       </p>
                     </div>
                   </div>
 
                   <span
                     className={`font-serif text-2xl text-[#A77B73] transition-transform duration-200 ${
-                      activeHelperTab ===
-                      "plan"
+                      activeHelperTab === "plan"
                         ? "rotate-180"
                         : ""
                     }`}
@@ -1405,17 +1170,12 @@ export default function MealPlansPage() {
                   </span>
                 </button>
               </div>
-
-              {/* TAB 01 */}
-
-              {activeHelperTab ===
-                "targets" && (
+                            {activeHelperTab === "targets" && (
                 <div className="border-t border-[#DED0CB] p-5 md:p-7">
                   <div className="flex items-start justify-between gap-5">
                     <div>
                       <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
-                        01 — FIND YOUR
-                        TARGETS
+                        01 — FIND YOUR TARGETS
                       </p>
 
                       <h2 className="mt-2 font-serif text-2xl md:text-3xl">
@@ -1426,22 +1186,15 @@ export default function MealPlansPage() {
                       </h2>
 
                       <p className="mt-3 max-w-xl text-[11px] leading-5 text-[#806E68]">
-                        Get a practical
-                        starting estimate
-                        for calories and
-                        macros. These are
-                        general estimates,
-                        not rigid rules.
+                        Get a practical starting estimate for
+                        calories and macros. These are general
+                        estimates, not rigid rules.
                       </p>
                     </div>
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setActiveHelperTab(
-                          null
-                        )
-                      }
+                      onClick={() => setActiveHelperTab(null)}
                       className="shrink-0 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
                     >
                       CLOSE ×
@@ -1449,8 +1202,6 @@ export default function MealPlansPage() {
                   </div>
 
                   <div className="mt-7 grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
-                    {/* FORM */}
-
                     <div className="rounded-[1.5rem] border border-[#E1D3CE] bg-[#F7F1ED] p-5 md:p-6">
                       <div className="flex flex-col gap-4 border-b border-[#E1D3CE] pb-5 sm:flex-row sm:items-center sm:justify-between">
                         <div>
@@ -1459,53 +1210,35 @@ export default function MealPlansPage() {
                           </p>
 
                           <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                            the basics first.
-                            ♡
+                            the basics first. ♡
                           </p>
                         </div>
 
                         <div className="flex w-fit rounded-full border border-[#D6C3BD] bg-[#FBF8F6] p-1">
                           {(
-                            [
-                              "imperial",
-                              "metric",
-                            ] as const
-                          ).map(
-                            (option) => (
-                              <button
-                                key={
-                                  option
-                                }
-                                type="button"
-                                onClick={() =>
-                                  setUnit(
-                                    option
-                                  )
-                                }
-                                className={`rounded-full px-4 py-2 text-[8px] tracking-[0.14em] transition ${
-                                  unit ===
-                                  option
-                                    ? "bg-[#211C19] text-[#F7F1ED]"
-                                    : "text-[#8F655E]"
-                                }`}
-                              >
-                                {option ===
-                                "imperial"
-                                  ? "LB / FT"
-                                  : "KG / CM"}
-                              </button>
-                            )
-                          )}
+                            ["imperial", "metric"] as const
+                          ).map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => setUnit(option)}
+                              className={`rounded-full px-4 py-2 text-[8px] tracking-[0.14em] transition ${
+                                unit === option
+                                  ? "bg-[#211C19] text-[#F7F1ED]"
+                                  : "text-[#8F655E]"
+                              }`}
+                            >
+                              {option === "imperial"
+                                ? "LB / FT"
+                                : "KG / CM"}
+                            </button>
+                          ))}
                         </div>
                       </div>
 
                       <div className="mt-5 grid gap-4 sm:grid-cols-2">
                         <label>
-                          <span
-                            className={
-                              calculatorLabelClass
-                            }
-                          >
+                          <span className={calculatorLabelClass}>
                             AGE
                           </span>
 
@@ -1513,74 +1246,43 @@ export default function MealPlansPage() {
                             type="number"
                             min="18"
                             value={age}
-                            onChange={(
-                              event
-                            ) =>
-                              setAge(
-                                event
-                                  .target
-                                  .value
-                              )
+                            onChange={(e) =>
+                              setAge(e.target.value)
                             }
                             placeholder="e.g. 30"
-                            className={
-                              calculatorInputClass
-                            }
+                            className={calculatorInputClass}
                           />
                         </label>
 
                         <div>
-                          <span
-                            className={
-                              calculatorLabelClass
-                            }
-                          >
+                          <span className={calculatorLabelClass}>
                             SEX
                           </span>
 
                           <div className="grid grid-cols-2 gap-2">
                             {(
-                              [
-                                "female",
-                                "male",
-                              ] as const
-                            ).map(
-                              (
-                                option
-                              ) => (
-                                <button
-                                  key={
-                                    option
-                                  }
-                                  type="button"
-                                  onClick={() =>
-                                    setSex(
-                                      option
-                                    )
-                                  }
-                                  className={`rounded-xl border px-3 py-3.5 text-[9px] tracking-[0.14em] transition ${
-                                    sex ===
-                                    option
-                                      ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
-                                      : "border-[#D6C3BD] bg-[#FBF8F6] text-[#8F655E]"
-                                  }`}
-                                >
-                                  {option.toUpperCase()}
-                                </button>
-                              )
-                            )}
+                              ["female", "male"] as const
+                            ).map((option) => (
+                              <button
+                                key={option}
+                                type="button"
+                                onClick={() => setSex(option)}
+                                className={`rounded-xl border px-3 py-3.5 text-[9px] tracking-[0.14em] transition ${
+                                  sex === option
+                                    ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
+                                    : "border-[#D6C3BD] bg-[#FBF8F6] text-[#8F655E]"
+                                }`}
+                              >
+                                {option.toUpperCase()}
+                              </button>
+                            ))}
                           </div>
                         </div>
 
                         <label>
-                          <span
-                            className={
-                              calculatorLabelClass
-                            }
-                          >
+                          <span className={calculatorLabelClass}>
                             WEIGHT{" "}
-                            {unit ===
-                            "imperial"
+                            {unit === "imperial"
                               ? "(LB)"
                               : "(KG)"}
                           </span>
@@ -1589,29 +1291,19 @@ export default function MealPlansPage() {
                             type="number"
                             min="1"
                             value={weight}
-                            onChange={(
-                              event
-                            ) =>
-                              setWeight(
-                                event
-                                  .target
-                                  .value
-                              )
+                            onChange={(e) =>
+                              setWeight(e.target.value)
                             }
                             placeholder={
-                              unit ===
-                              "imperial"
+                              unit === "imperial"
                                 ? "e.g. 135"
                                 : "e.g. 61"
                             }
-                            className={
-                              calculatorInputClass
-                            }
+                            className={calculatorInputClass}
                           />
                         </label>
 
-                        {unit ===
-                        "imperial" ? (
+                        {unit === "imperial" ? (
                           <div>
                             <span
                               className={
@@ -1625,17 +1317,9 @@ export default function MealPlansPage() {
                               <input
                                 type="number"
                                 min="1"
-                                value={
-                                  feet
-                                }
-                                onChange={(
-                                  event
-                                ) =>
-                                  setFeet(
-                                    event
-                                      .target
-                                      .value
-                                  )
+                                value={feet}
+                                onChange={(e) =>
+                                  setFeet(e.target.value)
                                 }
                                 placeholder="Feet"
                                 className={
@@ -1647,17 +1331,9 @@ export default function MealPlansPage() {
                                 type="number"
                                 min="0"
                                 max="11"
-                                value={
-                                  inches
-                                }
-                                onChange={(
-                                  event
-                                ) =>
-                                  setInches(
-                                    event
-                                      .target
-                                      .value
-                                  )
+                                value={inches}
+                                onChange={(e) =>
+                                  setInches(e.target.value)
                                 }
                                 placeholder="Inches"
                                 className={
@@ -1679,17 +1355,9 @@ export default function MealPlansPage() {
                             <input
                               type="number"
                               min="1"
-                              value={
-                                heightCm
-                              }
-                              onChange={(
-                                event
-                              ) =>
-                                setHeightCm(
-                                  event
-                                    .target
-                                    .value
-                                )
+                              value={heightCm}
+                              onChange={(e) =>
+                                setHeightCm(e.target.value)
                               }
                               placeholder="e.g. 165"
                               className={
@@ -1706,39 +1374,28 @@ export default function MealPlansPage() {
                         </p>
 
                         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                          {activityLevels.map(
-                            (level) => (
-                              <button
-                                key={
-                                  level.value
-                                }
-                                type="button"
-                                onClick={() =>
-                                  setActivity(
-                                    level.value
-                                  )
-                                }
-                                className={`rounded-xl border p-3.5 text-left transition ${
-                                  activity ===
-                                  level.value
-                                    ? "border-[#A77B73] bg-[#EAD8D3]/75"
-                                    : "border-[#D6C3BD] bg-[#FBF8F6] hover:border-[#CBA9A2]"
-                                }`}
-                              >
-                                <span className="block text-[8px] tracking-[0.14em] text-[#6F514B]">
-                                  {
-                                    level.label
-                                  }
-                                </span>
+                          {activityLevels.map((level) => (
+                            <button
+                              key={level.value}
+                              type="button"
+                              onClick={() =>
+                                setActivity(level.value)
+                              }
+                              className={`rounded-xl border p-3.5 text-left transition ${
+                                activity === level.value
+                                  ? "border-[#A77B73] bg-[#EAD8D3]/75"
+                                  : "border-[#D6C3BD] bg-[#FBF8F6] hover:border-[#CBA9A2]"
+                              }`}
+                            >
+                              <span className="block text-[8px] tracking-[0.14em] text-[#6F514B]">
+                                {level.label}
+                              </span>
 
-                                <span className="mt-1 block text-[11px] leading-4 text-[#806E68]">
-                                  {
-                                    level.detail
-                                  }
-                                </span>
-                              </button>
-                            )
-                          )}
+                              <span className="mt-1 block text-[11px] leading-4 text-[#806E68]">
+                                {level.detail}
+                              </span>
+                            </button>
+                          ))}
                         </div>
                       </div>
 
@@ -1748,56 +1405,41 @@ export default function MealPlansPage() {
                         </p>
 
                         <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                          {goalOptions.map(
-                            (option) => (
-                              <button
-                                key={
-                                  option.value
-                                }
-                                type="button"
-                                onClick={() =>
-                                  setGoal(
-                                    option.value
-                                  )
-                                }
-                                className={`rounded-xl border p-3.5 text-left transition ${
-                                  goal ===
-                                  option.value
-                                    ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
-                                    : "border-[#D6C3BD] bg-[#FBF8F6] text-[#8F655E]"
+                          {goalOptions.map((option) => (
+                            <button
+                              key={option.value}
+                              type="button"
+                              onClick={() =>
+                                setGoal(option.value)
+                              }
+                              className={`rounded-xl border p-3.5 text-left transition ${
+                                goal === option.value
+                                  ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
+                                  : "border-[#D6C3BD] bg-[#FBF8F6] text-[#8F655E]"
+                              }`}
+                            >
+                              <span className="block text-[8px] tracking-[0.12em]">
+                                {option.label}
+                              </span>
+
+                              <span
+                                className={`mt-1.5 block text-[10px] leading-4 ${
+                                  goal === option.value
+                                    ? "text-[#D8CAC5]"
+                                    : "text-[#806E68]"
                                 }`}
                               >
-                                <span className="block text-[8px] tracking-[0.12em]">
-                                  {
-                                    option.label
-                                  }
-                                </span>
-
-                                <span
-                                  className={`mt-1.5 block text-[10px] leading-4 ${
-                                    goal ===
-                                    option.value
-                                      ? "text-[#D8CAC5]"
-                                      : "text-[#806E68]"
-                                  }`}
-                                >
-                                  {
-                                    option.detail
-                                  }
-                                </span>
-                              </button>
-                            )
-                          )}
+                                {option.detail}
+                              </span>
+                            </button>
+                          ))}
                         </div>
                       </div>
                     </div>
 
-                    {/* RESULT */}
-
                     <div className="rounded-[1.5rem] bg-[#EAD8D3]/75 p-5 md:p-6">
                       <p className="text-[8px] tracking-[0.24em] text-[#8F655E]">
-                        YOUR STARTING
-                        TARGET
+                        YOUR STARTING TARGET
                       </p>
 
                       {macroResult ? (
@@ -1808,22 +1450,18 @@ export default function MealPlansPage() {
                             </p>
 
                             <p className="mt-2 text-[8px] tracking-[0.2em] text-[#8F655E]">
-                              CALORIES /
-                              DAY
+                              CALORIES / DAY
                             </p>
                           </div>
 
                           <div className="grid grid-cols-3 border-b border-[#D5BBB5]">
                             <div className="py-4 text-center">
                               <p className="font-serif text-2xl text-[#211C19]">
-                                {
-                                  macroResult.protein
-                                }
+                                {macroResult.protein}
                                 <span className="text-xs italic text-[#A77B73]">
                                   g
                                 </span>
                               </p>
-
                               <p className="mt-1 text-[7px] tracking-[0.12em] text-[#8F655E]">
                                 PROTEIN
                               </p>
@@ -1831,14 +1469,11 @@ export default function MealPlansPage() {
 
                             <div className="border-x border-[#D5BBB5] py-4 text-center">
                               <p className="font-serif text-2xl text-[#211C19]">
-                                {
-                                  macroResult.carbs
-                                }
+                                {macroResult.carbs}
                                 <span className="text-xs italic text-[#A77B73]">
                                   g
                                 </span>
                               </p>
-
                               <p className="mt-1 text-[7px] tracking-[0.12em] text-[#8F655E]">
                                 CARBS
                               </p>
@@ -1846,14 +1481,11 @@ export default function MealPlansPage() {
 
                             <div className="py-4 text-center">
                               <p className="font-serif text-2xl text-[#211C19]">
-                                {
-                                  macroResult.fat
-                                }
+                                {macroResult.fat}
                                 <span className="text-xs italic text-[#A77B73]">
                                   g
                                 </span>
                               </p>
-
                               <p className="mt-1 text-[7px] tracking-[0.12em] text-[#8F655E]">
                                 FAT
                               </p>
@@ -1862,15 +1494,13 @@ export default function MealPlansPage() {
 
                           <div className="pt-5">
                             <p className="text-[7px] tracking-[0.18em] text-[#8F655E]">
-                              ESTIMATED
-                              MAINTENANCE
+                              ESTIMATED MAINTENANCE
                             </p>
 
                             <p className="mt-1 font-serif text-xl">
                               {macroResult.maintenance.toLocaleString()}
                               <span className="ml-1 text-sm italic text-[#A77B73]">
-                                cal /
-                                day
+                                cal / day
                               </span>
                             </p>
                           </div>
@@ -1878,45 +1508,33 @@ export default function MealPlansPage() {
                       ) : (
                         <div className="py-8">
                           <p className="font-serif text-3xl italic leading-tight text-[#A77B73]">
-                            your numbers
-                            will
+                            your numbers will
                             <br />
                             show here. ♡
                           </p>
 
                           <p className="mt-4 text-[12px] leading-5 text-[#6F5F59]">
-                            Add your age,
-                            weight and
-                            height. Your
-                            targets update
-                            automatically.
+                            Add your age, weight and height.
+                            Your targets update automatically.
                           </p>
                         </div>
                       )}
 
                       <p className="mt-5 border-t border-[#D5BBB5] pt-4 text-[9px] leading-4 text-[#806E68]">
-                        General estimates
-                        only. Use these as
-                        a starting point
-                        and adjust based on
-                        progress,
-                        performance and
-                        how you feel.
+                        General estimates only. Use these as a
+                        starting point and adjust based on
+                        progress, performance and how you feel.
                       </p>
 
                       {macroResult && (
                         <button
                           type="button"
                           onClick={() =>
-                            setActiveHelperTab(
-                              "plan"
-                            )
+                            setActiveHelperTab("plan")
                           }
                           className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#211C19] px-5 py-3.5 text-[7px] tracking-[0.18em] text-[#F7F1ED] transition hover:-translate-y-0.5"
                         >
-                          SEE MY PLAN
-                          RECOMMENDATION
-                          →
+                          SEE MY PLAN RECOMMENDATION →
                         </button>
                       )}
                     </div>
@@ -1924,10 +1542,7 @@ export default function MealPlansPage() {
                 </div>
               )}
 
-              {/* TAB 02 */}
-
-              {activeHelperTab ===
-                "plan" && (
+              {activeHelperTab === "plan" && (
                 <div className="border-t border-[#DED0CB] p-5 md:p-7">
                   <div className="flex items-start justify-between gap-5">
                     <div>
@@ -1943,23 +1558,16 @@ export default function MealPlansPage() {
                       </h2>
 
                       <p className="mt-3 max-w-xl text-[11px] leading-5 text-[#806E68]">
-                        If you completed
-                        your targets, we&apos;ll
-                        use your activity
-                        and goal to suggest
-                        a starting plan.
-                        You can always pick
+                        If you completed your targets, we&apos;ll
+                        use your activity and goal to suggest a
+                        starting plan. You can always pick
                         something else.
                       </p>
                     </div>
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setActiveHelperTab(
-                          null
-                        )
-                      }
+                      onClick={() => setActiveHelperTab(null)}
                       className="shrink-0 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
                     >
                       CLOSE ×
@@ -1975,48 +1583,34 @@ export default function MealPlansPage() {
                           </span>
 
                           <p className="text-[8px] tracking-[0.22em] text-[#9D6F67]">
-                            BASED ON YOUR
-                            ACTIVITY + GOAL
+                            BASED ON YOUR ACTIVITY + GOAL
                           </p>
                         </div>
 
                         <h3 className="mt-4 font-serif text-3xl text-[#211C19]">
-                          {
-                            recommendedPlan.title
-                          }
+                          {recommendedPlan.title}
                         </h3>
 
                         <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                          {
-                            recommendedPlan.subtitle
-                          }
+                          {recommendedPlan.subtitle}
                         </p>
 
                         <p className="mt-4 max-w-2xl text-[11px] leading-5 text-[#806E68]">
-                          {
-                            recommendedPlan.reason
-                          }
+                          {recommendedPlan.reason}
                         </p>
 
                         <div className="mt-5 flex flex-wrap gap-2">
                           <Link
-                            href={
-                              recommendedPlan.href
-                            }
+                            href={recommendedPlan.href}
                             className="inline-flex items-center gap-2 rounded-full bg-[#211C19] px-5 py-3 text-[7px] tracking-[0.2em] text-[#F7F1ED] transition hover:-translate-y-0.5"
                           >
-                            VIEW + USE PLAN
-                            <span>
-                              →
-                            </span>
+                            VIEW + USE PLAN <span>→</span>
                           </Link>
 
                           <button
                             type="button"
                             onClick={() =>
-                              setActiveHelperTab(
-                                "targets"
-                              )
+                              setActiveHelperTab("targets")
                             }
                             className="inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-5 py-3 text-[7px] tracking-[0.2em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
                           >
@@ -2030,7 +1624,6 @@ export default function MealPlansPage() {
                           <p className="font-serif text-2xl">
                             {macroResult.calories.toLocaleString()}
                           </p>
-
                           <p className="mt-1 text-[6px] tracking-[0.14em] text-[#8F655E]">
                             CALORIES
                           </p>
@@ -2038,14 +1631,11 @@ export default function MealPlansPage() {
 
                         <div className="rounded-2xl border border-[#D6C3BD] bg-[#F7F1ED] p-4 text-center">
                           <p className="font-serif text-2xl">
-                            {
-                              macroResult.protein
-                            }
+                            {macroResult.protein}
                             <span className="text-xs italic text-[#A77B73]">
                               g
                             </span>
                           </p>
-
                           <p className="mt-1 text-[6px] tracking-[0.14em] text-[#8F655E]">
                             PROTEIN
                           </p>
@@ -2055,27 +1645,20 @@ export default function MealPlansPage() {
                   ) : (
                     <div className="mt-6 rounded-[1.5rem] border border-dashed border-[#D6C3BD] bg-[#F7F1ED] p-5 md:p-6">
                       <p className="font-serif text-xl italic text-[#A77B73]">
-                        want a personalized
-                        starting point? ♡
+                        want a personalized starting point? ♡
                       </p>
 
                       <p className="mt-2 max-w-xl text-[11px] leading-5 text-[#806E68]">
-                        Complete the macro
-                        calculator first
-                        and we&apos;ll suggest
-                        a plan based on
-                        your activity and
-                        goal — or skip it
-                        and choose any plan
-                        below.
+                        Complete the macro calculator first and
+                        we&apos;ll suggest a plan based on your
+                        activity and goal — or skip it and choose
+                        any plan below.
                       </p>
 
                       <button
                         type="button"
                         onClick={() =>
-                          setActiveHelperTab(
-                            "targets"
-                          )
+                          setActiveHelperTab("targets")
                         }
                         className="mt-4 rounded-full bg-[#211C19] px-5 py-3 text-[7px] tracking-[0.18em] text-[#F7F1ED]"
                       >
@@ -2087,78 +1670,61 @@ export default function MealPlansPage() {
                   <div className="mt-7 border-t border-[#DED0CB] pt-6">
                     <div>
                       <p className="text-[7px] tracking-[0.24em] text-[#9D6F67]">
-                        OR CHOOSE FOR
-                        YOURSELF
+                        OR CHOOSE FOR YOURSELF
                       </p>
 
                       <p className="mt-1 font-serif text-base italic text-[#A77B73]">
-                        recommendations are
-                        a starting point,
-                        not a rule. ♡
+                        recommendations are a starting point, not
+                        a rule. ♡
                       </p>
                     </div>
 
                     <div className="mt-4 grid gap-2 md:grid-cols-3">
-                      {quickStarts.map(
-                        (plan) => {
-                          const isRecommended =
-                            Boolean(
-                              macroResult
-                            ) &&
-                            recommendedPlan.title ===
-                              plan.title;
+                      {quickStarts.map((plan) => {
+                        const isRecommended =
+                          Boolean(macroResult) &&
+                          recommendedPlan.title === plan.title;
 
-                          return (
-                            <Link
-                              key={
-                                plan.title
-                              }
-                              href={
-                                plan.href
-                              }
-                              className={`group rounded-2xl border p-4 transition ${
-                                isRecommended
-                                  ? "border-[#A77B73] bg-[#EAD8D3]/60"
-                                  : "border-[#DED0CB] bg-[#F7F1ED] hover:border-[#CBA9A2]"
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-[7px] tracking-[0.18em] text-[#211C19]">
-                                  {
-                                    plan.title
-                                  }
-                                </p>
+                        return (
+                          <Link
+                            key={plan.title}
+                            href={plan.href}
+                            className={`group rounded-2xl border p-4 transition ${
+                              isRecommended
+                                ? "border-[#A77B73] bg-[#EAD8D3]/60"
+                                : "border-[#DED0CB] bg-[#F7F1ED] hover:border-[#CBA9A2]"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-[7px] tracking-[0.18em] text-[#211C19]">
+                                {plan.title}
+                              </p>
 
-                                <span className="text-[6px] tracking-[0.12em] text-[#9D6F67]">
-                                  {isRecommended
-                                    ? "YOUR PICK"
-                                    : plan.tag}
-                                </span>
-                              </div>
+                              <span className="text-[6px] tracking-[0.12em] text-[#9D6F67]">
+                                {isRecommended
+                                  ? "YOUR PICK"
+                                  : plan.tag}
+                              </span>
+                            </div>
 
-                              <div className="mt-3 flex items-end justify-between gap-3">
-                                <p className="font-serif text-sm italic text-[#A77B73]">
-                                  {
-                                    plan.subtitle
-                                  }
-                                </p>
+                            <div className="mt-3 flex items-end justify-between gap-3">
+                              <p className="font-serif text-sm italic text-[#A77B73]">
+                                {plan.subtitle}
+                              </p>
 
-                                <span className="font-serif text-lg text-[#A77B73] transition group-hover:translate-x-1">
-                                  →
-                                </span>
-                              </div>
-                            </Link>
-                          );
-                        }
-                      )}
+                              <span className="font-serif text-lg text-[#A77B73] transition group-hover:translate-x-1">
+                                →
+                              </span>
+                            </div>
+                          </Link>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
               )}
             </div>
           </section>
-
-          {/* WEEKLY PLANNER */}
 
           <section className="mx-auto max-w-6xl pb-12">
             <div className="mb-7 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
@@ -2175,10 +1741,8 @@ export default function MealPlansPage() {
                 </h2>
 
                 <p className="mt-3 max-w-xl text-[11px] leading-5 text-[#806E68]">
-                  Pick any start date.
-                  Plan seven days from
-                  there, then add,
-                  change or remove meals
+                  Pick any start date. Plan seven days from
+                  there, then add, change or remove meals
                   whenever you need.
                 </p>
               </div>
@@ -2196,28 +1760,25 @@ export default function MealPlansPage() {
                   type="date"
                   value={weekStart}
                   onChange={(event) =>
-                    handleWeekStartChange(
-                      event.target.value
-                    )
+                    handleWeekStartChange(event.target.value)
                   }
                   className="mt-2 w-full rounded-xl border border-[#D6C3BD] bg-[#FBF8F6] px-4 py-3 text-[16px] text-[#211C19] outline-none transition focus:border-[#A77B73]"
                 />
               </div>
             </div>
 
-            {plannerWeek.length > 0 &&
-              weekEnd && (
-                <div className="mb-5 rounded-2xl bg-[#EAD8D3]/45 px-5 py-4">
-                  <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                    PLANNING
-                  </p>
+            {plannerWeek.length > 0 && weekEnd && (
+              <div className="mb-5 rounded-2xl bg-[#EAD8D3]/45 px-5 py-4">
+                <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                  PLANNING
+                </p>
 
-                  <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
-                    {plannerWeek[0].dayLabel}{" "}
-                    — {weekEnd.dayLabel}
-                  </p>
-                </div>
-              )}
+                <p className="mt-1 font-serif text-lg italic text-[#A77B73]">
+                  {plannerWeek[0].dayLabel} —{" "}
+                  {weekEnd.dayLabel}
+                </p>
+              </div>
+            )}
 
             {plannerError && (
               <div className="mb-5 rounded-2xl border border-[#D9B7B0] bg-[#F3E3DF] px-4 py-3">
@@ -2227,39 +1788,30 @@ export default function MealPlansPage() {
               </div>
             )}
 
-            {/* MOBILE DAY TABS */}
-
             <div className="mb-4 flex gap-2 overflow-x-auto pb-1 md:hidden">
-              {plannerWeek.map(
-                (day, index) => (
-                  <button
-                    key={day.key}
-                    type="button"
-                    onClick={() =>
-                      setActiveDayIndex(
-                        index
-                      )
-                    }
-                    className={`min-w-[76px] rounded-2xl border px-3 py-3 text-center transition ${
-                      activeDayIndex ===
-                      index
-                        ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
-                        : "border-[#D6C3BD] bg-[#FBF8F6] text-[#806E68]"
-                    }`}
-                  >
-                    <span className="block text-[7px] tracking-[0.15em]">
-                      {day.weekday}
-                    </span>
+              {plannerWeek.map((day, index) => (
+                <button
+                  key={day.key}
+                  type="button"
+                  onClick={() =>
+                    setActiveDayIndex(index)
+                  }
+                  className={`min-w-[76px] rounded-2xl border px-3 py-3 text-center transition ${
+                    activeDayIndex === index
+                      ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
+                      : "border-[#D6C3BD] bg-[#FBF8F6] text-[#806E68]"
+                  }`}
+                >
+                  <span className="block text-[7px] tracking-[0.15em]">
+                    {day.weekday}
+                  </span>
 
-                    <span className="mt-1 block font-serif text-sm italic">
-                      {day.shortDate}
-                    </span>
-                  </button>
-                )
-              )}
+                  <span className="mt-1 block font-serif text-sm italic">
+                    {day.shortDate}
+                  </span>
+                </button>
+              ))}
             </div>
-
-            {/* MOBILE ACTIVE DAY */}
 
             {activeDay && (
               <div className="md:hidden">
@@ -2275,94 +1827,65 @@ export default function MealPlansPage() {
                   </div>
 
                   <div className="divide-y divide-[#E8DDD9]">
-                    {mealSlots.map(
-                      (slot) => {
-                        const key =
-                          getMealKey(
-                            activeDay.date,
-                            slot
-                          );
+                    {mealSlots.map((slot) => {
+                      const key = getMealKey(
+                        activeDay.date,
+                        slot
+                      );
 
-                        const meal =
-                          plannerMeals[
-                            key
-                          ];
+                      const meal = plannerMeals[key];
 
-                        const recipe =
-                          getRecipeById(
-                            meal?.recipe_id
-                          );
+                      const recipe = getRecipeById(
+                        meal?.recipe_id
+                      );
 
-                        const mealName =
-                          recipe?.title ??
-                          meal?.custom_meal_name ??
-                          "";
+                      const mealName =
+                        recipe?.title ??
+                        meal?.custom_meal_name ??
+                        "";
 
-                        return (
-                          <div
-                            key={slot}
-                            className="p-4"
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
-                                {slot}
-                              </p>
+                      return (
+                        <div key={slot} className="p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
+                              {slot}
+                            </p>
 
-                              {meal && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeMeal(
-                                      activeDay.date,
-                                      slot
-                                    )
-                                  }
-                                  className="text-[6px] tracking-[0.14em] text-[#A77B73]"
-                                >
-                                  REMOVE
-                                </button>
-                              )}
-                            </div>
+                            {meal && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeMeal(
+                                    activeDay.date,
+                                    slot
+                                  )
+                                }
+                                className="text-[6px] tracking-[0.14em] text-[#A77B73]"
+                              >
+                                REMOVE
+                              </button>
+                            )}
+                          </div>
 
-                            {isLoadingPlanner ? (
-                              <div className="mt-3 h-12 animate-pulse rounded-xl bg-[#EFE5E1]" />
-                            ) : meal ? (
-                              <div className="mt-2 flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                  {recipe ? (
-                                    <Link
-                                      href={
-                                        recipe.href
-                                      }
-                                      className="font-serif text-lg leading-snug transition hover:text-[#A77B73]"
-                                    >
-                                      {
-                                        mealName
-                                      }
-                                    </Link>
-                                  ) : (
-                                    <p className="font-serif text-lg leading-snug">
-                                      {
-                                        mealName
-                                      }
-                                    </p>
-                                  )}
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    openMealPicker(
-                                      activeDay.date,
-                                      slot
-                                    )
-                                  }
-                                  className="shrink-0 rounded-full border border-[#CBA9A2] px-3 py-2 text-[6px] tracking-[0.14em] text-[#8F655E]"
-                                >
-                                  CHANGE
-                                </button>
+                          {isLoadingPlanner ? (
+                            <div className="mt-3 h-12 animate-pulse rounded-xl bg-[#EFE5E1]" />
+                          ) : meal ? (
+                            <div className="mt-2 flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                {recipe ? (
+                                  <Link
+                                    href={recipe.href}
+                                    className="font-serif text-lg leading-snug transition hover:text-[#A77B73]"
+                                  >
+                                    {mealName}
+                                  </Link>
+                                ) : (
+                                  <p className="font-serif text-lg leading-snug">
+                                    {mealName}
+                                  </p>
+                                )}
                               </div>
-                            ) : (
+
                               <button
                                 type="button"
                                 onClick={() =>
@@ -2371,146 +1894,107 @@ export default function MealPlansPage() {
                                     slot
                                   )
                                 }
-                                className="mt-2 flex w-full items-center justify-between rounded-xl border border-dashed border-[#D6C3BD] px-4 py-3 text-left transition hover:bg-[#F4ECE8]"
+                                className="shrink-0 rounded-full border border-[#CBA9A2] px-3 py-2 text-[6px] tracking-[0.14em] text-[#8F655E]"
                               >
-                                <span className="font-serif text-base italic text-[#A77B73]">
-                                  add a meal.
-                                  ♡
-                                </span>
-
-                                <span className="text-lg text-[#A77B73]">
-                                  +
-                                </span>
+                                CHANGE
                               </button>
-                            )}
-                          </div>
-                        );
-                      }
-                    )}
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openMealPicker(
+                                  activeDay.date,
+                                  slot
+                                )
+                              }
+                              className="mt-2 flex w-full items-center justify-between rounded-xl border border-dashed border-[#D6C3BD] px-4 py-3 text-left transition hover:bg-[#F4ECE8]"
+                            >
+                              <span className="font-serif text-base italic text-[#A77B73]">
+                                add a meal. ♡
+                              </span>
+
+                              <span className="text-lg text-[#A77B73]">
+                                +
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* DESKTOP WEEK */}
-
             <div className="hidden overflow-x-auto md:block">
               <div className="min-w-[980px] overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]">
                 <div className="grid grid-cols-7 border-b border-[#DED0CB]">
-                  {plannerWeek.map(
-                    (day) => (
-                      <div
-                        key={day.key}
-                        className="border-r border-[#DED0CB] px-3 py-4 text-center last:border-r-0"
-                      >
-                        <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
-                          {
-                            day.weekday
-                          }
-                        </p>
+                  {plannerWeek.map((day) => (
+                    <div
+                      key={day.key}
+                      className="border-r border-[#DED0CB] px-3 py-4 text-center last:border-r-0"
+                    >
+                      <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
+                        {day.weekday}
+                      </p>
 
-                        <p className="mt-1 font-serif text-base italic text-[#A77B73]">
-                          {
-                            day.shortDate
-                          }
-                        </p>
-                      </div>
-                    )
-                  )}
+                      <p className="mt-1 font-serif text-base italic text-[#A77B73]">
+                        {day.shortDate}
+                      </p>
+                    </div>
+                  ))}
                 </div>
 
-                {mealSlots.map(
-                  (slot) => (
-                    <div
-                      key={slot}
-                      className="grid grid-cols-7 border-b border-[#E8DDD9] last:border-b-0"
-                    >
-                      {plannerWeek.map(
-                        (day) => {
-                          const key =
-                            getMealKey(
-                              day.date,
-                              slot
-                            );
+                {mealSlots.map((slot) => (
+                  <div
+                    key={slot}
+                    className="grid grid-cols-7 border-b border-[#E8DDD9] last:border-b-0"
+                  >
+                    {plannerWeek.map((day) => {
+                      const key = getMealKey(
+                        day.date,
+                        slot
+                      );
 
-                          const meal =
-                            plannerMeals[
-                              key
-                            ];
+                      const meal = plannerMeals[key];
 
-                          const recipe =
-                            getRecipeById(
-                              meal?.recipe_id
-                            );
+                      const recipe = getRecipeById(
+                        meal?.recipe_id
+                      );
 
-                          const mealName =
-                            recipe?.title ??
-                            meal?.custom_meal_name ??
-                            "";
+                      const mealName =
+                        recipe?.title ??
+                        meal?.custom_meal_name ??
+                        "";
 
-                          return (
-                            <div
-                              key={
-                                day.key
-                              }
-                              className="min-h-[150px] border-r border-[#E8DDD9] p-3 last:border-r-0"
-                            >
-                              <p className="text-[6px] tracking-[0.16em] text-[#9D6F67]">
-                                {slot}
-                              </p>
+                      return (
+                        <div
+                          key={day.key}
+                          className="min-h-[150px] border-r border-[#E8DDD9] p-3 last:border-r-0"
+                        >
+                          <p className="text-[6px] tracking-[0.16em] text-[#9D6F67]">
+                            {slot}
+                          </p>
 
-                              {isLoadingPlanner ? (
-                                <div className="mt-3 h-16 animate-pulse rounded-xl bg-[#EFE5E1]" />
-                              ) : meal ? (
-                                <div className="mt-3">
-                                  {recipe ? (
-                                    <Link
-                                      href={
-                                        recipe.href
-                                      }
-                                      className="font-serif text-sm leading-snug transition hover:text-[#A77B73]"
-                                    >
-                                      {
-                                        mealName
-                                      }
-                                    </Link>
-                                  ) : (
-                                    <p className="font-serif text-sm leading-snug">
-                                      {
-                                        mealName
-                                      }
-                                    </p>
-                                  )}
-
-                                  <div className="mt-4 flex flex-wrap gap-1.5">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        openMealPicker(
-                                          day.date,
-                                          slot
-                                        )
-                                      }
-                                      className="rounded-full border border-[#CBA9A2] px-2.5 py-1.5 text-[5px] tracking-[0.12em] text-[#8F655E]"
-                                    >
-                                      CHANGE
-                                    </button>
-
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        removeMeal(
-                                          day.date,
-                                          slot
-                                        )
-                                      }
-                                      className="px-2 py-1.5 text-[5px] tracking-[0.12em] text-[#A77B73]"
-                                    >
-                                      REMOVE
-                                    </button>
-                                  </div>
-                                </div>
+                          {isLoadingPlanner ? (
+                            <div className="mt-3 h-16 animate-pulse rounded-xl bg-[#EFE5E1]" />
+                          ) : meal ? (
+                            <div className="mt-3">
+                              {recipe ? (
+                                <Link
+                                  href={recipe.href}
+                                  className="font-serif text-sm leading-snug transition hover:text-[#A77B73]"
+                                >
+                                  {mealName}
+                                </Link>
                               ) : (
+                                <p className="font-serif text-sm leading-snug">
+                                  {mealName}
+                                </p>
+                              )}
+
+                              <div className="mt-4 flex flex-wrap gap-1.5">
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -2519,29 +2003,53 @@ export default function MealPlansPage() {
                                       slot
                                     )
                                   }
-                                  className="mt-3 flex min-h-[86px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-[#D6C3BD] px-2 text-center transition hover:bg-[#F4ECE8]"
+                                  className="rounded-full border border-[#CBA9A2] px-2.5 py-1.5 text-[5px] tracking-[0.12em] text-[#8F655E]"
                                 >
-                                  <span className="font-serif text-lg text-[#C39A92]">
-                                    +
-                                  </span>
-
-                                  <span className="mt-1 text-[6px] tracking-[0.12em] text-[#9D6F67]">
-                                    ADD MEAL
-                                  </span>
+                                  CHANGE
                                 </button>
-                              )}
+
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    removeMeal(
+                                      day.date,
+                                      slot
+                                    )
+                                  }
+                                  className="px-2 py-1.5 text-[5px] tracking-[0.12em] text-[#A77B73]"
+                                >
+                                  REMOVE
+                                </button>
+                              </div>
                             </div>
-                          );
-                        }
-                      )}
-                    </div>
-                  )
-                )}
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                openMealPicker(
+                                  day.date,
+                                  slot
+                                )
+                              }
+                              className="mt-3 flex min-h-[86px] w-full flex-col items-center justify-center rounded-xl border border-dashed border-[#D6C3BD] px-2 text-center transition hover:bg-[#F4ECE8]"
+                            >
+                              <span className="font-serif text-lg text-[#C39A92]">
+                                +
+                              </span>
+
+                              <span className="mt-1 text-[6px] tracking-[0.12em] text-[#9D6F67]">
+                                ADD MEAL
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           </section>
-
-          {/* WEEK TOOLS */}
 
           <section className="mx-auto max-w-6xl pb-12">
             <div className="grid gap-3 md:grid-cols-2">
@@ -2560,8 +2068,7 @@ export default function MealPlansPage() {
                     </h3>
 
                     <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
-                      shop once. make the
-                      week easier. ♡
+                      shop once. make the week easier. ♡
                     </p>
                   </div>
 
@@ -2586,9 +2093,7 @@ export default function MealPlansPage() {
                     </h3>
 
                     <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
-                      prep what helps.
-                      leave room for life.
-                      ♡
+                      prep what helps. leave room for life. ♡
                     </p>
                   </div>
 
@@ -2600,44 +2105,31 @@ export default function MealPlansPage() {
             </div>
           </section>
 
-          {/* NUTRITION NOTE */}
-
           <section className="mx-auto max-w-6xl border-t border-[#DED0CB] py-7">
             <p className="max-w-4xl text-[9px] leading-5 text-[#927D76]">
-              Nutrition note: Meal
-              plans, calorie targets and
-              macro estimates are general
-              planning tools, not
-              individualized medical or
-              nutrition prescriptions.
-              Needs vary by person,
-              activity, health needs and
-              goals. Adjust portions and
-              food choices based on your
-              own needs.
+              Nutrition note: Meal plans, calorie targets and
+              macro estimates are general planning tools, not
+              individualized medical or nutrition
+              prescriptions. Needs vary by person, activity,
+              health needs and goals. Adjust portions and food
+              choices based on your own needs.
             </p>
           </section>
 
-          {/* END */}
-
           <section className="mx-auto max-w-6xl pb-14 pt-5 text-center">
             <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-              make the plan fit your
-              life. ♡
+              make the plan fit your life. ♡
             </p>
           </section>
         </section>
       </div>
-
-      {/* MEAL PICKER */}
 
       {pickerOpen && (
         <div
           className="fixed inset-0 z-[100] flex items-end justify-center bg-[#211C19]/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
           onMouseDown={(event) => {
             if (
-              event.target ===
-                event.currentTarget &&
+              event.target === event.currentTarget &&
               !isSavingMeal &&
               !isSavingCustomMeal
             ) {
@@ -2664,12 +2156,9 @@ export default function MealPlansPage() {
 
               <button
                 type="button"
-                onClick={
-                  closeMealPicker
-                }
+                onClick={closeMealPicker}
                 disabled={
-                  isSavingMeal ||
-                  isSavingCustomMeal
+                  isSavingMeal || isSavingCustomMeal
                 }
                 aria-label="Close meal picker"
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#CBA9A2] text-lg text-[#9D6F67] transition hover:bg-[#EAD8D3] disabled:opacity-50"
@@ -2677,8 +2166,6 @@ export default function MealPlansPage() {
                 ×
               </button>
             </div>
-
-            {/* SEARCH */}
 
             <div className="mt-6">
               <label
@@ -2693,16 +2180,12 @@ export default function MealPlansPage() {
                 type="text"
                 value={recipeSearch}
                 onChange={(event) =>
-                  setRecipeSearch(
-                    event.target.value
-                  )
+                  setRecipeSearch(event.target.value)
                 }
                 placeholder="Search recipes..."
                 className="mt-2 w-full rounded-xl border border-[#D6C3BD] bg-[#FBF8F6] px-4 py-3.5 text-[16px] outline-none transition placeholder:text-[#AA9690] focus:border-[#A77B73]"
               />
             </div>
-
-            {/* RECIPES */}
 
             <div className="mt-5">
               <div className="flex items-center justify-between gap-4">
@@ -2719,61 +2202,46 @@ export default function MealPlansPage() {
               </div>
 
               <div className="mt-3 max-h-[300px] divide-y divide-[#E8DDD9] overflow-y-auto rounded-2xl border border-[#DED0CB] bg-[#FBF8F6]">
-                {filteredRecipes.length >
-                0 ? (
-                  filteredRecipes.map(
-                    (recipe) => (
-                      <button
-                        key={
-                          recipe.id
-                        }
-                        type="button"
-                        onClick={() =>
-                          saveRecipeToPlanner(
-                            recipe
-                          )
-                        }
-                        disabled={
-                          isSavingMeal ||
-                          isSavingCustomMeal
-                        }
-                        className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F4ECE8] disabled:opacity-50"
-                      >
-                        <div>
-                          <p className="text-[6px] tracking-[0.15em] text-[#9D6F67]">
-                            {
-                              recipe.category
-                            }
-                          </p>
+                {filteredRecipes.length > 0 ? (
+                  filteredRecipes.map((recipe) => (
+                    <button
+                      key={recipe.id}
+                      type="button"
+                      onClick={() =>
+                        saveRecipeToPlanner(recipe)
+                      }
+                      disabled={
+                        isSavingMeal ||
+                        isSavingCustomMeal
+                      }
+                      className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F4ECE8] disabled:opacity-50"
+                    >
+                      <div>
+                        <p className="text-[6px] tracking-[0.15em] text-[#9D6F67]">
+                          {recipe.category}
+                        </p>
 
-                          <p className="mt-1 font-serif text-lg">
-                            {
-                              recipe.title
-                            }
-                          </p>
-                        </div>
+                        <p className="mt-1 font-serif text-lg">
+                          {recipe.title}
+                        </p>
+                      </div>
 
-                        <span className="font-serif text-xl text-[#A77B73]">
-                          +
-                        </span>
-                      </button>
-                    )
-                  )
+                      <span className="font-serif text-xl text-[#A77B73]">
+                        +
+                      </span>
+                    </button>
+                  ))
                 ) : (
                   <div className="px-5 py-8 text-center">
                     <p className="font-serif text-lg italic text-[#A77B73]">
-                      no recipes found.
-                      ♡
+                      no recipes found. ♡
                     </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* SAVED CUSTOM MEALS */}
-
-            {customMeals.length >
-              0 && (
+            {customMeals.length > 0 && (
               <div className="mt-6">
                 <p className="text-[7px] tracking-[0.22em] text-[#9D6F67]">
                   YOUR SAVED MEALS
@@ -2787,9 +2255,7 @@ export default function MealPlansPage() {
                         key={meal.id}
                         type="button"
                         onClick={() =>
-                          saveExistingCustomMeal(
-                            meal
-                          )
+                          saveExistingCustomMeal(meal)
                         }
                         disabled={
                           isSavingMeal ||
@@ -2804,36 +2270,24 @@ export default function MealPlansPage() {
               </div>
             )}
 
-            {/* CUSTOM MEAL */}
-
             <div className="mt-7 border-t border-[#DED0CB] pt-6">
               <p className="text-[7px] tracking-[0.22em] text-[#9D6F67]">
                 OR ADD YOUR OWN
               </p>
 
               <p className="mt-2 font-serif text-lg italic text-[#A77B73]">
-                not everything needs a
-                recipe. ♡
+                not everything needs a recipe. ♡
               </p>
 
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                 <input
                   type="text"
-                  value={
-                    customMealName
-                  }
+                  value={customMealName}
                   onChange={(event) =>
-                    setCustomMealName(
-                      event.target.value
-                    )
+                    setCustomMealName(event.target.value)
                   }
-                  onKeyDown={(
-                    event
-                  ) => {
-                    if (
-                      event.key ===
-                      "Enter"
-                    ) {
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
                       event.preventDefault();
                       createAndUseCustomMeal();
                     }
@@ -2844,9 +2298,7 @@ export default function MealPlansPage() {
 
                 <button
                   type="button"
-                  onClick={
-                    createAndUseCustomMeal
-                  }
+                  onClick={createAndUseCustomMeal}
                   disabled={
                     !customMealName.trim() ||
                     isSavingMeal ||
