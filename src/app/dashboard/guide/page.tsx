@@ -6,17 +6,16 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
-/* ---------------------------------*
- *  WEEKLY TRAINING OPTIONS
- *--------------------------------- */
+/* ---------------------------------
+ * WEEKLY TRAINING OPTIONS
+ * --------------------------------- */
 
 const trainingWeek = [
   {
     day: "01",
     title: "LOWER BODY",
     focus: "Glutes + Quads",
-    description:
-      "Choose the lower-body session that fits your day.",
+    description: "Choose the lower-body session that fits your day.",
     workouts: [
       {
         title: "Lower Body Foundation",
@@ -45,8 +44,7 @@ const trainingWeek = [
     day: "02",
     title: "UPPER BODY",
     focus: "Back + Arms + Posture",
-    description:
-      "Pick the upper-body focus that feels right for you today.",
+    description: "Pick the upper-body focus that feels right for you today.",
     workouts: [
       {
         title: "Home Back & Biceps",
@@ -80,8 +78,7 @@ const trainingWeek = [
     day: "03",
     title: "CORE + MOBILITY",
     focus: "Control + Stability",
-    description:
-      "Keep the focus controlled and intentional.",
+    description: "Keep the focus controlled and intentional.",
     workouts: [
       {
         title: "Core Control",
@@ -95,8 +92,7 @@ const trainingWeek = [
     day: "04",
     title: "GLUTES",
     focus: "Build + Strength",
-    description:
-      "Choose your glute session based on where you're training.",
+    description: "Choose your glute session based on where you're training.",
     workouts: [
       {
         title: "Home Glute & Legs",
@@ -135,8 +131,7 @@ const trainingWeek = [
     day: "06",
     title: "CONDITIONING",
     focus: "Low Impact + Cardio",
-    description:
-      "Choose your conditioning based on your space and equipment.",
+    description: "Choose your conditioning based on your space and equipment.",
     workouts: [
       {
         title: "Cardio Lock In",
@@ -161,9 +156,13 @@ const trainingWeek = [
   },
 ];
 
-/* ---------------------------------*
- *  TRAINING LEVELS
- *--------------------------------- */
+const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
+
+type ScheduleView = "numbers" | "weekdays";
+
+/* ---------------------------------
+ * TRAINING LEVELS
+ * --------------------------------- */
 
 const trainingLevels = [
   {
@@ -186,9 +185,9 @@ const trainingLevels = [
   },
 ];
 
-/* ---------------------------------*
- *  BASICS
- *--------------------------------- */
+/* ---------------------------------
+ * BASICS
+ * --------------------------------- */
 
 const basics = [
   {
@@ -211,24 +210,37 @@ const basics = [
   },
 ];
 
-/* ---------------------------------*
- *  PAGE
- *--------------------------------- */
+/* ---------------------------------
+ * PAGE
+ * --------------------------------- */
 
 export default function GuidePage() {
   const [firstName, setFirstName] = useState("there");
 
-  const [isLoadingUser, setIsLoadingUser] =
-    useState(true);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
 
-  const [expandedDay, setExpandedDay] =
-    useState<string | null>(null);
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
-  const [selectedWorkouts, setSelectedWorkouts] =
-    useState<Record<string, string[]>>({});
+  const [selectedWorkouts, setSelectedWorkouts] = useState<
+    Record<string, string[]>
+  >({});
 
-  const [selectionStorageKey, setSelectionStorageKey] =
-    useState<string | null>(null);
+  const [selectionStorageKey, setSelectionStorageKey] = useState<
+    string | null
+  >(null);
+
+  const [scheduleView, setScheduleView] =
+    useState<ScheduleView>("numbers");
+
+  const [weekStart, setWeekStart] = useState("MON");
+
+  const [scheduleViewStorageKey, setScheduleViewStorageKey] = useState<
+    string | null
+  >(null);
+
+  const [weekStartStorageKey, setWeekStartStorageKey] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -241,18 +253,39 @@ export default function GuidePage() {
         return;
       }
 
-      const storageKey =
-        `lockInGuideWorkoutSelections:${user.id}`;
+      const storageKey = `lockInGuideWorkoutSelections:${user.id}`;
+
+      const viewStorageKey = `lockInGuideScheduleView:${user.id}`;
+
+      const startStorageKey = `lockInGuideWeekStart:${user.id}`;
 
       setSelectionStorageKey(storageKey);
+      setScheduleViewStorageKey(viewStorageKey);
+      setWeekStartStorageKey(startStorageKey);
+
+      try {
+        const savedView = window.localStorage.getItem(viewStorageKey);
+
+        const savedWeekStart =
+          window.localStorage.getItem(startStorageKey);
+
+        if (savedView === "numbers" || savedView === "weekdays") {
+          setScheduleView(savedView);
+        }
+
+        if (savedWeekStart && weekdays.includes(savedWeekStart)) {
+          setWeekStart(savedWeekStart);
+        }
+      } catch {
+        // Keep default schedule settings if local storage is unavailable.
+      }
 
       try {
         const savedSelections =
           window.localStorage.getItem(storageKey);
 
         if (savedSelections) {
-          const parsedSelections =
-            JSON.parse(savedSelections);
+          const parsedSelections = JSON.parse(savedSelections);
 
           if (
             parsedSelections &&
@@ -272,7 +305,8 @@ export default function GuidePage() {
                         typeof item === "string",
                     );
                 } else if (typeof value === "string") {
-                  // Convert the old single-workout format to the new multi-workout format.
+                  // Convert the old single-workout format
+                  // to the new multi-workout format.
                   normalizedSelections[dayId] = [value];
                 }
               },
@@ -285,15 +319,12 @@ export default function GuidePage() {
         // Keep the guide usable if local storage is unavailable.
       }
 
-      const savedName =
-        user.user_metadata?.name;
+      const savedName = user.user_metadata?.name;
 
       if (savedName) {
         setFirstName(savedName);
       } else if (user.email) {
-        setFirstName(
-          user.email.split("@")[0],
-        );
+        setFirstName(user.email.split("@")[0]);
       }
 
       setIsLoadingUser(false);
@@ -352,6 +383,56 @@ export default function GuidePage() {
 
   const handleDoneSelecting = () => {
     setExpandedDay(null);
+  };
+
+  const handleScheduleViewChange = (
+    view: ScheduleView,
+  ) => {
+    setScheduleView(view);
+
+    if (scheduleViewStorageKey) {
+      try {
+        window.localStorage.setItem(
+          scheduleViewStorageKey,
+          view,
+        );
+      } catch {
+        // Keep preference in state if local storage is unavailable.
+      }
+    }
+  };
+
+  const handleWeekStartChange = (day: string) => {
+    setWeekStart(day);
+
+    if (weekStartStorageKey) {
+      try {
+        window.localStorage.setItem(
+          weekStartStorageKey,
+          day,
+        );
+      } catch {
+        // Keep preference in state if local storage is unavailable.
+      }
+    }
+  };
+
+  const weekStartIndex = Math.max(
+    weekdays.indexOf(weekStart),
+    0,
+  );
+
+  const getDayLabel = (
+    index: number,
+    fallbackDay: string,
+  ) => {
+    if (scheduleView === "numbers") {
+      return fallbackDay;
+    }
+
+    return weekdays[
+      (weekStartIndex + index) % weekdays.length
+    ];
   };
 
   const initial =
@@ -472,7 +553,88 @@ export default function GuidePage() {
               </p>
             </div>
 
-            <div className="mt-7 overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
+            {/* SCHEDULE DISPLAY SETTINGS */}
+
+            <div className="mt-7 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] p-5 md:p-6">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
+                    VIEW YOUR WEEK AS
+                  </p>
+
+                  <div className="mt-3 flex w-fit rounded-full border border-[#D8C7C1] bg-[#F7F1ED] p-1">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleScheduleViewChange(
+                          "numbers",
+                        )
+                      }
+                      className={`rounded-full px-4 py-2 text-[8px] tracking-[0.18em] transition ${
+                        scheduleView === "numbers"
+                          ? "bg-[#211C19] text-[#F7F1ED]"
+                          : "text-[#8F655E] hover:bg-[#EAD8D3]"
+                      }`}
+                    >
+                      DAY NUMBERS
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleScheduleViewChange(
+                          "weekdays",
+                        )
+                      }
+                      className={`rounded-full px-4 py-2 text-[8px] tracking-[0.18em] transition ${
+                        scheduleView === "weekdays"
+                          ? "bg-[#211C19] text-[#F7F1ED]"
+                          : "text-[#8F655E] hover:bg-[#EAD8D3]"
+                      }`}
+                    >
+                      WEEKDAYS
+                    </button>
+                  </div>
+                </div>
+
+                {scheduleView === "weekdays" && (
+                  <div className="lg:text-right">
+                    <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
+                      MY WEEK STARTS
+                    </p>
+
+                    <div className="mt-3 flex max-w-full gap-1.5 overflow-x-auto pb-1 lg:justify-end">
+                      {weekdays.map((day) => (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() =>
+                            handleWeekStartChange(day)
+                          }
+                          className={`h-9 min-w-11 shrink-0 rounded-full border px-3 text-[7px] tracking-[0.14em] transition ${
+                            weekStart === day
+                              ? "border-[#A77B73] bg-[#EAD8D3] text-[#211C19]"
+                              : "border-[#D8C7C1] bg-[#F7F1ED] text-[#8F655E] hover:border-[#B9948B]"
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <p className="mt-4 max-w-2xl text-[10px] leading-5 text-[#927D76]">
+                {scheduleView === "numbers"
+                  ? "Keep your training week flexible with Day 01–07."
+                  : `Starting on ${weekStart}, the rest of your training week follows in order.`}
+              </p>
+            </div>
+
+            {/* TRAINING WEEK */}
+
+            <div className="mt-4 overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
               {trainingWeek.map((day, index) => {
                 const isExpanded =
                   expandedDay === day.day;
@@ -508,10 +670,13 @@ export default function GuidePage() {
 
                     <div className="grid gap-4 px-5 py-5 sm:grid-cols-[48px_1fr_auto] sm:items-start sm:gap-4 md:px-7">
 
-                      {/* DAY NUMBER */}
+                      {/* DAY NUMBER / WEEKDAY */}
 
                       <span className="font-serif text-xl text-[#B48A82]">
-                        {day.day}
+                        {getDayLabel(
+                          index,
+                          day.day,
+                        )}
                       </span>
 
                       {/* DAY / WORKOUT INFO */}
@@ -527,7 +692,8 @@ export default function GuidePage() {
 
                         {/* YOUR PICKS */}
 
-                        {selectedWorkoutsForDay.length > 0 && (
+                        {selectedWorkoutsForDay.length >
+                          0 && (
                           <div className="mt-4 rounded-[1rem] border border-[#CBA9A2] bg-[#EAD8D3]/75 px-4 py-3">
                             <div className="flex items-center justify-between gap-3">
                               <p className="text-[8px] font-medium tracking-[0.22em] text-[#8F655E]">
@@ -535,7 +701,9 @@ export default function GuidePage() {
                               </p>
 
                               <span className="rounded-full border border-[#CBA9A2] bg-[#F7F1ED]/70 px-2.5 py-1 text-[7px] tracking-[0.14em] text-[#8F655E]">
-                                {selectedWorkoutsForDay.length}{" "}
+                                {
+                                  selectedWorkoutsForDay.length
+                                }{" "}
                                 SELECTED
                               </span>
                             </div>
@@ -544,12 +712,18 @@ export default function GuidePage() {
                               {selectedWorkoutsForDay.map(
                                 (workout) => (
                                   <Link
-                                    key={workout.href}
-                                    href={workout.href}
+                                    key={
+                                      workout.href
+                                    }
+                                    href={
+                                      workout.href
+                                    }
                                     className="group flex items-center justify-between gap-3 rounded-[0.7rem] border border-[#D6C1BB] bg-[#FBF8F6]/75 px-3 py-2 transition hover:border-[#B9948B] hover:bg-[#F7F1ED]"
                                   >
                                     <span className="font-serif text-base text-[#211C19]">
-                                      {workout.title}
+                                      {
+                                        workout.title
+                                      }
                                     </span>
 
                                     <span className="shrink-0 font-serif text-sm text-[#A77B73] transition group-hover:translate-x-0.5">
@@ -577,14 +751,17 @@ export default function GuidePage() {
                               →
                             </span>
                           </Link>
-                        ) : selectedWorkoutsForDay.length > 0 ? (
+                        ) : selectedWorkoutsForDay.length >
+                          0 ? (
                           <>
                             <button
                               type="button"
                               onClick={() =>
                                 isExpanded
                                   ? handleDoneSelecting()
-                                  : handleChangeWorkout(day.day)
+                                  : handleChangeWorkout(
+                                      day.day,
+                                    )
                               }
                               className="inline-flex items-center gap-2 rounded-full border border-[#CBA9A2] px-3 py-1.5 text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:bg-[#EAD8D3] hover:text-[#211C19]"
                             >
@@ -604,7 +781,8 @@ export default function GuidePage() {
                             </button>
 
                             <p className="max-w-[180px] text-[8px] leading-4 text-[#A18B84] sm:text-right">
-                              Select one or more workouts for this day.
+                              Select one or more
+                              workouts for this day.
                             </p>
                           </>
                         ) : (
@@ -649,17 +827,24 @@ export default function GuidePage() {
                                   BUILD YOUR DAY
                                 </p>
 
-                                {selectedWorkoutsForDay.length > 0 && (
+                                {selectedWorkoutsForDay.length >
+                                  0 && (
                                   <span className="rounded-full bg-[#EAD8D3] px-2.5 py-1 text-[7px] tracking-[0.14em] text-[#8F655E]">
-                                    {selectedWorkoutsForDay.length}{" "}
+                                    {
+                                      selectedWorkoutsForDay.length
+                                    }{" "}
                                     SELECTED
                                   </span>
                                 )}
                               </div>
 
                               <p className="mt-2 max-w-xl text-[11px] leading-5 text-[#806E68]">
-                                {day.description} You can choose more than
-                                one if you want to combine workouts.
+                                {
+                                  day.description
+                                }{" "}
+                                You can choose more
+                                than one if you want
+                                to combine workouts.
                               </p>
                             </div>
 
@@ -673,7 +858,9 @@ export default function GuidePage() {
 
                               <button
                                 type="button"
-                                onClick={handleDoneSelecting}
+                                onClick={
+                                  handleDoneSelecting
+                                }
                                 className="rounded-full bg-[#211C19] px-4 py-2 text-[7px] tracking-[0.18em] text-[#F7F1ED] transition hover:bg-[#493D39]"
                               >
                                 DONE
@@ -682,60 +869,68 @@ export default function GuidePage() {
                           </div>
 
                           <div className="mt-5 grid gap-2 md:grid-cols-2">
-                            {day.workouts.map((workout) => {
-                              const isSelected =
-                                selectedTitles.includes(
-                                  workout.title,
-                                );
+                            {day.workouts.map(
+                              (workout) => {
+                                const isSelected =
+                                  selectedTitles.includes(
+                                    workout.title,
+                                  );
 
-                              return (
-                                <button
-                                  key={workout.href}
-                                  type="button"
-                                  onClick={() =>
-                                    handleWorkoutSelect(
-                                      day.day,
-                                      workout.title,
-                                    )
-                                  }
-                                  className={`group flex items-center justify-between rounded-[1rem] border px-4 py-4 text-left transition ${
-                                    isSelected
-                                      ? "border-[#A77B73] bg-[#EAD8D3] shadow-[0_0_0_2px_rgba(167,123,115,0.12)]"
-                                      : "border-[#D8C7C1] bg-[#FBF8F6] hover:border-[#B9948B] hover:bg-[#EAD8D3]"
-                                  }`}
-                                >
-                                  <div className="min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <p className="font-serif text-lg text-[#211C19]">
-                                        {workout.title}
-                                      </p>
-
-                                      {isSelected && (
-                                        <span className="rounded-full bg-[#F7F1ED] px-2 py-1 text-[6px] font-medium tracking-[0.14em] text-[#8F655E]">
-                                          SELECTED
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    <p className="mt-1 text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                                      {workout.meta}
-                                    </p>
-                                  </div>
-
-                                  <span
-                                    className={`ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-sm transition ${
+                                return (
+                                  <button
+                                    key={
+                                      workout.href
+                                    }
+                                    type="button"
+                                    onClick={() =>
+                                      handleWorkoutSelect(
+                                        day.day,
+                                        workout.title,
+                                      )
+                                    }
+                                    className={`group flex items-center justify-between rounded-[1rem] border px-4 py-4 text-left transition ${
                                       isSelected
-                                        ? "border-[#A77B73] bg-[#F7F1ED] text-[#A77B73]"
-                                        : "border-[#CBA9A2] text-[#A77B73] group-hover:bg-[#F7F1ED]"
+                                        ? "border-[#A77B73] bg-[#EAD8D3] shadow-[0_0_0_2px_rgba(167,123,115,0.12)]"
+                                        : "border-[#D8C7C1] bg-[#FBF8F6] hover:border-[#B9948B] hover:bg-[#EAD8D3]"
                                     }`}
                                   >
-                                    {isSelected
-                                      ? "✓"
-                                      : "+"}
-                                  </span>
-                                </button>
-                              );
-                            })}
+                                    <div className="min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <p className="font-serif text-lg text-[#211C19]">
+                                          {
+                                            workout.title
+                                          }
+                                        </p>
+
+                                        {isSelected && (
+                                          <span className="rounded-full bg-[#F7F1ED] px-2 py-1 text-[6px] font-medium tracking-[0.14em] text-[#8F655E]">
+                                            SELECTED
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      <p className="mt-1 text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                        {
+                                          workout.meta
+                                        }
+                                      </p>
+                                    </div>
+
+                                    <span
+                                      className={`ml-4 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-serif text-sm transition ${
+                                        isSelected
+                                          ? "border-[#A77B73] bg-[#F7F1ED] text-[#A77B73]"
+                                          : "border-[#CBA9A2] text-[#A77B73] group-hover:bg-[#F7F1ED]"
+                                      }`}
+                                    >
+                                      {isSelected
+                                        ? "✓"
+                                        : "+"}
+                                    </span>
+                                  </button>
+                                );
+                              },
+                            )}
                           </div>
                         </div>
                       )}
@@ -928,7 +1123,6 @@ export default function GuidePage() {
               just keep showing up. ♡
             </p>
           </div>
-
         </section>
       </div>
     </main>
