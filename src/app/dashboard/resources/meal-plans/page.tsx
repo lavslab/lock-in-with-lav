@@ -28,8 +28,15 @@ type ActiveSlot = {
 
 type SavedMealRow = {
   day: string;
+  plan_date: string | null;
   meal_slot: MealSlot;
   recipe_id: string;
+};
+
+type PlannerDay = {
+  date: string;
+  weekday: string;
+  monthDay: string;
 };
 
 const quickStarts = [
@@ -51,16 +58,6 @@ const quickStarts = [
     tag: "LIGHT",
     href: "/dashboard/resources/meal-plans/lighter-week",
   },
-];
-
-const days = [
-  "MONDAY",
-  "TUESDAY",
-  "WEDNESDAY",
-  "THURSDAY",
-  "FRIDAY",
-  "SATURDAY",
-  "SUNDAY",
 ];
 
 const mealSlots: MealSlot[] = [
@@ -362,6 +359,55 @@ function PrepIcon() {
   );
 }
 
+function formatDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseDateInput(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+function addDays(date: Date, amount: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+}
+
+function getDefaultWeekStart() {
+  return formatDateInput(new Date());
+}
+
+function buildPlannerWeek(startDate: string): PlannerDay[] {
+  const start = parseDateInput(startDate);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDays(start, index);
+
+    return {
+      date: formatDateInput(date),
+
+      weekday: date
+        .toLocaleDateString("en-CA", {
+          weekday: "short",
+        })
+        .toUpperCase(),
+
+      monthDay: date
+        .toLocaleDateString("en-CA", {
+          month: "short",
+          day: "2-digit",
+        })
+        .toUpperCase(),
+    };
+  });
+}
+
 function getSlotKey(day: string, slot: MealSlot) {
   return `${day}-${slot}`;
 }
@@ -428,18 +474,23 @@ function recipeMatchesSlot(
     return recipe.meal === "Dinner";
   }
 
-  return (
-    recipe.meal === "Snacks" ||
-    recipe.meal === "Shakes"
-  );
+  return recipe.meal === "Snacks" || recipe.meal === "Shakes";
 }
 
 export default function MealPlansPage() {
-  const [firstName, setFirstName] =
-    useState("there");
+  const [firstName, setFirstName] = useState("there");
 
   const [isLoadingUser, setIsLoadingUser] =
     useState(true);
+
+  const [userId, setUserId] =
+    useState<string | null>(null);
+
+  const [weekStartDate, setWeekStartDate] =
+    useState(getDefaultWeekStart);
+
+  const [isLoadingWeek, setIsLoadingWeek] =
+    useState(false);
 
   const [plannerSelections, setPlannerSelections] =
     useState<PlannerSelections>({});
@@ -462,8 +513,17 @@ export default function MealPlansPage() {
   const [isSavingCustomMeal, setIsSavingCustomMeal] =
     useState(false);
 
+  const plannerWeek = useMemo(
+    () => buildPlannerWeek(weekStartDate),
+    [weekStartDate]
+  );
+
+  const weekEndDate =
+    plannerWeek[plannerWeek.length - 1]?.date ??
+    weekStartDate;
+
   useEffect(() => {
-    const getUserAndMeals = async () => {
+    const getUser = async () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -473,6 +533,8 @@ export default function MealPlansPage() {
         return;
       }
 
+      setUserId(user.id);
+
       const savedName = user.user_metadata?.name;
 
       if (savedName) {
@@ -481,24 +543,70 @@ export default function MealPlansPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
+      try {
+        const savedWeekStart =
+          window.localStorage.getItem(
+            `lockInMealPlannerWeekStart:${user.id}`
+          );
+
+        if (
+          savedWeekStart &&
+          /^\d{4}-\d{2}-\d{2}$/.test(savedWeekStart)
+        ) {
+          setWeekStartDate(savedWeekStart);
+        }
+      } catch {
+        // Keep today's date if local storage is unavailable.
+      }
+
+      setIsLoadingUser(false);
+    };
+
+    getUser();
+  }, []);
+
+  useEffect(() => {
+    if (!userId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadWeekMeals = async () => {
+      setIsLoadingWeek(true);
+
       const { data: savedMeals, error } =
         await supabase
           .from("meal_plan_selections")
-          .select("day, meal_slot, recipe_id")
-          .eq("user_id", user.id);
+          .select(
+            "day, plan_date, meal_slot, recipe_id"
+          )
+          .eq("user_id", userId)
+          .gte("plan_date", weekStartDate)
+          .lte("plan_date", weekEndDate);
+
+      if (cancelled) {
+        return;
+      }
 
       if (error) {
         console.error(
           "Error loading meal plan:",
           error
         );
-      } else if (savedMeals) {
-        const restoredSelections: PlannerSelections =
-          {};
 
-        (
-          savedMeals as SavedMealRow[]
-        ).forEach((savedMeal) => {
+        setIsLoadingWeek(false);
+        return;
+      }
+
+      const restoredSelections: PlannerSelections = {};
+
+      ((savedMeals ?? []) as SavedMealRow[]).forEach(
+        (savedMeal) => {
+          if (!savedMeal.plan_date) {
+            return;
+          }
+
           const recipe = recipeFromSavedId(
             savedMeal.recipe_id,
             savedMeal.meal_slot
@@ -509,36 +617,28 @@ export default function MealPlansPage() {
           }
 
           const key = getSlotKey(
-            savedMeal.day,
+            savedMeal.plan_date,
             savedMeal.meal_slot
           );
 
           restoredSelections[key] = recipe;
-        });
+        }
+      );
 
-        setPlannerSelections(
-          restoredSelections
-        );
-      }
-
-      setIsLoadingUser(false);
+      setPlannerSelections(restoredSelections);
+      setIsLoadingWeek(false);
     };
 
-    getUserAndMeals();
-  }, []);
-
-  useEffect(() => {
-    if (!activeSlot) {
-      document.body.style.overflow = "";
-      return;
-    }
-
-    document.body.style.overflow = "hidden";
+    loadWeekMeals();
 
     return () => {
-      document.body.style.overflow = "";
+      cancelled = true;
     };
-  }, [activeSlot]);
+  }, [
+    userId,
+    weekStartDate,
+    weekEndDate,
+  ]);
 
   const initial =
     !isLoadingUser && firstName !== "there"
@@ -581,6 +681,27 @@ export default function MealPlansPage() {
     recipeSearch,
     showAllRecipes,
   ]);
+
+  const handleWeekStartChange = (
+    value: string
+  ) => {
+    if (!value) {
+      return;
+    }
+
+    setWeekStartDate(value);
+
+    if (userId) {
+      try {
+        window.localStorage.setItem(
+          `lockInMealPlannerWeekStart:${userId}`,
+          value
+        );
+      } catch {
+        // The selected date still works for this session.
+      }
+    }
+  };
 
   const openMealPicker = (
     day: string,
@@ -666,15 +787,23 @@ export default function MealPlansPage() {
       .upsert(
         {
           user_id: user.id,
+
+          // Keep day populated for compatibility
+          // with the existing table.
+          // It now stores the actual calendar date.
           day: slotToSave.day,
+
+          plan_date: slotToSave.day,
+
           meal_slot: slotToSave.slot,
           recipe_id: recipe.id,
+
           updated_at:
             new Date().toISOString(),
         },
         {
           onConflict:
-            "user_id,day,meal_slot",
+            "user_id,plan_date,meal_slot",
         }
       );
 
@@ -777,6 +906,7 @@ export default function MealPlansPage() {
         {
           user_id: user.id,
           day: slotToSave.day,
+          plan_date: slotToSave.day,
           meal_slot: slotToSave.slot,
           recipe_id: customRecipe.id,
           updated_at:
@@ -784,7 +914,7 @@ export default function MealPlansPage() {
         },
         {
           onConflict:
-            "user_id,day,meal_slot",
+            "user_id,plan_date,meal_slot",
         }
       );
 
@@ -850,7 +980,7 @@ export default function MealPlansPage() {
       .from("meal_plan_selections")
       .delete()
       .eq("user_id", user.id)
-      .eq("day", day)
+      .eq("plan_date", day)
       .eq("meal_slot", slot);
 
     if (error) {
@@ -917,9 +1047,8 @@ export default function MealPlansPage() {
               </p>
 
               <p className="mt-5 max-w-xl text-sm leading-6 text-[#806E68]">
-                Pick your meals, organize your
-                week and turn the plan into one
-                simple shopping list.
+                Pick your meals, organize your week and turn
+                the plan into one simple shopping list.
               </p>
             </div>
           </section>
@@ -994,158 +1123,257 @@ export default function MealPlansPage() {
                   own. ♡
                 </span>
               </h2>
+
+              <p className="mt-3 max-w-xl text-[11px] leading-5 text-[#806E68]">
+                Choose when your week starts, then plan seven
+                days from there. No Monday required. ♡
+              </p>
             </div>
 
-            <div className="mt-7 space-y-3">
-              {days.map((day, dayIndex) => (
-                <div
-                  key={day}
-                  className="overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]"
-                >
-                  <div className="flex items-center gap-4 border-b border-[#E1D3CE] px-5 py-4 md:px-6">
-                    <span className="font-serif text-xl text-[#C6A29A]">
-                      {String(dayIndex + 1).padStart(
-                        2,
-                        "0"
-                      )}
-                    </span>
+            {/* WEEK START */}
 
-                    <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                      {day}
-                    </p>
-                  </div>
+            <div className="mt-7 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] p-5 md:p-6">
+              <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
+                    WEEK STARTS
+                  </p>
 
-                  <div className="grid sm:grid-cols-2 xl:grid-cols-4">
-                    {mealSlots.map(
-                      (slot, slotIndex) => {
-                        const key = getSlotKey(
-                          day,
-                          slot
-                        );
+                  <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
+                    start wherever you are. ♡
+                  </p>
+                </div>
 
-                        const selectedRecipe =
-                          plannerSelections[key];
+                <div className="w-full md:w-auto">
+                  <label
+                    htmlFor="meal-week-start"
+                    className="mb-2 block text-[7px] tracking-[0.2em] text-[#806E68]"
+                  >
+                    CHOOSE START DATE
+                  </label>
 
-                        return (
-                          <div
-                            key={slot}
-                            className={`p-5 ${
-                              slotIndex > 0
-                                ? "border-t border-[#E1D3CE] sm:border-l sm:border-t-0"
-                                : ""
-                            } ${
-                              slotIndex === 2
-                                ? "sm:border-l-0 sm:border-t xl:border-l xl:border-t-0"
-                                : ""
-                            } ${
-                              slotIndex === 3
-                                ? "sm:border-t xl:border-t-0"
-                                : ""
-                            }`}
-                          >
-                            <p className="text-[7px] tracking-[0.22em] text-[#9D6F67]">
-                              {slot}
+                  <input
+                    id="meal-week-start"
+                    type="date"
+                    value={weekStartDate}
+                    onChange={(event) =>
+                      handleWeekStartChange(
+                        event.target.value
+                      )
+                    }
+                    className="w-full rounded-xl border border-[#D8C7C1] bg-[#F7F1ED] px-4 py-3 text-[10px] tracking-[0.12em] text-[#211C19] outline-none transition focus:border-[#A77B73] md:w-[210px]"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-5 border-t border-[#E1D3CE] pt-4">
+                <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                  PLANNING
+                </p>
+
+                <p className="mt-1 font-serif text-base italic text-[#806E68]">
+                  {plannerWeek[0]?.weekday}{" "}
+                  {plannerWeek[0]?.monthDay}
+                  {"  →  "}
+                  {plannerWeek[6]?.weekday}{" "}
+                  {plannerWeek[6]?.monthDay}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {isLoadingWeek ? (
+                <div className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-6 py-10 text-center">
+                  <p className="font-serif text-lg italic text-[#A77B73]">
+                    loading your week... ♡
+                  </p>
+                </div>
+              ) : (
+                plannerWeek.map(
+                  (plannerDay, dayIndex) => {
+                    const day = plannerDay.date;
+
+                    return (
+                      <div
+                        key={day}
+                        className="overflow-hidden rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6]"
+                      >
+                        <div className="flex items-center gap-4 border-b border-[#E1D3CE] px-5 py-4 md:px-6">
+                          <span className="font-serif text-xl text-[#C6A29A]">
+                            {String(
+                              dayIndex + 1
+                            ).padStart(2, "0")}
+                          </span>
+
+                          <div>
+                            <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
+                              {plannerDay.weekday}
                             </p>
 
-                            {selectedRecipe ? (
-                              <div className="mt-4 min-h-[112px] rounded-2xl border border-[#D6C3BD] bg-[#F7F1ED] p-4">
-                                {selectedRecipe.id.startsWith(
-                                  "custom-meal:"
-                                ) ? (
-                                  <div>
-                                    <p className="font-serif text-lg leading-tight text-[#211C19]">
-                                      {selectedRecipe.title}
-                                    </p>
-
-                                    <p className="mt-2 text-[7px] tracking-[0.12em] text-[#806E68]">
-                                      PERSONAL MEAL • ADDED BY YOU
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <Link
-                                    href={`/dashboard/resources/recipes/${selectedRecipe.id}`}
-                                    className="group block rounded-xl transition"
-                                  >
-                                    <p className="font-serif text-lg leading-tight text-[#211C19] transition group-hover:text-[#8F655E]">
-                                      {selectedRecipe.title}
-                                    </p>
-
-                                    <p className="mt-2 text-[7px] tracking-[0.12em] text-[#806E68]">
-                                      {selectedRecipe.calories} CAL •{" "}
-                                      {selectedRecipe.protein}G PROTEIN
-                                    </p>
-
-                                    <div className="mt-3 flex items-center gap-2 text-[7px] tracking-[0.16em] text-[#9D6F67] transition group-hover:text-[#211C19]">
-                                      <span>VIEW RECIPE</span>
-
-                                      <span className="font-serif text-sm transition group-hover:translate-x-1">
-                                        →
-                                      </span>
-                                    </div>
-                                  </Link>
-                                )}
-
-                                <div className="mt-4 flex items-center gap-4 border-t border-[#E1D3CE] pt-3">
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      openMealPicker(
-                                        day,
-                                        slot
-                                      )
-                                    }
-                                    className="text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
-                                  >
-                                    CHANGE
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      removeRecipe(
-                                        day,
-                                        slot
-                                      )
-                                    }
-                                    className="text-[7px] tracking-[0.18em] text-[#A18A83] transition hover:text-[#211C19]"
-                                  >
-                                    REMOVE
-                                  </button>
-                                </div>
-                              </div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  openMealPicker(
-                                    day,
-                                    slot
-                                  )
-                                }
-                                className="group mt-4 flex min-h-[74px] w-full items-center justify-between gap-4 rounded-2xl border border-dashed border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:border-[#A77B73] hover:bg-[#F3E9E5]"
-                              >
-                                <span className="text-[8px] tracking-[0.18em] text-[#806E68]">
-                                  ADD MEAL
-                                </span>
-
-                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EAD8D3] text-[#8F655E] transition group-hover:bg-[#DFC4BD]">
-                                  <PlusIcon />
-                                </span>
-                              </button>
-                            )}
+                            <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
+                              {plannerDay.monthDay}
+                            </p>
                           </div>
-                        );
-                      }
-                    )}
-                  </div>
-                </div>
-              ))}
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 xl:grid-cols-4">
+                          {mealSlots.map(
+                            (
+                              slot,
+                              slotIndex
+                            ) => {
+                              const key =
+                                getSlotKey(
+                                  day,
+                                  slot
+                                );
+
+                              const selectedRecipe =
+                                plannerSelections[
+                                  key
+                                ];
+
+                              return (
+                                <div
+                                  key={slot}
+                                  className={`p-5 ${
+                                    slotIndex > 0
+                                      ? "border-t border-[#E1D3CE] sm:border-l sm:border-t-0"
+                                      : ""
+                                  } ${
+                                    slotIndex ===
+                                    2
+                                      ? "sm:border-l-0 sm:border-t xl:border-l xl:border-t-0"
+                                      : ""
+                                  } ${
+                                    slotIndex ===
+                                    3
+                                      ? "sm:border-t xl:border-t-0"
+                                      : ""
+                                  }`}
+                                >
+                                  <p className="text-[7px] tracking-[0.22em] text-[#9D6F67]">
+                                    {slot}
+                                  </p>
+
+                                  {selectedRecipe ? (
+                                    <div className="mt-4 min-h-[112px] rounded-2xl border border-[#D6C3BD] bg-[#F7F1ED] p-4">
+                                      {selectedRecipe.id.startsWith(
+                                        "custom-meal:"
+                                      ) ? (
+                                        <div>
+                                          <p className="font-serif text-lg leading-tight text-[#211C19]">
+                                            {
+                                              selectedRecipe.title
+                                            }
+                                          </p>
+
+                                          <p className="mt-2 text-[7px] tracking-[0.12em] text-[#806E68]">
+                                            PERSONAL
+                                            MEAL •
+                                            ADDED BY
+                                            YOU
+                                          </p>
+                                        </div>
+                                      ) : (
+                                        <Link
+                                          href={`/dashboard/resources/recipes/${selectedRecipe.id}`}
+                                          className="group block rounded-xl transition"
+                                        >
+                                          <p className="font-serif text-lg leading-tight text-[#211C19] transition group-hover:text-[#8F655E]">
+                                            {
+                                              selectedRecipe.title
+                                            }
+                                          </p>
+
+                                          <p className="mt-2 text-[7px] tracking-[0.12em] text-[#806E68]">
+                                            {
+                                              selectedRecipe.calories
+                                            }{" "}
+                                            CAL •{" "}
+                                            {
+                                              selectedRecipe.protein
+                                            }
+                                            G
+                                            PROTEIN
+                                          </p>
+
+                                          <div className="mt-3 flex items-center gap-2 text-[7px] tracking-[0.16em] text-[#9D6F67] transition group-hover:text-[#211C19]">
+                                            <span>
+                                              VIEW
+                                              RECIPE
+                                            </span>
+
+                                            <span className="font-serif text-sm transition group-hover:translate-x-1">
+                                              →
+                                            </span>
+                                          </div>
+                                        </Link>
+                                      )}
+
+                                      <div className="mt-4 flex items-center gap-4 border-t border-[#E1D3CE] pt-3">
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            openMealPicker(
+                                              day,
+                                              slot
+                                            )
+                                          }
+                                          className="text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
+                                        >
+                                          CHANGE
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            removeRecipe(
+                                              day,
+                                              slot
+                                            )
+                                          }
+                                          className="text-[7px] tracking-[0.18em] text-[#A18A83] transition hover:text-[#211C19]"
+                                        >
+                                          REMOVE
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openMealPicker(
+                                          day,
+                                          slot
+                                        )
+                                      }
+                                      className="group mt-4 flex min-h-[74px] w-full items-center justify-between gap-4 rounded-2xl border border-dashed border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:border-[#A77B73] hover:bg-[#F3E9E5]"
+                                    >
+                                      <span className="text-[8px] tracking-[0.18em] text-[#806E68]">
+                                        ADD MEAL
+                                      </span>
+
+                                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#EAD8D3] text-[#8F655E] transition group-hover:bg-[#DFC4BD]">
+                                        <PlusIcon />
+                                      </span>
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            }
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+                )
+              )}
             </div>
 
             <p className="mt-5 text-center text-[8px] leading-5 tracking-[0.12em] text-[#A18A83]">
-              PICK FROM THE RECIPE LIBRARY •
-              MIX + MATCH • REPEAT MEALS IF YOU
-              WANT
+              PICK FROM THE RECIPE LIBRARY • MIX + MATCH •
+              REPEAT MEALS IF YOU WANT
             </p>
           </section>
 
@@ -1184,8 +1412,8 @@ export default function MealPlansPage() {
                     </h3>
 
                     <p className="mt-2 max-w-lg text-sm leading-6 text-[#725F5A]">
-                      Add what you need and check
-                      things off as you shop.
+                      Add what you need and check things off as
+                      you shop.
                     </p>
                   </div>
                 </div>
@@ -1223,9 +1451,8 @@ export default function MealPlansPage() {
                   </h3>
 
                   <p className="mt-2 max-w-xl text-sm leading-6 text-[#725F5A]">
-                    A simple approach to getting
-                    ahead without spending your
-                    entire Sunday in the kitchen.
+                    A simple approach to getting ahead without
+                    spending your entire Sunday in the kitchen.
                   </p>
                 </div>
               </div>
@@ -1248,13 +1475,11 @@ export default function MealPlansPage() {
             </p>
 
             <p className="mt-3 max-w-4xl text-xs leading-6 text-[#806E68]">
-              Meal plans are examples, not
-              individualized nutrition
-              prescriptions. Energy and nutrition
-              needs vary by person, activity, health
-              needs and goals. Use the plans as a
-              flexible framework and adjust portions
-              or ingredients as needed.
+              Meal plans are examples, not individualized
+              nutrition prescriptions. Energy and nutrition
+              needs vary by person, activity, health needs and
+              goals. Use the plans as a flexible framework and
+              adjust portions or ingredients as needed.
             </p>
           </section>
 
@@ -1262,8 +1487,7 @@ export default function MealPlansPage() {
 
           <section className="border-t border-[#DED0CB] py-12 text-center">
             <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-              plan it. shop it. make the week
-              easier. ♡
+              plan it. shop it. make the week easier. ♡
             </p>
           </section>
         </section>
@@ -1276,7 +1500,8 @@ export default function MealPlansPage() {
           className="fixed inset-0 z-[100] flex items-end justify-center bg-[#211C19]/45 p-0 backdrop-blur-[2px] md:items-center md:p-6"
           onMouseDown={(event) => {
             if (
-              event.target === event.currentTarget
+              event.target ===
+              event.currentTarget
             ) {
               closeMealPicker();
             }
@@ -1288,8 +1513,18 @@ export default function MealPlansPage() {
             <div className="flex items-start justify-between gap-5 border-b border-[#DED0CB] px-6 py-6 md:px-8">
               <div>
                 <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                  {activeSlot.day} •{" "}
-                  {activeSlot.slot}
+                  {plannerWeek.find(
+                    (item) =>
+                      item.date ===
+                      activeSlot.day
+                  )?.weekday ??
+                    activeSlot.day}{" "}
+                  {plannerWeek.find(
+                    (item) =>
+                      item.date ===
+                      activeSlot.day
+                  )?.monthDay ?? ""}{" "}
+                  • {activeSlot.slot}
                 </p>
 
                 <h2 className="mt-3 font-serif text-3xl md:text-4xl">
@@ -1333,9 +1568,9 @@ export default function MealPlansPage() {
                   </h3>
 
                   <p className="mt-3 text-sm leading-6 text-[#806E68]">
-                    Add a meal that is not in the
-                    recipe library. It will be saved
-                    to this spot in your meal plan.
+                    Add a meal that is not in the recipe
+                    library. It will be saved to this spot in
+                    your meal plan.
                   </p>
 
                   <label className="mt-7 block">
@@ -1353,7 +1588,8 @@ export default function MealPlansPage() {
                       }
                       onKeyDown={(event) => {
                         if (
-                          event.key === "Enter"
+                          event.key ===
+                          "Enter"
                         ) {
                           event.preventDefault();
                           void saveCustomMeal();
@@ -1367,8 +1603,18 @@ export default function MealPlansPage() {
                   </label>
 
                   <p className="mt-3 text-[7px] tracking-[0.08em] text-[#A18A83]">
-                    {activeSlot.day} •{" "}
-                    {activeSlot.slot}
+                    {plannerWeek.find(
+                      (item) =>
+                        item.date ===
+                        activeSlot.day
+                    )?.weekday ??
+                      activeSlot.day}{" "}
+                    {plannerWeek.find(
+                      (item) =>
+                        item.date ===
+                        activeSlot.day
+                    )?.monthDay ?? ""}{" "}
+                    • {activeSlot.slot}
                   </p>
 
                   <button
@@ -1393,7 +1639,9 @@ export default function MealPlansPage() {
                 <div className="border-b border-[#DED0CB] px-6 py-5 md:px-8">
                   <button
                     type="button"
-                    onClick={openCustomMealForm}
+                    onClick={
+                      openCustomMealForm
+                    }
                     className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-[#CBA9A2] bg-[#EAD8D3] px-5 py-4 text-left transition hover:-translate-y-0.5 hover:bg-[#DFC4BD]"
                   >
                     <span>
@@ -1406,8 +1654,8 @@ export default function MealPlansPage() {
                       </span>
 
                       <span className="mt-1 block text-xs text-[#806E68]">
-                        Create a meal that is not in
-                        the recipe library.
+                        Create a meal that is not in the recipe
+                        library.
                       </span>
                     </span>
 
@@ -1443,7 +1691,9 @@ export default function MealPlansPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        setShowAllRecipes(false)
+                        setShowAllRecipes(
+                          false
+                        )
                       }
                       className={`rounded-full border px-4 py-2 text-[7px] tracking-[0.16em] transition ${
                         !showAllRecipes
@@ -1460,7 +1710,9 @@ export default function MealPlansPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        setShowAllRecipes(true)
+                        setShowAllRecipes(
+                          true
+                        )
                       }
                       className={`rounded-full border px-4 py-2 text-[7px] tracking-[0.16em] transition ${
                         showAllRecipes
@@ -1476,7 +1728,8 @@ export default function MealPlansPage() {
                 {/* RECIPE RESULTS */}
 
                 <div className="overflow-y-auto px-6 py-6 md:px-8">
-                  {filteredRecipes.length > 0 ? (
+                  {filteredRecipes.length >
+                  0 ? (
                     <div className="grid gap-3 md:grid-cols-2">
                       {filteredRecipes.map(
                         (recipe) => {
@@ -1489,11 +1742,14 @@ export default function MealPlansPage() {
                           const isSelected =
                             plannerSelections[
                               currentKey
-                            ]?.id === recipe.id;
+                            ]?.id ===
+                            recipe.id;
 
                           return (
                             <button
-                              key={recipe.id}
+                              key={
+                                recipe.id
+                              }
                               type="button"
                               onClick={() =>
                                 chooseRecipe(
@@ -1513,11 +1769,15 @@ export default function MealPlansPage() {
                                   </p>
 
                                   <h3 className="mt-2 font-serif text-xl leading-tight text-[#211C19]">
-                                    {recipe.title}
+                                    {
+                                      recipe.title
+                                    }
                                   </h3>
 
                                   <p className="mt-1 font-serif text-base italic text-[#A77B73]">
-                                    {recipe.subtitle}
+                                    {
+                                      recipe.subtitle
+                                    }
                                   </p>
                                 </div>
 
@@ -1532,7 +1792,9 @@ export default function MealPlansPage() {
                                 {recipe.goals.map(
                                   (goal) => (
                                     <span
-                                      key={goal}
+                                      key={
+                                        goal
+                                      }
                                       className="rounded-full bg-[#EAD8D3]/65 px-2.5 py-1.5 text-[6px] tracking-[0.12em] text-[#806E68]"
                                     >
                                       {goal.toUpperCase()}
@@ -1543,21 +1805,30 @@ export default function MealPlansPage() {
 
                               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-[#E1D3CE] pt-4 text-[7px] tracking-[0.12em] text-[#806E68]">
                                 <span>
-                                  {recipe.calories} CAL
+                                  {
+                                    recipe.calories
+                                  }{" "}
+                                  CAL
                                 </span>
 
                                 <span>
-                                  {recipe.protein}G
-                                  PROTEIN
+                                  {
+                                    recipe.protein
+                                  }
+                                  G PROTEIN
                                 </span>
 
                                 <span>
-                                  {recipe.carbs}G
-                                  CARBS
+                                  {
+                                    recipe.carbs
+                                  }
+                                  G CARBS
                                 </span>
 
                                 <span>
-                                  {recipe.time}
+                                  {
+                                    recipe.time
+                                  }
                                 </span>
                               </div>
                             </button>
@@ -1572,14 +1843,16 @@ export default function MealPlansPage() {
                       </p>
 
                       <p className="mt-3 text-sm text-[#806E68]">
-                        Try another search or
-                        view all recipes.
+                        Try another search or view all recipes.
                       </p>
 
                       <button
                         type="button"
                         onClick={() => {
-                          setRecipeSearch("");
+                          setRecipeSearch(
+                            ""
+                          );
+
                           setShowAllRecipes(
                             true
                           );

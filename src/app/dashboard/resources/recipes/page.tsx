@@ -9,6 +9,14 @@ type IconProps = {
   className?: string;
 };
 
+type MealSlot = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
+
+type PlannerDay = {
+  date: string;
+  weekday: string;
+  monthDay: string;
+};
+
 /* ---------------------------------
  * RECIPE ICONS
  * --------------------------------- */
@@ -180,7 +188,13 @@ function PotatoIcon({ className = "" }: IconProps) {
       aria-hidden="true"
     >
       <path d="M7 6.5c2.5-2.1 6.8-2 9.3.4 2.8 2.6 2.7 7.2-.1 9.9-2.6 2.5-7.2 2.5-9.8-.1-2.8-2.8-2.5-7.7.6-10.2Z" />
-      <circle cx="9" cy="9" r=".6" fill="currentColor" stroke="none" />
+      <circle
+        cx="9"
+        cy="9"
+        r=".6"
+        fill="currentColor"
+        stroke="none"
+      />
       <circle
         cx="14.5"
         cy="8.5"
@@ -440,7 +454,7 @@ const recipes = [
     protein: 45,
     carbs: 52,
     time: "30 MIN",
-    icon: ChickenIcon,
+    icon: PotatoIcon,
   },
   {
     id: "protein-snack-box",
@@ -582,15 +596,9 @@ const goalTypes = [
   "Post-Workout",
 ];
 
-type SelectedRecipe = {
-  id: string;
-  title: string;
-  meal: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  time: string;
-};
+/* ---------------------------------
+ * DATE HELPERS
+ * --------------------------------- */
 
 function formatDateForStorage(date: Date) {
   const year = date.getFullYear();
@@ -600,17 +608,134 @@ function formatDateForStorage(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function parseStorageDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+function addDays(value: string, amount: number) {
+  const date = parseStorageDate(value);
+
+  date.setDate(date.getDate() + amount);
+
+  return formatDateForStorage(date);
+}
+
+function buildPlannerWeek(startDate: string): PlannerDay[] {
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDays(startDate, index);
+    const parsed = parseStorageDate(date);
+
+    return {
+      date,
+      weekday: parsed
+        .toLocaleDateString("en-CA", {
+          weekday: "short",
+        })
+        .toUpperCase(),
+      monthDay: parsed
+        .toLocaleDateString("en-CA", {
+          month: "short",
+          day: "numeric",
+        })
+        .toUpperCase(),
+    };
+  });
+}
+
+function getDefaultMealSlot(
+  recipe: (typeof recipes)[number]
+): MealSlot {
+  if (recipe.meal === "Breakfast") {
+    return "BREAKFAST";
+  }
+
+  if (recipe.meal === "Lunch") {
+    return "LUNCH";
+  }
+
+  if (
+    recipe.meal === "Snacks" ||
+    recipe.meal === "Shakes"
+  ) {
+    return "SNACK";
+  }
+
+  return "DINNER";
+}
+
+function formatSavedMealLabel(
+  date: string,
+  slot: MealSlot
+) {
+  const parsed = parseStorageDate(date);
+
+  const dayName = parsed.toLocaleDateString("en-CA", {
+    weekday: "long",
+  });
+
+  return `${dayName}'s ${slot.toLowerCase()}`;
+}
+
+/* ---------------------------------
+ * PAGE
+ * --------------------------------- */
+
 export default function RecipesPage() {
   const [firstName, setFirstName] = useState("there");
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [isLoadingUser, setIsLoadingUser] =
+    useState(true);
 
-  const [userId, setUserId] = useState<string | null>(null);
-  const [selectedRecipe, setSelectedRecipe] =
-    useState<SelectedRecipe | null>(null);
+  const [userId, setUserId] =
+    useState<string | null>(null);
 
   const [meal, setMeal] = useState("All");
   const [goal, setGoal] = useState("All");
   const [search, setSearch] = useState("");
+
+  const [weekStartDate, setWeekStartDate] =
+    useState(
+      formatDateForStorage(new Date())
+    );
+
+  const [plannerRecipe, setPlannerRecipe] =
+    useState<
+      (typeof recipes)[number] | null
+    >(null);
+
+  const [
+    selectedPlanDate,
+    setSelectedPlanDate,
+  ] = useState("");
+
+  const [
+    selectedMealSlot,
+    setSelectedMealSlot,
+  ] = useState<MealSlot>("DINNER");
+
+  const [isSavingMeal, setIsSavingMeal] =
+    useState(false);
+
+  const [plannerMessage, setPlannerMessage] =
+    useState("");
+
+  const [plannerError, setPlannerError] =
+    useState("");
+
+  const [
+    lastAddedRecipeId,
+    setLastAddedRecipeId,
+  ] = useState<string | null>(null);
+
+  const plannerWeek = useMemo(
+    () => buildPlannerWeek(weekStartDate),
+    [weekStartDate]
+  );
+
+  /* ---------------------------------
+   * USER
+   * --------------------------------- */
 
   useEffect(() => {
     const getUser = async () => {
@@ -625,30 +750,33 @@ export default function RecipesPage() {
 
       setUserId(user.id);
 
-      const todayKey = formatDateForStorage(new Date());
-      const selectedRecipeKey = `selected-recipe-${user.id}-${todayKey}`;
-      const savedSelectedRecipe =
-        localStorage.getItem(selectedRecipeKey);
+      try {
+        const savedWeekStart =
+          window.localStorage.getItem(
+            `lockInMealPlannerWeekStart:${user.id}`
+          );
 
-      if (savedSelectedRecipe) {
-        try {
-          const parsedRecipe =
-            JSON.parse(savedSelectedRecipe) as SelectedRecipe;
-
-          if (parsedRecipe?.id && parsedRecipe?.title) {
-            setSelectedRecipe(parsedRecipe);
-          }
-        } catch {
-          localStorage.removeItem(selectedRecipeKey);
+        if (
+          savedWeekStart &&
+          /^\d{4}-\d{2}-\d{2}$/.test(
+            savedWeekStart
+          )
+        ) {
+          setWeekStartDate(savedWeekStart);
         }
+      } catch {
+        // Keep today's date if local storage is unavailable.
       }
 
-      const savedName = user.user_metadata?.name;
+      const savedName =
+        user.user_metadata?.name;
 
       if (savedName) {
         setFirstName(savedName);
       } else if (user.email) {
-        setFirstName(user.email.split("@")[0]);
+        setFirstName(
+          user.email.split("@")[0]
+        );
       }
 
       setIsLoadingUser(false);
@@ -657,46 +785,30 @@ export default function RecipesPage() {
     getUser();
   }, []);
 
-  const chooseRecipeForToday = (
-    recipe: (typeof recipes)[number]
-  ) => {
-    if (!userId) return;
-
-    const selected: SelectedRecipe = {
-      id: recipe.id,
-      title: recipe.title,
-      meal: recipe.meal,
-      calories: recipe.calories,
-      protein: recipe.protein,
-      carbs: recipe.carbs,
-      time: recipe.time,
-    };
-
-    const todayKey = formatDateForStorage(new Date());
-    const selectedRecipeKey = `selected-recipe-${userId}-${todayKey}`;
-
-    localStorage.setItem(
-      selectedRecipeKey,
-      JSON.stringify(selected)
-    );
-
-    setSelectedRecipe(selected);
-  };
-
   const initial =
-    !isLoadingUser && firstName !== "there"
-      ? firstName.charAt(0).toUpperCase()
+    !isLoadingUser &&
+    firstName !== "there"
+      ? firstName
+          .charAt(0)
+          .toUpperCase()
       : "♡";
 
+  /* ---------------------------------
+   * FILTERING
+   * --------------------------------- */
+
   const filteredRecipes = useMemo(() => {
-    const searchTerm = search.trim().toLowerCase();
+    const searchTerm =
+      search.trim().toLowerCase();
 
     return recipes.filter((recipe) => {
       const mealMatch =
-        meal === "All" || recipe.meal === meal;
+        meal === "All" ||
+        recipe.meal === meal;
 
       const goalMatch =
-        goal === "All" || recipe.goals.includes(goal);
+        goal === "All" ||
+        recipe.goals.includes(goal);
 
       const searchableText = [
         recipe.title,
@@ -709,11 +821,164 @@ export default function RecipesPage() {
 
       const searchMatch =
         searchTerm === "" ||
-        searchableText.includes(searchTerm);
+        searchableText.includes(
+          searchTerm
+        );
 
-      return mealMatch && goalMatch && searchMatch;
+      return (
+        mealMatch &&
+        goalMatch &&
+        searchMatch
+      );
     });
   }, [meal, goal, search]);
+
+  const hasActiveFilters =
+    search.trim() !== "" ||
+    meal !== "All" ||
+    goal !== "All";
+
+  const clearFilters = () => {
+    setSearch("");
+    setMeal("All");
+    setGoal("All");
+  };
+
+  /* ---------------------------------
+   * MEAL PLANNER
+   * --------------------------------- */
+
+  const openMealPlanner = (
+    recipe: (typeof recipes)[number]
+  ) => {
+    let startDate = weekStartDate;
+
+    if (userId) {
+      try {
+        const savedWeekStart =
+          window.localStorage.getItem(
+            `lockInMealPlannerWeekStart:${userId}`
+          );
+
+        if (
+          savedWeekStart &&
+          /^\d{4}-\d{2}-\d{2}$/.test(
+            savedWeekStart
+          )
+        ) {
+          startDate = savedWeekStart;
+          setWeekStartDate(
+            savedWeekStart
+          );
+        }
+      } catch {
+        // Use the week already loaded.
+      }
+    }
+
+    setPlannerRecipe(recipe);
+
+    setSelectedPlanDate(
+      startDate
+    );
+
+    setSelectedMealSlot(
+      getDefaultMealSlot(recipe)
+    );
+
+    setPlannerMessage("");
+    setPlannerError("");
+  };
+
+  const closeMealPlanner = () => {
+    if (isSavingMeal) {
+      return;
+    }
+
+    setPlannerRecipe(null);
+    setPlannerMessage("");
+    setPlannerError("");
+  };
+
+  const saveMealToPlanner =
+    async () => {
+      if (
+        !userId ||
+        !plannerRecipe ||
+        !selectedPlanDate ||
+        !selectedMealSlot
+      ) {
+        return;
+      }
+
+      setIsSavingMeal(true);
+      setPlannerMessage("");
+      setPlannerError("");
+
+      const { error } =
+        await supabase
+          .from(
+            "meal_plan_selections"
+          )
+          .upsert(
+            {
+              user_id: userId,
+
+              // Keep day populated for
+              // compatibility with the
+              // existing table.
+              day: selectedPlanDate,
+
+              plan_date:
+                selectedPlanDate,
+
+              meal_slot:
+                selectedMealSlot,
+
+              recipe_id:
+                plannerRecipe.id,
+
+              updated_at:
+                new Date().toISOString(),
+            },
+            {
+              onConflict:
+                "user_id,plan_date,meal_slot",
+            }
+          );
+
+      if (error) {
+        console.error(
+          "Error adding recipe to meal plan:",
+          error
+        );
+
+        setPlannerError(
+          "That meal could not be added just yet. Please try again. ♡"
+        );
+
+        setIsSavingMeal(false);
+
+        return;
+      }
+
+      setLastAddedRecipeId(
+        plannerRecipe.id
+      );
+
+      setPlannerMessage(
+        `Added to ${formatSavedMealLabel(
+          selectedPlanDate,
+          selectedMealSlot
+        )}. ♡`
+      );
+
+      setIsSavingMeal(false);
+    };
+
+  /* ---------------------------------
+   * FILTER BUTTON
+   * --------------------------------- */
 
   const FilterButton = ({
     label,
@@ -737,27 +1002,20 @@ export default function RecipesPage() {
     </button>
   );
 
-  const hasActiveFilters =
-    search.trim() !== "" ||
-    meal !== "All" ||
-    goal !== "All";
-
-  const clearFilters = () => {
-    setSearch("");
-    setMeal("All");
-    setGoal("All");
-  };
-
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
         <DashboardSidebar
           firstName={firstName}
           initial={initial}
-          isLoadingUser={isLoadingUser}
+          isLoadingUser={
+            isLoadingUser
+          }
         />
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
+          {/* HEADER */}
+
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
@@ -777,11 +1035,14 @@ export default function RecipesPage() {
             </Link>
           </header>
 
+          {/* SEARCH + FILTERS */}
+
           <section className="pb-10 pt-10">
             <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
               <div>
                 <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
-                  LOOKING FOR SOMETHING?
+                  LOOKING FOR
+                  SOMETHING?
                 </p>
 
                 <div className="relative mt-4">
@@ -791,7 +1052,10 @@ export default function RecipesPage() {
                     type="search"
                     value={search}
                     onChange={(event) =>
-                      setSearch(event.target.value)
+                      setSearch(
+                        event.target
+                          .value
+                      )
                     }
                     placeholder="Search recipes..."
                     aria-label="Search recipes"
@@ -801,7 +1065,9 @@ export default function RecipesPage() {
                   {search && (
                     <button
                       type="button"
-                      onClick={() => setSearch("")}
+                      onClick={() =>
+                        setSearch("")
+                      }
                       aria-label="Clear search"
                       className="absolute right-5 top-1/2 -translate-y-1/2 font-serif text-lg text-[#A77B73] transition hover:text-[#211C19]"
                     >
@@ -811,8 +1077,9 @@ export default function RecipesPage() {
                 </div>
 
                 <p className="mt-3 text-[8px] leading-4 tracking-[0.12em] text-[#A18A83]">
-                  TRY “SALMON”, “TURKEY”, “QUICK” OR “HIGH
-                  PROTEIN”
+                  TRY “SALMON”,
+                  “TURKEY”, “QUICK”
+                  OR “HIGH PROTEIN”
                 </p>
               </div>
 
@@ -821,18 +1088,32 @@ export default function RecipesPage() {
               <div className="grid gap-8 xl:grid-cols-2">
                 <div>
                   <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
-                    WHAT ARE WE EATING?
+                    WHAT ARE WE
+                    EATING?
                   </p>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {mealTypes.map((option) => (
-                      <FilterButton
-                        key={option}
-                        label={option}
-                        active={meal === option}
-                        onClick={() => setMeal(option)}
-                      />
-                    ))}
+                    {mealTypes.map(
+                      (option) => (
+                        <FilterButton
+                          key={
+                            option
+                          }
+                          label={
+                            option
+                          }
+                          active={
+                            meal ===
+                            option
+                          }
+                          onClick={() =>
+                            setMeal(
+                              option
+                            )
+                          }
+                        />
+                      )
+                    )}
                   </div>
                 </div>
 
@@ -842,14 +1123,27 @@ export default function RecipesPage() {
                   </p>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {goalTypes.map((option) => (
-                      <FilterButton
-                        key={option}
-                        label={option}
-                        active={goal === option}
-                        onClick={() => setGoal(option)}
-                      />
-                    ))}
+                    {goalTypes.map(
+                      (option) => (
+                        <FilterButton
+                          key={
+                            option
+                          }
+                          label={
+                            option
+                          }
+                          active={
+                            goal ===
+                            option
+                          }
+                          onClick={() =>
+                            setGoal(
+                              option
+                            )
+                          }
+                        />
+                      )
+                    )}
                   </div>
                 </div>
               </div>
@@ -858,15 +1152,20 @@ export default function RecipesPage() {
                 <div className="mt-7 flex justify-end border-t border-[#E1D3CE] pt-5">
                   <button
                     type="button"
-                    onClick={clearFilters}
+                    onClick={
+                      clearFilters
+                    }
                     className="text-[7px] tracking-[0.22em] text-[#9D6F67] transition hover:text-[#211C19]"
                   >
-                    CLEAR SEARCH + FILTERS
+                    CLEAR SEARCH +
+                    FILTERS
                   </button>
                 </div>
               )}
             </div>
           </section>
+
+          {/* RECIPES */}
 
           <section className="pb-12">
             <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
@@ -901,147 +1200,190 @@ export default function RecipesPage() {
               </div>
 
               <p className="font-serif text-lg italic text-[#A77B73]">
-                {filteredRecipes.length}{" "}
-                {filteredRecipes.length === 1
+                {
+                  filteredRecipes.length
+                }{" "}
+                {filteredRecipes.length ===
+                1
                   ? "recipe"
                   : "recipes"}{" "}
                 ♡
               </p>
             </div>
 
-            {filteredRecipes.length > 0 ? (
+            {filteredRecipes.length >
+            0 ? (
               <div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {filteredRecipes.map((recipe) => {
-                  const Icon = recipe.icon;
+                {filteredRecipes.map(
+                  (recipe) => {
+                    const Icon =
+                      recipe.icon;
 
-                  const originalIndex = recipes.findIndex(
-                    (item) => item.id === recipe.id
-                  );
+                    const originalIndex =
+                      recipes.findIndex(
+                        (item) =>
+                          item.id ===
+                          recipe.id
+                      );
 
-                  return (
-                    <article
-                      key={recipe.id}
-                      className="group flex min-h-[330px] flex-col justify-between rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:border-[#CBA9A2] hover:shadow-sm"
-                    >
-                      <div>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#EAD8D3] text-[#9D6F67] transition duration-300 group-hover:bg-[#E3CCC6]">
-                              <Icon className="h-6 w-6" />
+                    return (
+                      <article
+                        key={
+                          recipe.id
+                        }
+                        className="group flex min-h-[330px] flex-col justify-between rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:border-[#CBA9A2] hover:shadow-sm"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#EAD8D3] text-[#9D6F67] transition duration-300 group-hover:bg-[#E3CCC6]">
+                                <Icon className="h-6 w-6" />
+                              </div>
+
+                              <span className="font-serif text-sm text-[#C6A29A]">
+                                {String(
+                                  originalIndex +
+                                    1
+                                ).padStart(
+                                  2,
+                                  "0"
+                                )}
+                              </span>
                             </div>
 
-                            <span className="font-serif text-sm text-[#C6A29A]">
-                              {String(
-                                originalIndex + 1
-                              ).padStart(2, "0")}
+                            <span className="rounded-full border border-[#D6C3BD] px-3 py-1.5 text-[7px] tracking-[0.18em] text-[#8F655E]">
+                              {recipe.meal.toUpperCase()}
                             </span>
                           </div>
 
-                          <span className="rounded-full border border-[#D6C3BD] px-3 py-1.5 text-[7px] tracking-[0.18em] text-[#8F655E]">
-                            {recipe.meal.toUpperCase()}
-                          </span>
-                        </div>
-
-                        <h2 className="mt-7 font-serif text-3xl leading-tight">
-                          {recipe.title}
-                        </h2>
-
-                        <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                          {recipe.subtitle}
-                        </p>
-
-                        <div className="mt-5 flex flex-wrap gap-2">
-                          {recipe.goals.map((tag) => (
-                            <span
-                              key={tag}
-                              className="rounded-full bg-[#EAD8D3]/65 px-3 py-1.5 text-[7px] tracking-[0.12em] text-[#806E68]"
-                            >
-                              {tag.toUpperCase()}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="mt-8">
-                        <div className="grid grid-cols-4 gap-2 border-t border-[#E1D3CE] pt-4 text-center">
-                          <div>
-                            <p className="font-serif text-lg">
-                              {recipe.calories}
-                            </p>
-
-                            <p className="mt-1 text-[6px] tracking-[0.14em] text-[#806E68]">
-                              CAL
-                            </p>
-                          </div>
-
-                          <div className="border-l border-[#E1D3CE]">
-                            <p className="font-serif text-lg">
-                              {recipe.protein}g
-                            </p>
-
-                            <p className="mt-1 text-[6px] tracking-[0.14em] text-[#806E68]">
-                              PROTEIN
-                            </p>
-                          </div>
-
-                          <div className="border-l border-[#E1D3CE]">
-                            <p className="font-serif text-lg">
-                              {recipe.carbs}g
-                            </p>
-
-                            <p className="mt-1 text-[6px] tracking-[0.14em] text-[#806E68]">
-                              CARBS
-                            </p>
-                          </div>
-
-                          <div className="border-l border-[#E1D3CE]">
-                            <p className="font-serif text-lg">
-                              {recipe.time}
-                            </p>
-
-                            <p className="mt-1 text-[6px] tracking-[0.14em] text-[#806E68]">
-                              PREP
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                          <Link
-                            href={`/dashboard/resources/recipes/${recipe.id}`}
-                            className="flex items-center gap-3 text-[7px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
-                          >
-                            <span>VIEW RECIPE</span>
-
-                            <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition group-hover:bg-[#EAD8D3]">
-                              →
-                            </span>
-                          </Link>
-
-                          <button
-                            type="button"
-                            disabled={!userId}
-                            onClick={() =>
-                              chooseRecipeForToday(recipe)
+                          <h2 className="mt-7 font-serif text-3xl leading-tight">
+                            {
+                              recipe.title
                             }
-                            className={`rounded-full border px-4 py-2.5 text-[7px] tracking-[0.18em] transition ${
-                              selectedRecipe?.id === recipe.id
-                                ? "border-[#A77B73] bg-[#EAD8D3] text-[#6F514B]"
-                                : "border-[#CBA9A2] bg-[#F7F1ED] text-[#8F655E] hover:bg-[#EAD8D3]"
-                            } ${
-                              !userId
-                                ? "cursor-wait opacity-60"
-                                : ""
-                            }`}
-                          >
-                            {selectedRecipe?.id === recipe.id
-                              ? "CHOSEN FOR TODAY ✓"
-                              : "CHOOSE FOR TODAY"}
-                          </button>
+                          </h2>
+
+                          <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
+                            {
+                              recipe.subtitle
+                            }
+                          </p>
+
+                          <div className="mt-5 flex flex-wrap gap-2">
+                            {recipe.goals.map(
+                              (tag) => (
+                                <span
+                                  key={
+                                    tag
+                                  }
+                                  className="rounded-full bg-[#EAD8D3]/65 px-3 py-1.5 text-[7px] tracking-[0.12em] text-[#806E68]"
+                                >
+                                  {tag.toUpperCase()}
+                                </span>
+                              )
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </article>
-                  );
-                })}
+
+                        <div className="mt-8">
+                          <div className="grid grid-cols-4 gap-2 border-t border-[#E1D3CE] pt-4 text-center">
+                            <div>
+                              <p className="font-serif text-lg">
+                                {
+                                  recipe.calories
+                                }
+                              </p>
+
+                              <p className="mt-1 text-[6px] tracking-[0.14em] text-[#806E68]">
+                                CAL
+                              </p>
+                            </div>
+
+                            <div className="border-l border-[#E1D3CE]">
+                              <p className="font-serif text-lg">
+                                {
+                                  recipe.protein
+                                }
+                                g
+                              </p>
+
+                              <p className="mt-1 text-[6px] tracking-[0.14em] text-[#806E68]">
+                                PROTEIN
+                              </p>
+                            </div>
+
+                            <div className="border-l border-[#E1D3CE]">
+                              <p className="font-serif text-lg">
+                                {
+                                  recipe.carbs
+                                }
+                                g
+                              </p>
+
+                              <p className="mt-1 text-[6px] tracking-[0.14em] text-[#806E68]">
+                                CARBS
+                              </p>
+                            </div>
+
+                            <div className="border-l border-[#E1D3CE]">
+                              <p className="font-serif text-lg">
+                                {
+                                  recipe.time
+                                }
+                              </p>
+
+                              <p className="mt-1 text-[6px] tracking-[0.14em] text-[#806E68]">
+                                PREP
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                            <Link
+                              href={`/dashboard/resources/recipes/${recipe.id}`}
+                              className="flex items-center gap-3 text-[7px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
+                            >
+                              <span>
+                                VIEW
+                                RECIPE
+                              </span>
+
+                              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition group-hover:bg-[#EAD8D3]">
+                                →
+                              </span>
+                            </Link>
+
+                            <button
+                              type="button"
+                              disabled={
+                                !userId
+                              }
+                              onClick={() =>
+                                openMealPlanner(
+                                  recipe
+                                )
+                              }
+                              className={`rounded-full border px-4 py-2.5 text-[7px] tracking-[0.18em] transition ${
+                                lastAddedRecipeId ===
+                                recipe.id
+                                  ? "border-[#A77B73] bg-[#EAD8D3] text-[#6F514B]"
+                                  : "border-[#CBA9A2] bg-[#F7F1ED] text-[#8F655E] hover:bg-[#EAD8D3]"
+                              } ${
+                                !userId
+                                  ? "cursor-wait opacity-60"
+                                  : ""
+                              }`}
+                            >
+                              {lastAddedRecipeId ===
+                              recipe.id
+                                ? "ADDED TO YOUR WEEK ✓"
+                                : "USE THIS MEAL"}
+                            </button>
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  }
+                )}
               </div>
             ) : (
               <div className="mt-8 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-6 py-16 text-center">
@@ -1050,16 +1392,21 @@ export default function RecipesPage() {
                 </p>
 
                 <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#806E68]">
-                  Try another search or clear your filters to
-                  see the full recipe library.
+                  Try another search or
+                  clear your filters to
+                  see the full recipe
+                  library.
                 </p>
 
                 <button
                   type="button"
-                  onClick={clearFilters}
+                  onClick={
+                    clearFilters
+                  }
                   className="mt-6 rounded-full border border-[#CBA9A2] px-6 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
                 >
-                  CLEAR SEARCH + FILTERS
+                  CLEAR SEARCH +
+                  FILTERS
                 </button>
               </div>
             )}
@@ -1070,11 +1417,250 @@ export default function RecipesPage() {
               href="/dashboard/resources"
               className="text-[8px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
             >
-              ← BACK TO ALL RESOURCES
+              ← BACK TO ALL
+              RESOURCES
             </Link>
           </section>
         </section>
       </div>
+
+      {/* ---------------------------------
+          ADD TO WEEK MODAL
+          --------------------------------- */}
+
+      {plannerRecipe && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-[#211C19]/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-6"
+          onMouseDown={(event) => {
+            if (
+              event.target ===
+              event.currentTarget
+            ) {
+              closeMealPlanner();
+            }
+          }}
+        >
+          <section className="max-h-[92vh] w-full overflow-y-auto rounded-t-[2rem] border border-[#D8C6C0] bg-[#F7F1ED] px-5 pb-7 pt-5 shadow-2xl sm:max-w-2xl sm:rounded-[2rem] sm:p-8">
+            {/* MODAL HEADER */}
+
+            <div className="flex items-start justify-between gap-5">
+              <div>
+                <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
+                  ADD TO YOUR WEEK
+                </p>
+
+                <h2 className="mt-3 font-serif text-3xl leading-tight sm:text-4xl">
+                  {
+                    plannerRecipe.title
+                  }
+                </h2>
+
+                <p className="mt-2 font-serif text-base italic text-[#A77B73]">
+                  pick the day + where it
+                  belongs. ♡
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={
+                  closeMealPlanner
+                }
+                disabled={
+                  isSavingMeal
+                }
+                aria-label="Close meal planner"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#D6C3BD] font-serif text-xl text-[#8F655E] transition hover:bg-[#EAD8D3] disabled:opacity-50"
+              >
+                ×
+              </button>
+            </div>
+
+            {/* DAY */}
+
+            <div className="mt-7 border-t border-[#DED0CB] pt-6">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[8px] tracking-[0.28em] text-[#806E68]">
+                    1 · CHOOSE A DAY
+                  </p>
+
+                  <p className="mt-2 font-serif text-sm italic text-[#A18A83]">
+                    your current Build
+                    Your Week dates
+                  </p>
+                </div>
+
+                <Link
+                  href="/dashboard/resources/meal-plans"
+                  className="text-[7px] tracking-[0.18em] text-[#9D6F67] underline decoration-[#CBA9A2] underline-offset-4"
+                >
+                  CHANGE WEEK
+                </Link>
+              </div>
+
+              <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-7">
+                {plannerWeek.map(
+                  (day) => {
+                    const isSelected =
+                      selectedPlanDate ===
+                      day.date;
+
+                    return (
+                      <button
+                        key={
+                          day.date
+                        }
+                        type="button"
+                        onClick={() => {
+                          setSelectedPlanDate(
+                            day.date
+                          );
+
+                          setPlannerMessage(
+                            ""
+                          );
+
+                          setPlannerError(
+                            ""
+                          );
+                        }}
+                        className={`rounded-2xl border px-2 py-3 text-center transition ${
+                          isSelected
+                            ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
+                            : "border-[#D6C3BD] bg-[#FBF8F6] text-[#806E68] hover:border-[#A77B73]"
+                        }`}
+                      >
+                        <span className="block text-[7px] tracking-[0.18em]">
+                          {
+                            day.weekday
+                          }
+                        </span>
+
+                        <span
+                          className={`mt-1 block font-serif text-sm ${
+                            isSelected
+                              ? "text-[#EAD8D3]"
+                              : "text-[#A77B73]"
+                          }`}
+                        >
+                          {
+                            day.monthDay
+                          }
+                        </span>
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+
+            {/* SLOT */}
+
+            <div className="mt-7 border-t border-[#DED0CB] pt-6">
+              <p className="text-[8px] tracking-[0.28em] text-[#806E68]">
+                2 · CHOOSE A MEAL
+              </p>
+
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {(
+                  [
+                    "BREAKFAST",
+                    "LUNCH",
+                    "DINNER",
+                    "SNACK",
+                  ] as MealSlot[]
+                ).map((slot) => {
+                  const isSelected =
+                    selectedMealSlot ===
+                    slot;
+
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMealSlot(
+                          slot
+                        );
+
+                        setPlannerMessage(
+                          ""
+                        );
+
+                        setPlannerError(
+                          ""
+                        );
+                      }}
+                      className={`rounded-full border px-4 py-3 text-[7px] tracking-[0.16em] transition ${
+                        isSelected
+                          ? "border-[#A77B73] bg-[#EAD8D3] text-[#6F514B]"
+                          : "border-[#D6C3BD] bg-[#FBF8F6] text-[#806E68] hover:border-[#A77B73]"
+                      }`}
+                    >
+                      {slot}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ERROR */}
+
+            {plannerError && (
+              <div className="mt-6 rounded-2xl border border-[#D8B5AE] bg-[#F4E7E3] px-4 py-3 font-serif text-sm italic text-[#8C5E56]">
+                {plannerError}
+              </div>
+            )}
+
+            {/* SUCCESS */}
+
+            {plannerMessage && (
+              <div className="mt-6 rounded-2xl border border-[#D8C9C3] bg-[#F1E6E2] px-4 py-4">
+                <p className="font-serif text-base italic text-[#6F5D57]">
+                  {
+                    plannerMessage
+                  }
+                </p>
+
+                <Link
+                  href="/dashboard/resources/meal-plans"
+                  className="mt-3 inline-flex text-[7px] tracking-[0.2em] text-[#8F655E] underline decoration-[#CBA9A2] underline-offset-4"
+                >
+                  VIEW MY MEAL PLAN →
+                </Link>
+              </div>
+            )}
+
+            {/* SAVE */}
+
+            <button
+              type="button"
+              onClick={
+                saveMealToPlanner
+              }
+              disabled={
+                isSavingMeal ||
+                !selectedPlanDate ||
+                !selectedMealSlot
+              }
+              className="mt-7 w-full rounded-full bg-[#211C19] px-6 py-4 text-[8px] tracking-[0.25em] text-[#F7F1ED] transition hover:bg-[#3A312D] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isSavingMeal
+                ? "ADDING..."
+                : plannerMessage
+                  ? "ADD AGAIN →"
+                  : "ADD TO MEAL PLAN →"}
+            </button>
+
+            <p className="mt-3 text-center font-serif text-xs italic text-[#A18A83]">
+              If that slot already has a
+              meal, this one will replace
+              it. ♡
+            </p>
+          </section>
+        </div>
+      )}
     </main>
   );
 }

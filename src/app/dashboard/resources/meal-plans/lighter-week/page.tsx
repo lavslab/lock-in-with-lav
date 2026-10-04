@@ -8,16 +8,6 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 
 type MealSlot = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
 
-const plannerDays = [
-  "MONDAY",
-  "TUESDAY",
-  "WEDNESDAY",
-  "THURSDAY",
-  "FRIDAY",
-  "SATURDAY",
-  "SUNDAY",
-];
-
 const plannerSlots: MealSlot[] = [
   "BREAKFAST",
   "LUNCH",
@@ -228,6 +218,39 @@ function getRecipeId(href: string) {
   return href.split("/").filter(Boolean).pop() ?? "";
 }
 
+function formatDateForInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getTodayForInput() {
+  return formatDateForInput(new Date());
+}
+
+function parseDateInput(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+
+  return new Date(year, month - 1, day);
+}
+
+function addDays(date: Date, amount: number) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + amount);
+
+  return nextDate;
+}
+
+function getWeekdayName(date: Date) {
+  return date
+    .toLocaleDateString("en-US", {
+      weekday: "long",
+    })
+    .toUpperCase();
+}
+
 export default function LighterWeekPage() {
   const router = useRouter();
 
@@ -242,6 +265,9 @@ export default function LighterWeekPage() {
 
   const [applyPlanError, setApplyPlanError] =
     useState("");
+
+  const [selectedStartDate, setSelectedStartDate] =
+    useState(getTodayForInput);
 
   useEffect(() => {
     const getUser = async () => {
@@ -288,6 +314,11 @@ export default function LighterWeekPage() {
 
   const openPlanConfirmation = () => {
     setApplyPlanError("");
+
+    if (!selectedStartDate) {
+      setSelectedStartDate(getTodayForInput());
+    }
+
     setShowPlanConfirmation(true);
   };
 
@@ -302,6 +333,13 @@ export default function LighterWeekPage() {
 
   const applyLighterPlan = async () => {
     if (isApplyingPlan) {
+      return;
+    }
+
+    if (!selectedStartDate) {
+      setApplyPlanError(
+        "Choose the date you want Day 1 to begin."
+      );
       return;
     }
 
@@ -327,24 +365,37 @@ export default function LighterWeekPage() {
       return;
     }
 
+    const weekStartDate = selectedStartDate;
+    const startDate = parseDateInput(weekStartDate);
     const updatedAt = new Date().toISOString();
 
-    const rows = days.flatMap((day, dayIndex) =>
-      day.meals.map((meal, mealIndex) => ({
+    const rows = days.flatMap((day, dayIndex) => {
+      const planDate = addDays(startDate, dayIndex);
+      const planDateValue = formatDateForInput(planDate);
+      const weekday = getWeekdayName(planDate);
+
+      return day.meals.map((meal, mealIndex) => ({
         user_id: user.id,
-        day: plannerDays[dayIndex],
+        day: weekday,
+        plan_date: planDateValue,
         meal_slot: plannerSlots[mealIndex],
         recipe_id: getRecipeId(meal.href),
         updated_at: updatedAt,
-      }))
-    );
+      }));
+    });
 
     if (
       rows.length !== 28 ||
-      rows.some((row) => !row.recipe_id)
+      rows.some(
+        (row) =>
+          !row.recipe_id ||
+          !row.day ||
+          !row.plan_date ||
+          !row.meal_slot
+      )
     ) {
       console.error(
-        "Lighter Week could not be converted into 28 planner meals.",
+        "Lighter Week could not be converted into 28 dated planner meals.",
         rows
       );
 
@@ -359,7 +410,7 @@ export default function LighterWeekPage() {
     const { error } = await supabase
       .from("meal_plan_selections")
       .upsert(rows, {
-        onConflict: "user_id,day,meal_slot",
+        onConflict: "user_id,plan_date,meal_slot",
       });
 
     if (error) {
@@ -376,10 +427,23 @@ export default function LighterWeekPage() {
       return;
     }
 
+    try {
+      window.localStorage.setItem(
+        `lockInMealPlannerWeekStart:${user.id}`,
+        weekStartDate
+      );
+    } catch (storageError) {
+      console.warn(
+        "Could not save planner week start locally:",
+        storageError
+      );
+    }
+
     setShowPlanConfirmation(false);
     setIsApplyingPlan(false);
 
     router.push("/dashboard/resources/meal-plans");
+    router.refresh();
   };
 
   return (
@@ -678,11 +742,37 @@ export default function LighterWeekPage() {
             </div>
 
             <p className="mt-5 text-sm leading-6 text-[#75635D]">
-              This will replace the meals currently saved in
-              your weekly planner with the Lighter Week plan.
-              You can still change or remove individual meals
-              afterward.
+              Choose the date you want Day 1 to begin. This will
+              fill that date and the following 6 days with the
+              Lighter Week plan. You can still change or remove
+              individual meals afterward.
             </p>
+
+            <div className="mt-5">
+              <label
+                htmlFor="lighter-plan-start-date"
+                className="text-[7px] tracking-[0.24em] text-[#9D6F67]"
+              >
+                START THIS PLAN ON
+              </label>
+
+              <input
+                id="lighter-plan-start-date"
+                type="date"
+                value={selectedStartDate}
+                onChange={(event) => {
+                  setSelectedStartDate(event.target.value);
+                  setApplyPlanError("");
+                }}
+                disabled={isApplyingPlan}
+                className="mt-2 w-full rounded-xl border border-[#D9C6C0] bg-[#FBF8F6] px-4 py-3 text-sm text-[#211C19] outline-none transition focus:border-[#B78981] disabled:cursor-not-allowed disabled:opacity-60"
+              />
+
+              <p className="mt-2 font-serif text-xs italic text-[#A77B73]">
+                Day 1 starts here, then the next 6 days fill
+                automatically. ♡
+              </p>
+            </div>
 
             <div className="mt-5 rounded-2xl bg-[#EAD8D3]/45 px-5 py-4">
               <p className="font-serif text-lg italic text-[#A77B73]">
@@ -711,7 +801,10 @@ export default function LighterWeekPage() {
               <button
                 type="button"
                 onClick={applyLighterPlan}
-                disabled={isApplyingPlan}
+                disabled={
+                  isApplyingPlan ||
+                  !selectedStartDate
+                }
                 className="rounded-full bg-[#211C19] px-6 py-3.5 text-[8px] tracking-[0.2em] text-[#F7F1ED] transition hover:-translate-y-0.5 disabled:cursor-wait disabled:translate-y-0 disabled:opacity-70"
               >
                 {isApplyingPlan

@@ -8,16 +8,6 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 
 type MealSlot = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
 
-const plannerDays = [
-  "MONDAY",
-  "TUESDAY",
-  "WEDNESDAY",
-  "THURSDAY",
-  "FRIDAY",
-  "SATURDAY",
-  "SUNDAY",
-];
-
 const plannerSlots: MealSlot[] = [
   "BREAKFAST",
   "LUNCH",
@@ -228,6 +218,50 @@ function getRecipeId(href: string) {
   return href.split("/").filter(Boolean).pop() ?? "";
 }
 
+function formatLocalDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(dateString: string, amount: number) {
+  const [year, month, day] = dateString.split("-").map(Number);
+
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + amount);
+
+  return formatLocalDate(date);
+}
+
+function getTodayLocalDate() {
+  return formatLocalDate(new Date());
+}
+
+/*
+ * meal_plan_selections.day expects the weekday name
+ * (MONDAY, TUESDAY, etc.), while plan_date stores
+ * the actual calendar date.
+ */
+function getDayName(dateString: string) {
+  const [year, month, day] = dateString.split("-").map(Number);
+
+  const date = new Date(year, month - 1, day);
+
+  const dayNames = [
+    "SUNDAY",
+    "MONDAY",
+    "TUESDAY",
+    "WEDNESDAY",
+    "THURSDAY",
+    "FRIDAY",
+    "SATURDAY",
+  ];
+
+  return dayNames[date.getDay()];
+}
+
 export default function BalancedWeekPage() {
   const router = useRouter();
 
@@ -242,6 +276,9 @@ export default function BalancedWeekPage() {
 
   const [applyPlanError, setApplyPlanError] =
     useState("");
+
+  const [selectedStartDate, setSelectedStartDate] =
+    useState(getTodayLocalDate());
 
   useEffect(() => {
     const getUser = async () => {
@@ -286,8 +323,36 @@ export default function BalancedWeekPage() {
       ? firstName.charAt(0).toUpperCase()
       : "♡";
 
-  const openPlanConfirmation = () => {
+  const openPlanConfirmation = async () => {
     setApplyPlanError("");
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    let startDate = getTodayLocalDate();
+
+    if (user) {
+      try {
+        const savedWeekStart = window.localStorage.getItem(
+          `lockInMealPlannerWeekStart:${user.id}`
+        );
+
+        if (
+          savedWeekStart &&
+          /^\d{4}-\d{2}-\d{2}$/.test(savedWeekStart)
+        ) {
+          startDate = savedWeekStart;
+        }
+      } catch (error) {
+        console.warn(
+          "Could not read saved meal planner week:",
+          error
+        );
+      }
+    }
+
+    setSelectedStartDate(startDate);
     setShowPlanConfirmation(true);
   };
 
@@ -301,7 +366,7 @@ export default function BalancedWeekPage() {
   };
 
   const applyBalancedPlan = async () => {
-    if (isApplyingPlan) {
+    if (isApplyingPlan || !selectedStartDate) {
       return;
     }
 
@@ -327,24 +392,45 @@ export default function BalancedWeekPage() {
       return;
     }
 
+    const weekStartDate = selectedStartDate;
     const updatedAt = new Date().toISOString();
 
+    /*
+     * Build 28 planner rows.
+     *
+     * day = weekday name required by the existing database
+     * plan_date = actual calendar date selected by the user
+     */
     const rows = days.flatMap((day, dayIndex) =>
-      day.meals.map((meal, mealIndex) => ({
-        user_id: user.id,
-        day: plannerDays[dayIndex],
-        meal_slot: plannerSlots[mealIndex],
-        recipe_id: getRecipeId(meal.href),
-        updated_at: updatedAt,
-      }))
+      day.meals.map((meal, mealIndex) => {
+        const planDate = addDays(
+          weekStartDate,
+          dayIndex
+        );
+
+        return {
+          user_id: user.id,
+          day: getDayName(planDate),
+          plan_date: planDate,
+          meal_slot: plannerSlots[mealIndex],
+          recipe_id: getRecipeId(meal.href),
+          updated_at: updatedAt,
+        };
+      })
     );
 
     if (
       rows.length !== 28 ||
-      rows.some((row) => !row.recipe_id)
+      rows.some(
+        (row) =>
+          !row.recipe_id ||
+          !row.day ||
+          !row.plan_date ||
+          !row.meal_slot
+      )
     ) {
       console.error(
-        "Balanced Week could not be converted into 28 planner meals.",
+        "Balanced Week could not be converted into 28 dated planner meals.",
         rows
       );
 
@@ -356,10 +442,12 @@ export default function BalancedWeekPage() {
       return;
     }
 
+    console.log("Applying Balanced Week:", rows);
+
     const { error } = await supabase
       .from("meal_plan_selections")
       .upsert(rows, {
-        onConflict: "user_id,day,meal_slot",
+        onConflict: "user_id,plan_date,meal_slot",
       });
 
     if (error) {
@@ -369,17 +457,31 @@ export default function BalancedWeekPage() {
       );
 
       setApplyPlanError(
-        "We couldn't save the plan. Please try again."
+        error.message ||
+          "We couldn't save the plan. Please try again."
       );
 
       setIsApplyingPlan(false);
       return;
     }
 
+    try {
+      window.localStorage.setItem(
+        `lockInMealPlannerWeekStart:${user.id}`,
+        weekStartDate
+      );
+    } catch (error) {
+      console.warn(
+        "Could not save meal planner week:",
+        error
+      );
+    }
+
     setShowPlanConfirmation(false);
     setIsApplyingPlan(false);
 
     router.push("/dashboard/resources/meal-plans");
+    router.refresh();
   };
 
   return (
@@ -675,11 +777,39 @@ export default function BalancedWeekPage() {
             </div>
 
             <p className="mt-5 text-sm leading-6 text-[#75635D]">
-              This will replace the meals currently saved in
-              your weekly planner with the Balanced Week plan.
-              You can still change or remove individual meals
-              afterward.
+              Choose the date you want Day 1 to begin. This will
+              fill that date and the following 6 days with the
+              Balanced Week plan. You can still change or remove
+              individual meals afterward.
             </p>
+
+            {/* START DATE */}
+
+            <div className="mt-6">
+              <label
+                htmlFor="balanced-week-start-date"
+                className="block text-[8px] tracking-[0.25em] text-[#9D6F67]"
+              >
+                START THIS PLAN ON
+              </label>
+
+              <input
+                id="balanced-week-start-date"
+                type="date"
+                value={selectedStartDate}
+                onChange={(event) => {
+                  setSelectedStartDate(event.target.value);
+                  setApplyPlanError("");
+                }}
+                disabled={isApplyingPlan}
+                className="mt-3 w-full rounded-2xl border border-[#D6C3BD] bg-[#FBF8F6] px-4 py-3.5 text-sm text-[#211C19] outline-none transition focus:border-[#A77B73] disabled:opacity-60"
+              />
+
+              <p className="mt-2 font-serif text-sm italic text-[#A77B73]">
+                Day 1 starts here, then the next 6 days follow
+                automatically. ♡
+              </p>
+            </div>
 
             <div className="mt-5 rounded-2xl bg-[#EAD8D3]/45 px-5 py-4">
               <p className="font-serif text-lg italic text-[#A77B73]">
@@ -708,7 +838,9 @@ export default function BalancedWeekPage() {
               <button
                 type="button"
                 onClick={applyBalancedPlan}
-                disabled={isApplyingPlan}
+                disabled={
+                  isApplyingPlan || !selectedStartDate
+                }
                 className="rounded-full bg-[#211C19] px-6 py-3.5 text-[8px] tracking-[0.2em] text-[#F7F1ED] transition hover:-translate-y-0.5 disabled:cursor-wait disabled:translate-y-0 disabled:opacity-70"
               >
                 {isApplyingPlan
