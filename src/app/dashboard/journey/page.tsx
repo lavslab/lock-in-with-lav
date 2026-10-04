@@ -15,6 +15,10 @@ import {
   parseChallengeDate,
 } from "@/lib/challenge";
 
+type JourneyProgressRow = DailyProgressRow & {
+  manually_completed?: boolean;
+};
+
 type MeasurementRow = {
   id?: string;
   challenge_day: number;
@@ -73,6 +77,16 @@ function getCompletedCommitmentCount(row?: DailyProgressRow) {
 
   return commitments.filter(Boolean).length;
 }
+
+function isDayComplete(row?: JourneyProgressRow) {
+  if (!row) return false;
+
+  return (
+    getCompletedCommitmentCount(row) === 7 ||
+    row.manually_completed === true
+  );
+}
+
 
 function formatMeasurement(value: number | string | null | undefined) {
   if (value === null || value === undefined || value === "") return "—";
@@ -152,11 +166,17 @@ export default function JourneyPage() {
 
   const [challengeLength, setChallengeLength] = useState(0);
 
-  const [dailyProgress, setDailyProgress] = useState<DailyProgressRow[]>([]);
+  const [dailyProgress, setDailyProgress] =
+  useState<JourneyProgressRow[]>([]);
 
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [dayDetailsOpen, setDayDetailsOpen] = useState(false);
   const [dayDetailsLoading, setDayDetailsLoading] = useState(false);
+  const [manualCompletionLoading, setManualCompletionLoading] =
+  useState(false);
+
+const [manualCompletionError, setManualCompletionError] =
+  useState<string | null>(null);
 
   const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(
     null
@@ -218,8 +238,8 @@ export default function JourneyPage() {
         supabase
           .from("daily_progress")
           .select(
-            "challenge_day, move, get_outside, hydrate, read, nourish, document, no_alcohol"
-          )
+  "challenge_day, move, get_outside, hydrate, read, nourish, document, no_alcohol, manually_completed"
+)
           .eq("user_id", user.id)
           .order("challenge_day", { ascending: true }),
 
@@ -309,12 +329,12 @@ export default function JourneyPage() {
   const dayNumber = String(safeCurrentDay).padStart(2, "0");
 
   const completedDayNumbers = dailyProgress
-    .filter(
-      (row) =>
-        row.challenge_day <= challengeLength &&
-        getCompletedCommitmentCount(row) === 7
-    )
-    .map((row) => row.challenge_day);
+  .filter(
+    (row) =>
+      row.challenge_day <= challengeLength &&
+      isDayComplete(row)
+  )
+  .map((row) => row.challenge_day);
 
   const completedDays = completedDayNumbers.length;
 
@@ -343,12 +363,22 @@ export default function JourneyPage() {
   );
 
   const selectedCommitmentCount =
-    getCompletedCommitmentCount(selectedProgress);
+  getCompletedCommitmentCount(selectedProgress);
 
-  const selectedIsComplete = selectedCommitmentCount === 7;
-  const selectedIsCurrent = activeSelectedDay === safeCurrentDay;
-  const selectedIsPast = activeSelectedDay < safeCurrentDay;
-  const selectedIsUpcoming = activeSelectedDay > safeCurrentDay;
+const selectedWasManuallyCompleted =
+  selectedProgress?.manually_completed === true;
+
+const selectedIsComplete =
+  isDayComplete(selectedProgress);
+
+const selectedIsCurrent =
+  activeSelectedDay === safeCurrentDay;
+
+const selectedIsPast =
+  activeSelectedDay < safeCurrentDay;
+
+const selectedIsUpcoming =
+  activeSelectedDay > safeCurrentDay;
 
   const challengeDays = Array.from(
     { length: challengeLength },
@@ -366,6 +396,7 @@ export default function JourneyPage() {
     setSelectedPhotoPath(null);
     setPhotoError(null);
     setSelectedMeasurement(null);
+    setManualCompletionError(null);
 
     const {
       data: { user },
@@ -670,7 +701,112 @@ export default function JourneyPage() {
       event.target.value = "";
     }
   }
+async function setManualDayCompletion(complete: boolean) {
+  const day = activeSelectedDay;
 
+  if (
+    !day ||
+    !selectedIsPast ||
+    selectedCommitmentCount === 7
+  ) {
+    return;
+  }
+
+  setManualCompletionLoading(true);
+  setManualCompletionError(null);
+
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      throw (
+        userError ??
+        new Error(
+          "You need to be signed in to update this day."
+        )
+      );
+    }
+
+    const existingProgress = dailyProgress.find(
+      (row) => row.challenge_day === day
+    );
+
+    const progressDate = selectedDate
+      ? formatDateForDatabase(selectedDate)
+      : new Date().toISOString().slice(0, 10);
+
+    const updatedProgress = {
+      user_id: user.id,
+      challenge_day: day,
+      progress_date: progressDate,
+
+      move: existingProgress?.move ?? false,
+      get_outside:
+        existingProgress?.get_outside ?? false,
+      hydrate: existingProgress?.hydrate ?? false,
+      read: existingProgress?.read ?? false,
+      nourish: existingProgress?.nourish ?? false,
+      document: existingProgress?.document ?? false,
+      no_alcohol:
+        existingProgress?.no_alcohol ?? false,
+
+      manually_completed: complete,
+
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: saveError } = await supabase
+      .from("daily_progress")
+      .upsert(updatedProgress, {
+        onConflict: "user_id,challenge_day",
+      });
+
+    if (saveError) {
+      throw saveError;
+    }
+
+    setDailyProgress((previous) => {
+      const alreadyExists = previous.some(
+        (row) => row.challenge_day === day
+      );
+
+      if (alreadyExists) {
+        return previous.map((row) =>
+          row.challenge_day === day
+            ? {
+                ...row,
+                manually_completed: complete,
+              }
+            : row
+        );
+      }
+
+      return [
+        ...previous,
+        updatedProgress as JourneyProgressRow,
+      ].sort(
+        (a, b) =>
+          a.challenge_day - b.challenge_day
+      );
+    });
+  } catch (error) {
+    console.error(
+      "Could not update manual day completion:",
+      error
+    );
+
+    setManualCompletionError(
+      error instanceof Error
+        ? error.message
+        : "Could not update this day. Please try again."
+    );
+  } finally {
+    setManualCompletionLoading(false);
+  }
+}
   function closeDayDetails() {
     setDayDetailsOpen(false);
   }
@@ -864,9 +1000,10 @@ export default function JourneyPage() {
                   );
 
                   const completedForDay =
-                    getCompletedCommitmentCount(progressForDay);
+  getCompletedCommitmentCount(progressForDay);
 
-                  const isComplete = completedForDay === 7;
+const isComplete =
+  isDayComplete(progressForDay);
                   const isCurrent = day === safeCurrentDay;
                   const isUpcoming = day > safeCurrentDay;
                   const isSelected = day === activeSelectedDay;
@@ -1218,13 +1355,57 @@ export default function JourneyPage() {
                         </p>
 
                         <p className="mt-2 font-serif text-lg italic text-[#A77B73]">
-                          {selectedIsComplete
-                            ? "you did everything you said you would. ♡"
-                            : selectedIsCurrent
-                              ? "the day isn't over yet. ♡"
-                              : "part of the story, too. ♡"}
-                        </p>
+  {selectedWasManuallyCompleted
+    ? "you marked this day complete. ♡"
+    : selectedIsComplete
+      ? "you did everything you said you would. ♡"
+      : selectedIsCurrent
+        ? "the day isn't over yet. ♡"
+        : "part of the story, too. ♡"}
+</p>
                       </div>
+
+                      {selectedIsPast &&
+  selectedCommitmentCount < 7 && (
+    <div className="mt-5 rounded-[1.5rem] border border-[#D8C5BF] bg-[#F7F1ED] p-5">
+      <p className="text-[8px] tracking-[0.25em] text-[#8F655E]">
+        MANUAL COMPLETION
+      </p>
+
+      <p className="mt-2 font-serif text-lg italic text-[#806E68]">
+        {selectedWasManuallyCompleted
+          ? "Marked complete manually. Your original check-ins are still saved. ♡"
+          : "Did you finish this day but forget to check everything off?"}
+      </p>
+
+      {manualCompletionError && (
+        <p className="mt-3 text-[8px] leading-5 tracking-[0.10em] text-[#9D6F67]">
+          {manualCompletionError}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={() =>
+          setManualDayCompletion(
+            !selectedWasManuallyCompleted
+          )
+        }
+        disabled={manualCompletionLoading}
+        className={`mt-5 w-full rounded-full px-6 py-3 text-[8px] tracking-[0.20em] transition disabled:cursor-wait disabled:opacity-60 ${
+          selectedWasManuallyCompleted
+            ? "border border-[#CBA9A2] bg-[#FBF8F6] text-[#806E68] hover:bg-[#EAD8D3]"
+            : "bg-[#A77B73] text-[#FBF8F6] hover:bg-[#8F655E]"
+        }`}
+      >
+        {manualCompletionLoading
+          ? "SAVING..."
+          : selectedWasManuallyCompleted
+            ? "UNDO MANUAL COMPLETION"
+            : "MARK DAY COMPLETE ♡"}
+      </button>
+    </div>
+  )}
 
                       {selectedIsComplete && (
                         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#A77B73] text-[#FBF8F6]">

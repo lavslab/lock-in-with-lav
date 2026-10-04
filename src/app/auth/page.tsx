@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthPage() {
@@ -230,6 +232,28 @@ export default function AuthPage() {
       setResending(false);
     }
   }
+  async function handleForgotPassword() {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await Browser.open({
+        url: "https://www.lockinwithlav.com/auth/forgot-password",
+      });
+      return;
+    } catch (browserError) {
+      console.error(
+        "Could not open password reset in browser:",
+        browserError
+      );
+
+      window.location.href =
+        "https://www.lockinwithlav.com/auth/forgot-password";
+
+      return;
+    }
+  }
+
+  switchMode("forgot");
+}
 
   function switchMode(newMode: "login" | "signup" | "forgot") {
     setMode(newMode);
@@ -445,7 +469,7 @@ export default function AuthPage() {
                     <div className="mt-3 text-right">
                       <button
                         type="button"
-                        onClick={() => switchMode("forgot")}
+                        onClick={handleForgotPassword}
                         className="font-serif text-sm italic text-[#A77B73] transition hover:text-[#806E68]"
                       >
                         Forgot password?
