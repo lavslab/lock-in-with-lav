@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -324,7 +324,9 @@ export default function MealPlansPage() {
     useState<MealSlot>("BREAKFAST");
 
   const [recipeSearch, setRecipeSearch] = useState("");
-  const [customMealName, setCustomMealName] = useState("");
+const [pickerCategory, setPickerCategory] =
+  useState<MealSlot>("BREAKFAST");
+const [customMealName, setCustomMealName] = useState("");
 
   const [isSavingMeal, setIsSavingMeal] = useState(false);
   const [isSavingCustomMeal, setIsSavingCustomMeal] =
@@ -335,6 +337,7 @@ export default function MealPlansPage() {
 
   const [activeHelperTab, setActiveHelperTab] =
     useState<HelperTab>(null);
+  const planSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [unit, setUnit] = useState<Unit>("imperial");
   const [sex, setSex] = useState<Sex>("female");
@@ -691,15 +694,16 @@ export default function MealPlansPage() {
   };
 
   const openMealPicker = (
-    planDate: string,
-    slot: MealSlot
-  ) => {
-    setPickerDate(planDate);
-    setPickerSlot(slot);
-    setRecipeSearch("");
-    setCustomMealName("");
-    setPickerOpen(true);
-  };
+  planDate: string,
+  slot: MealSlot
+) => {
+  setPickerDate(planDate);
+  setPickerSlot(slot);
+  setPickerCategory(slot);
+  setRecipeSearch("");
+  setCustomMealName("");
+  setPickerOpen(true);
+};
 
   const closeMealPicker = () => {
     if (isSavingMeal || isSavingCustomMeal) return;
@@ -1018,31 +1022,17 @@ export default function MealPlansPage() {
   };
 
   const filteredRecipes = useMemo(() => {
-    const search = recipeSearch
-      .trim()
-      .toLowerCase();
+  const search = recipeSearch.trim().toLowerCase();
 
-    const sorted = [...recipeLibrary].sort(
-      (a, b) => {
-        const aMatches =
-          a.category === pickerSlot ? 0 : 1;
-
-        const bMatches =
-          b.category === pickerSlot ? 0 : 1;
-
-        if (aMatches !== bMatches)
-          return aMatches - bMatches;
-
-        return a.title.localeCompare(b.title);
-      }
-    );
-
-    if (!search) return sorted;
-
-    return sorted.filter((recipe) =>
-      recipe.title.toLowerCase().includes(search)
-    );
-  }, [recipeSearch, pickerSlot]);
+  return recipeLibrary
+    .filter((recipe) => recipe.category === pickerCategory)
+    .filter((recipe) =>
+      search
+        ? recipe.title.toLowerCase().includes(search)
+        : true
+    )
+    .sort((a, b) => a.title.localeCompare(b.title));
+}, [recipeSearch, pickerCategory]);
 
   const selectedPickerDay = plannerWeek.find(
     (day) => day.date === pickerDate
@@ -1548,9 +1538,16 @@ export default function MealPlansPage() {
                       {macroResult && (
                         <button
                           type="button"
-                          onClick={() =>
-                            setActiveHelperTab("plan")
-                          }
+                          onClick={() => {
+  setActiveHelperTab("plan");
+
+  window.setTimeout(() => {
+    planSectionRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 100);
+}}
                           className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#211C19] px-5 py-3.5 text-[7px] tracking-[0.18em] text-[#F7F1ED] transition hover:-translate-y-0.5"
                         >
                           SEE MY PLAN RECOMMENDATION →
@@ -1562,7 +1559,10 @@ export default function MealPlansPage() {
               )}
 
               {activeHelperTab === "plan" && (
-                <div className="border-t border-[#DED0CB] p-5 md:p-7">
+                <div
+  ref={planSectionRef}
+  className="scroll-mt-6 border-t border-[#DED0CB] p-5 md:p-7"
+>
                   <div className="flex items-start justify-between gap-5">
                     <div>
                       <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
@@ -2201,70 +2201,134 @@ export default function MealPlansPage() {
             </div>
 
             <div className="p-5 sm:p-6">
-              <section>
-                <div>
-                  <p className="text-[7px] tracking-[0.24em] text-[#9D6F67]">
-                    FROM THE RECIPE LIBRARY
-                  </p>
+             
+               <section>
+  <div>
+    <p className="text-[7px] tracking-[0.24em] text-[#9D6F67]">
+      FROM THE RECIPE LIBRARY
+    </p>
 
-                  <p className="mt-1 font-serif text-base italic text-[#A77B73]">
-                    pick one of Lav&apos;s recipes. ♡
-                  </p>
+    <p className="mt-1 font-serif text-base italic text-[#A77B73]">
+      pick one of Lav&apos;s recipes. ♡
+    </p>
+  </div>
+
+  {/* SEARCH */}
+  <div className="mt-4">
+    <input
+      type="text"
+      value={recipeSearch}
+      onChange={(event) =>
+        setRecipeSearch(event.target.value)
+      }
+      placeholder={`Search ${pickerCategory.toLowerCase()} recipes...`}
+      className="w-full rounded-xl border border-[#D6C3BD] bg-[#FBF8F6] px-4 py-3 text-[16px] text-[#211C19] outline-none placeholder:text-[#AA9690] focus:border-[#A77B73]"
+    />
+  </div>
+
+  {/* ACTIVE CATEGORY */}
+  <div className="mt-5 flex items-center justify-between gap-3">
+    <div>
+      <p className="text-[7px] tracking-[0.22em] text-[#9D6F67]">
+        {pickerCategory}
+      </p>
+
+      <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
+        suggestions for this category. ♡
+      </p>
+    </div>
+
+    <span className="rounded-full bg-[#EAD8D3] px-3 py-1.5 text-[6px] tracking-[0.15em] text-[#8F655E]">
+      {filteredRecipes.length}{" "}
+      {filteredRecipes.length === 1 ? "RECIPE" : "RECIPES"}
+    </span>
+  </div>
+
+  {/* RECIPES */}
+  <div className="mt-3 max-h-[260px] overflow-y-auto rounded-2xl border border-[#DED0CB] bg-[#FBF8F6]">
+    {filteredRecipes.length > 0 ? (
+      <div className="divide-y divide-[#E8DDD9]">
+        {filteredRecipes.map((recipe) => (
+          <button
+            key={recipe.id}
+            type="button"
+            disabled={
+              isSavingMeal ||
+              isSavingCustomMeal
+            }
+            onClick={() =>
+              saveRecipeToPlanner(recipe)
+            }
+            className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F4ECE8] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <div className="min-w-0">
+              <p className="font-serif text-base leading-snug text-[#211C19]">
+                {recipe.title}
+              </p>
+
+              <p className="mt-1 text-[6px] tracking-[0.15em] text-[#9D6F67]">
+                {recipe.category}
+              </p>
+            </div>
+
+            <span className="shrink-0 font-serif text-lg text-[#A77B73]">
+              +
+            </span>
+          </button>
+        ))}
+      </div>
+    ) : (
+      <div className="px-4 py-8 text-center">
+        <p className="font-serif text-base italic text-[#A77B73]">
+          no {pickerCategory.toLowerCase()} recipes found. ♡
+        </p>
+
+        {recipeSearch && (
+          <button
+            type="button"
+            onClick={() => setRecipeSearch("")}
+            className="mt-3 text-[7px] tracking-[0.16em] text-[#8F655E] underline underline-offset-4"
+          >
+            CLEAR SEARCH
+          </button>
+        )}
+      </div>
+    )}
+  </div>
+
+  {/* OTHER CATEGORIES */}
+  <div className="mt-5 border-t border-[#DED0CB] pt-5">
+    <p className="text-[7px] tracking-[0.22em] text-[#9D6F67]">
+      OTHER CATEGORIES
+    </p>
+
+    <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
+      craving something else? ♡
+    </p>
+
+    <div className="mt-3 flex flex-wrap gap-2">
+      {mealSlots
+        .filter((slot) => slot !== pickerCategory)
+        .map((slot) => (
+          <button
+            key={slot}
+            type="button"
+            onClick={() => {
+              setPickerCategory(slot);
+              setRecipeSearch("");
+            }}
+            className="rounded-full border border-[#CBA9A2] bg-[#FBF8F6] px-4 py-2.5 text-[7px] tracking-[0.15em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
+          >
+            {slot}
+          </button>
+        ))}
+    </div>
+  </div>
+</section>
+
+                 
                 </div>
-
-                <div className="mt-4">
-                  <input
-                    type="text"
-                    value={recipeSearch}
-                    onChange={(event) =>
-                      setRecipeSearch(event.target.value)
-                    }
-                    placeholder="Search recipes..."
-                    className="w-full rounded-xl border border-[#D6C3BD] bg-[#FBF8F6] px-4 py-3 text-[16px] text-[#211C19] outline-none placeholder:text-[#AA9690] focus:border-[#A77B73]"
-                  />
-                </div>
-
-                <div className="mt-4 max-h-[300px] overflow-y-auto rounded-2xl border border-[#DED0CB] bg-[#FBF8F6]">
-                  {filteredRecipes.length > 0 ? (
-                    <div className="divide-y divide-[#E8DDD9]">
-                      {filteredRecipes.map((recipe) => (
-                        <button
-                          key={recipe.id}
-                          type="button"
-                          disabled={
-                            isSavingMeal ||
-                            isSavingCustomMeal
-                          }
-                          onClick={() =>
-                            saveRecipeToPlanner(recipe)
-                          }
-                          className="flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F4ECE8] disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          <div className="min-w-0">
-                            <p className="font-serif text-base leading-snug text-[#211C19]">
-                              {recipe.title}
-                            </p>
-
-                            <p className="mt-1 text-[6px] tracking-[0.15em] text-[#9D6F67]">
-                              {recipe.category}
-                            </p>
-                          </div>
-
-                          <span className="shrink-0 font-serif text-lg text-[#A77B73]">
-                            +
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="px-4 py-8 text-center">
-                      <p className="font-serif text-base italic text-[#A77B73]">
-                        no recipes found. ♡
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </section>
+             
 
               <div className="my-7 flex items-center gap-3">
                 <div className="h-px flex-1 bg-[#DED0CB]" />
@@ -2409,10 +2473,10 @@ export default function MealPlansPage() {
                   CANCEL
                 </button>
               </div>
-            </div>
-          </div>
+                     </div>
         </div>
       )}
+
     </main>
   );
-}      
+}
