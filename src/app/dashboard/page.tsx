@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentChallengeDay } from "@/lib/challenge";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import { workouts } from "@/lib/workouts";
 
 const commitments = [
   {
@@ -251,6 +252,91 @@ const calculatedDay =
     profile.challenge_start_date,
     profileChallengeLength
   );
+  /*
+ * GUIDE → TODAY WORKOUT SYNC
+ *
+ * The Guide is a repeating 7-day schedule:
+ * Challenge Day 01 → Guide Day 01
+ * Challenge Day 07 → Guide Day 07
+ * Challenge Day 08 → Guide Day 01
+ * etc.
+ */
+const today = new Date();
+const jsDay = today.getDay();
+
+const guideDayNumber =
+  jsDay === 0 ? 7 : jsDay;
+
+const guideDayId = String(
+  guideDayNumber
+).padStart(2, "0");
+
+const {
+  data: userTemplate,
+  error: templateError,
+} = await supabase
+  .from("user_templates")
+  .select("workouts")
+  .eq("user_id", user.id)
+  .maybeSingle();
+
+if (templateError) {
+  console.error(
+    "Could not load Guide workout schedule:",
+    templateError
+  );
+}
+
+const guideWorkoutIds =
+  userTemplate?.workouts &&
+  typeof userTemplate.workouts === "object" &&
+  Array.isArray(
+    (
+      userTemplate.workouts as Record<
+        string,
+        unknown
+      >
+    )[guideDayId]
+  )
+    ? ((
+        userTemplate.workouts as Record<
+          string,
+          unknown
+        >
+      )[guideDayId] as string[])
+    : [];
+
+const scheduledGuideWorkouts: SelectedWorkout[] =
+  guideWorkoutIds
+    .map((workoutId) => {
+      const workout = workouts.find(
+        (item) => item.id === workoutId
+      );
+
+      if (!workout) {
+        return null;
+      }
+
+      return {
+        id: workout.id,
+        title: workout.title,
+        subtitle: workout.subtitle,
+        type: workout.type,
+        time: workout.time,
+        equipment: Array.isArray(
+          workout.equipment
+        )
+          ? workout.equipment.join(" + ")
+          : workout.equipment,
+        exercises: workout.exercises,
+      };
+    })
+    .filter(
+      (
+        workout
+      ): workout is SelectedWorkout =>
+        workout !== null
+    );
 
 const {
   data: savedProgress,
@@ -285,16 +371,67 @@ if (progressError) {
   );
 
   const savedWorkouts =
-    Array.isArray(savedProgress.selected_workouts)
-      ? (savedProgress.selected_workouts as SelectedWorkout[])
-      : [];
+  Array.isArray(savedProgress.selected_workouts)
+    ? (savedProgress.selected_workouts as SelectedWorkout[])
+    : [];
 
-  setSelectedWorkouts(savedWorkouts);
-  setSelectedWorkout(
-    savedWorkouts.length > 0
-      ? savedWorkouts[0]
-      : null
-  );
+/*
+ * Merge today's Guide workouts with anything
+ * already saved manually on Today.
+ *
+ * Existing Today selections are kept.
+ * Guide workouts are only added if they aren't
+ * already in selected_workouts.
+ */
+const mergedWorkouts = [
+  ...savedWorkouts,
+  ...scheduledGuideWorkouts.filter(
+    (scheduledWorkout) =>
+      !savedWorkouts.some(
+        (savedWorkout) =>
+          savedWorkout.id ===
+          scheduledWorkout.id
+      )
+  ),
+];
+
+setSelectedWorkouts(mergedWorkouts);
+
+setSelectedWorkout(
+  mergedWorkouts.length > 0
+    ? mergedWorkouts[0]
+    : null
+);
+
+/*
+ * If the Guide added something new,
+ * persist the merged list to today's
+ * daily_progress row.
+ */
+if (
+  mergedWorkouts.length !==
+  savedWorkouts.length
+) {
+  const { error: workoutSyncError } =
+    await supabase
+      .from("daily_progress")
+      .update({
+        selected_workouts:
+          mergedWorkouts,
+      })
+      .eq("user_id", user.id)
+      .eq(
+        "challenge_day",
+        calculatedDay
+      );
+
+  if (workoutSyncError) {
+    console.error(
+      "Could not sync Guide workout to Today:",
+      workoutSyncError
+    );
+  }
+}
 
   setProgress({
     move: savedProgress.move,
@@ -308,8 +445,42 @@ if (progressError) {
   });
 } else {
   setWaterBottles(0);
-  setSelectedWorkouts([]);
-  setSelectedWorkout(null);
+
+  // No daily_progress row exists yet for today.
+  // Still show any workouts scheduled from The Guide.
+  setSelectedWorkouts(scheduledGuideWorkouts);
+
+  setSelectedWorkout(
+    scheduledGuideWorkouts.length > 0
+      ? scheduledGuideWorkouts[0]
+      : null
+  );
+
+  // If The Guide has a workout scheduled for today,
+  // create today's progress row with that workout already selected.
+  if (scheduledGuideWorkouts.length > 0) {
+    const { error: createProgressError } = await supabase
+      .from("daily_progress")
+      .upsert(
+        {
+          user_id: user.id,
+          challenge_day: calculatedDay,
+          progress_date: new Date().toISOString().split("T")[0],
+          selected_workouts: scheduledGuideWorkouts,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,challenge_day",
+        }
+      );
+
+    if (createProgressError) {
+      console.error(
+        "Could not create today's scheduled workout:",
+        createProgressError
+      );
+    }
+  }
 }
 
       /*

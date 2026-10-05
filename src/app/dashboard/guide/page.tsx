@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -18,28 +17,31 @@ const trainingWeek = [
     description: "Choose the lower-body session that fits your day.",
     workouts: [
       {
+        id: "lower-body-foundation",
         title: "Lower Body Foundation",
         href: "/dashboard/resources/workouts/lower-body-foundation",
         meta: "BEGINNER • 35 MIN",
       },
       {
+        id: "home-glute-legs",
         title: "Home Glute & Legs",
         href: "/dashboard/resources/workouts/home-glute-legs",
         meta: "HOME • 35 MIN",
       },
       {
+        id: "gym-glute-legs",
         title: "Gym Glute & Legs",
         href: "/dashboard/resources/workouts/gym-glute-legs",
         meta: "GYM • 45 MIN",
       },
       {
+        id: "glute-builder",
         title: "Glute Builder",
         href: "/dashboard/resources/workouts/glute-builder",
         meta: "HOME / GYM • 40 MIN",
       },
     ],
   },
-
   {
     day: "02",
     title: "UPPER BODY",
@@ -47,33 +49,37 @@ const trainingWeek = [
     description: "Pick the upper-body focus that feels right for you today.",
     workouts: [
       {
+        id: "home-back-biceps",
         title: "Home Back & Biceps",
         href: "/dashboard/resources/workouts/home-back-biceps",
         meta: "HOME • 35 MIN",
       },
       {
+        id: "home-chest-triceps",
         title: "Home Chest & Triceps",
         href: "/dashboard/resources/workouts/home-chest-triceps",
         meta: "HOME • 35 MIN",
       },
       {
+        id: "gym-back-biceps",
         title: "Gym Back & Biceps",
         href: "/dashboard/resources/workouts/gym-back-biceps",
         meta: "GYM • 40 MIN",
       },
       {
+        id: "gym-chest-triceps",
         title: "Gym Chest & Triceps",
         href: "/dashboard/resources/workouts/gym-chest-triceps",
         meta: "GYM • 40 MIN",
       },
       {
+        id: "upper-body-build",
         title: "Upper Body Build",
         href: "/dashboard/resources/workouts/upper-body-build",
         meta: "HOME / GYM • 45 MIN",
       },
     ],
   },
-
   {
     day: "03",
     title: "CORE + MOBILITY",
@@ -81,13 +87,13 @@ const trainingWeek = [
     description: "Keep the focus controlled and intentional.",
     workouts: [
       {
+        id: "core-control",
         title: "Core Control",
         href: "/dashboard/resources/workouts/core-control",
         meta: "HOME / GYM • 20 MIN",
       },
     ],
   },
-
   {
     day: "04",
     title: "GLUTES",
@@ -95,23 +101,25 @@ const trainingWeek = [
     description: "Choose your glute session based on where you're training.",
     workouts: [
       {
+        id: "home-glute-legs",
         title: "Home Glute & Legs",
         href: "/dashboard/resources/workouts/home-glute-legs",
         meta: "HOME • 35 MIN",
       },
       {
+        id: "glute-builder",
         title: "Glute Builder",
         href: "/dashboard/resources/workouts/glute-builder",
         meta: "HOME / GYM • 40 MIN",
       },
       {
+        id: "gym-glute-legs",
         title: "Gym Glute & Legs",
         href: "/dashboard/resources/workouts/gym-glute-legs",
         meta: "GYM • 45 MIN",
       },
     ],
   },
-
   {
     day: "05",
     title: "FULL BODY",
@@ -120,13 +128,13 @@ const trainingWeek = [
       "A full-body option for the days you want everything working together.",
     workouts: [
       {
+        id: "full-body-reset",
         title: "Full Body Reset",
         href: "/dashboard/resources/workouts/full-body-reset",
         meta: "HOME / GYM • 25 MIN",
       },
     ],
   },
-
   {
     day: "06",
     title: "CONDITIONING",
@@ -134,18 +142,19 @@ const trainingWeek = [
     description: "Choose your conditioning based on your space and equipment.",
     workouts: [
       {
+        id: "cardio-lock-in",
         title: "Cardio Lock In",
         href: "/dashboard/resources/workouts/cardio-lock-in",
         meta: "HOME / NO EQUIPMENT • 30 MIN",
       },
       {
+        id: "gym-machine-cardio",
         title: "Gym Machine Cardio",
         href: "/dashboard/resources/workouts/gym-machine-cardio",
         meta: "GYM • 40 MIN",
       },
     ],
   },
-
   {
     day: "07",
     title: "RECOVER",
@@ -155,6 +164,52 @@ const trainingWeek = [
     workouts: [],
   },
 ];
+
+/* ---------------------------------
+ * WORKOUT SELECTION MIGRATION
+ * --------------------------------- */
+
+const workoutTitleToId = Object.fromEntries(
+  trainingWeek.flatMap((day) =>
+    day.workouts.map((workout) => [workout.title, workout.id]),
+  ),
+) as Record<string, string>;
+
+const validWorkoutIds = new Set(Object.values(workoutTitleToId));
+
+const normalizeWorkoutSelections = (value: unknown) => {
+  const normalized: Record<string, string[]> = {};
+
+  if (!value || typeof value !== "object") {
+    return normalized;
+  }
+
+  Object.entries(value as Record<string, unknown>).forEach(
+    ([dayId, rawValue]) => {
+      const rawItems = Array.isArray(rawValue) ? rawValue : [rawValue];
+
+      const ids = rawItems
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => {
+          // New format already uses workout IDs.
+          if (validWorkoutIds.has(item)) {
+            return item;
+          }
+
+          // Old format used workout titles.
+          // Convert those titles to their matching IDs.
+          return workoutTitleToId[item] ?? null;
+        })
+        .filter((item): item is string => Boolean(item));
+
+      if (ids.length > 0) {
+        normalized[dayId] = Array.from(new Set(ids));
+      }
+    },
+  );
+
+  return normalized;
+};
 
 const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
@@ -216,8 +271,9 @@ const basics = [
 
 export default function GuidePage() {
   const [firstName, setFirstName] = useState("there");
-
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  const [userId, setUserId] = useState<string | null>(null);
 
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
@@ -253,10 +309,10 @@ export default function GuidePage() {
         return;
       }
 
+      setUserId(user.id);
+
       const storageKey = `lockInGuideWorkoutSelections:${user.id}`;
-
       const viewStorageKey = `lockInGuideScheduleView:${user.id}`;
-
       const startStorageKey = `lockInGuideWeekStart:${user.id}`;
 
       setSelectionStorageKey(storageKey);
@@ -264,130 +320,133 @@ export default function GuidePage() {
       setWeekStartStorageKey(startStorageKey);
 
       try {
-        const savedView = window.localStorage.getItem(viewStorageKey);
+        const savedScheduleView =
+          window.localStorage.getItem(viewStorageKey);
 
+        if (
+          savedScheduleView === "numbers" ||
+          savedScheduleView === "weekdays"
+        ) {
+          setScheduleView(savedScheduleView);
+        }
+      } catch {
+        // Keep the default view if local storage is unavailable.
+      }
+
+      try {
         const savedWeekStart =
           window.localStorage.getItem(startStorageKey);
-
-        if (savedView === "numbers" || savedView === "weekdays") {
-          setScheduleView(savedView);
-        }
 
         if (savedWeekStart && weekdays.includes(savedWeekStart)) {
           setWeekStart(savedWeekStart);
         }
       } catch {
-        // Keep default schedule settings if local storage is unavailable.
+        // Keep Monday as the default if local storage is unavailable.
       }
 
-      try {
-        const savedSelections =
-          window.localStorage.getItem(storageKey);
+      /*
+       * Supabase is now the main source for the user's
+       * weekly workout schedule.
+       *
+       * Old schedules saved as workout TITLES are automatically
+       * converted to the new workout-ID format.
+       */
+      let loadedSelections: Record<string, string[]> = {};
 
-        if (savedSelections) {
-          const parsedSelections = JSON.parse(savedSelections);
+      const {
+        data: templateData,
+        error: templateError,
+      } = await supabase
+        .from("user_templates")
+        .select("workouts")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
-          if (
-            parsedSelections &&
-            typeof parsedSelections === "object"
-          ) {
-            const normalizedSelections: Record<
-              string,
-              string[]
-            > = {};
+      if (templateError) {
+        console.error(
+          "Could not load Guide workout schedule:",
+          templateError,
+        );
+      }
 
-            Object.entries(parsedSelections).forEach(
-              ([dayId, value]) => {
-                if (Array.isArray(value)) {
-                  normalizedSelections[dayId] =
-                    value.filter(
-                      (item): item is string =>
-                        typeof item === "string",
-                    );
-                } else if (typeof value === "string") {
-                  // Convert the old single-workout format
-                  // to the new multi-workout format.
-                  normalizedSelections[dayId] = [value];
-                }
-              },
+      if (templateData?.workouts) {
+        loadedSelections = normalizeWorkoutSelections(
+          templateData.workouts,
+        );
+      }
+
+      /*
+       * If Supabase doesn't have a schedule yet,
+       * fall back to this device's old localStorage schedule.
+       */
+      if (Object.keys(loadedSelections).length === 0) {
+        try {
+          const savedSelections =
+            window.localStorage.getItem(storageKey);
+
+          if (savedSelections) {
+            loadedSelections = normalizeWorkoutSelections(
+              JSON.parse(savedSelections),
             );
-
-            setSelectedWorkouts(normalizedSelections);
           }
+        } catch {
+          // Keep the guide usable if local storage is unavailable.
         }
+      }
+
+      setSelectedWorkouts(loadedSelections);
+
+      /*
+       * Keep localStorage as a device-level fallback,
+       * but save it in the new ID format.
+       */
+      try {
+        window.localStorage.setItem(
+          storageKey,
+          JSON.stringify(loadedSelections),
+        );
       } catch {
-        // Keep the guide usable if local storage is unavailable.
+        // Supabase remains the primary source of truth.
+      }
+
+      /*
+       * This also migrates old title-based schedules in Supabase
+       * to the new workout-ID format.
+       */
+      if (Object.keys(loadedSelections).length > 0) {
+        const { error: migrationError } = await supabase
+          .from("user_templates")
+          .upsert(
+            {
+              user_id: user.id,
+              workouts: loadedSelections,
+              updated_at: new Date().toISOString(),
+            },
+            {
+              onConflict: "user_id",
+            },
+          );
+
+        if (migrationError) {
+          console.error(
+            "Could not migrate Guide workout schedule:",
+            migrationError,
+          );
+        }
       }
 
       const savedName = user.user_metadata?.name;
 
-      if (savedName) {
-        setFirstName(savedName);
-      } else if (user.email) {
-        setFirstName(user.email.split("@")[0]);
+      if (savedName && typeof savedName === "string") {
+        setFirstName(savedName.split(" ")[0]);
       }
 
       setIsLoadingUser(false);
     };
 
-    getUser();
-  }, []);
-
-  const handleWorkoutSelect = (
-    dayId: string,
-    workoutTitle: string,
-  ) => {
-    const currentSelections =
-      selectedWorkouts[dayId] ?? [];
-
-    const isCurrentlySelected =
-      currentSelections.includes(workoutTitle);
-
-    const nextDaySelections = isCurrentlySelected
-      ? currentSelections.filter(
-          (title) => title !== workoutTitle,
-        )
-      : [...currentSelections, workoutTitle];
-
-    const nextSelections = {
-      ...selectedWorkouts,
-    };
-
-    if (nextDaySelections.length === 0) {
-      delete nextSelections[dayId];
-    } else {
-      nextSelections[dayId] =
-        nextDaySelections;
-    }
-
-    setSelectedWorkouts(nextSelections);
-
-    // Keep the options open so users can select more than one workout.
-    setExpandedDay(dayId);
-
-    if (selectionStorageKey) {
-      try {
-        window.localStorage.setItem(
-          selectionStorageKey,
-          JSON.stringify(nextSelections),
-        );
-      } catch {
-        // Keep the selection in state if local storage is unavailable.
-      }
-    }
-  };
-
-  const handleChangeWorkout = (dayId: string) => {
-    setExpandedDay(dayId);
-  };
-
-  const handleDoneSelecting = () => {
-    setExpandedDay(null);
-  };
-
-  const handleScheduleViewChange = (
-    view: ScheduleView,
-  ) => {
+    void getUser();
+  }, []); 
+    const handleScheduleViewChange = (view: ScheduleView) => {
     setScheduleView(view);
 
     if (scheduleViewStorageKey) {
@@ -397,7 +456,7 @@ export default function GuidePage() {
           view,
         );
       } catch {
-        // Keep preference in state if local storage is unavailable.
+        // Keep the setting in state if local storage is unavailable.
       }
     }
   };
@@ -412,15 +471,87 @@ export default function GuidePage() {
           day,
         );
       } catch {
-        // Keep preference in state if local storage is unavailable.
+        // Keep the setting in state if local storage is unavailable.
       }
     }
   };
 
-  const weekStartIndex = Math.max(
-    weekdays.indexOf(weekStart),
-    0,
-  );
+  const handleWorkoutSelect = async (
+    dayId: string,
+    workoutId: string,
+  ) => {
+    const currentSelections =
+      selectedWorkouts[dayId] ?? [];
+
+    const isCurrentlySelected =
+      currentSelections.includes(workoutId);
+
+    const nextDaySelections = isCurrentlySelected
+      ? currentSelections.filter(
+          (id) => id !== workoutId,
+        )
+      : [...currentSelections, workoutId];
+
+    const nextSelections = {
+      ...selectedWorkouts,
+    };
+
+    if (nextDaySelections.length === 0) {
+      delete nextSelections[dayId];
+    } else {
+      nextSelections[dayId] =
+        nextDaySelections;
+    }
+
+    // Update the UI immediately.
+    setSelectedWorkouts(nextSelections);
+
+    // Keep the options open so more than one workout can be selected.
+    setExpandedDay(dayId);
+
+    // Keep localStorage as a device-level fallback.
+    if (selectionStorageKey) {
+      try {
+        window.localStorage.setItem(
+          selectionStorageKey,
+          JSON.stringify(nextSelections),
+        );
+      } catch {
+        // Keep the selection in state if local storage is unavailable.
+      }
+    }
+
+    // Save the weekly schedule to Supabase.
+    if (userId) {
+      const { error } = await supabase
+        .from("user_templates")
+        .upsert(
+          {
+            user_id: userId,
+            workouts: nextSelections,
+            updated_at: new Date().toISOString(),
+          },
+          {
+            onConflict: "user_id",
+          },
+        );
+
+      if (error) {
+        console.error(
+          "Could not save Guide workout schedule:",
+          error,
+        );
+      }
+    }
+  };
+
+  const handleChangeWorkout = (dayId: string) => {
+    setExpandedDay(dayId);
+  };
+
+  const handleDoneSelecting = () => {
+    setExpandedDay(null);
+  };
 
   const getDayLabel = (
     index: number,
@@ -430,18 +561,21 @@ export default function GuidePage() {
       return fallbackDay;
     }
 
+    const startIndex = weekdays.indexOf(weekStart);
+
+    if (startIndex === -1) {
+      return weekdays[index];
+    }
+
     return weekdays[
-      (weekStartIndex + index) % weekdays.length
+      (startIndex + index) % weekdays.length
     ];
   };
 
   const initial =
-    !isLoadingUser &&
-    firstName !== "there"
-      ? firstName
-          .charAt(0)
-          .toUpperCase()
-      : "♡";
+    firstName && firstName !== "there"
+      ? firstName.charAt(0).toUpperCase()
+      : "L";
 
   if (isLoadingUser) {
     return (
@@ -453,18 +587,10 @@ export default function GuidePage() {
             isLoadingUser={isLoadingUser}
           />
 
-          <section className="flex flex-1 items-center justify-center px-6 py-8">
-            <div className="text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#DDB5AE] bg-[#FBF8F6] font-serif text-2xl text-[#A77B73]">
-                ♡
-              </div>
-
-              <p className="mt-6 text-[10px] tracking-[0.35em] text-[#9D6F67]">
-                LOCKING IN
-              </p>
-
-              <p className="mt-3 font-serif text-2xl italic text-[#A77B73]">
-                loading your guide... ♡
+          <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
+            <div className="flex min-h-[60vh] items-center justify-center">
+              <p className="font-serif text-xl italic text-[#A77B73]">
+                loading your guide...
               </p>
             </div>
           </section>
@@ -483,7 +609,6 @@ export default function GuidePage() {
         />
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
-
           {/* HEADER */}
 
           <header className="flex items-start justify-between gap-6">
@@ -642,14 +767,19 @@ export default function GuidePage() {
                 const isRecovery =
                   day.workouts.length === 0;
 
-                const selectedTitles =
+                /*
+                 * IMPORTANT:
+                 * selectedWorkouts now contains IDs,
+                 * not workout titles.
+                 */
+                const selectedIds =
                   selectedWorkouts[day.day] ?? [];
 
                 const selectedWorkoutsForDay =
                   day.workouts.filter(
                     (workout) =>
-                      selectedTitles.includes(
-                        workout.title,
+                      selectedIds.includes(
+                        workout.id,
                       ),
                   );
 
@@ -669,7 +799,6 @@ export default function GuidePage() {
                     {/* DAY HEADER */}
 
                     <div className="grid gap-4 px-5 py-5 sm:grid-cols-[48px_1fr_auto] sm:items-start sm:gap-4 md:px-7">
-
                       {/* DAY NUMBER / WEEKDAY */}
 
                       <span className="font-serif text-xl text-[#B48A82]">
@@ -713,7 +842,7 @@ export default function GuidePage() {
                                 (workout) => (
                                   <Link
                                     key={
-                                      workout.href
+                                      workout.id
                                     }
                                     href={
                                       workout.href
@@ -872,20 +1001,20 @@ export default function GuidePage() {
                             {day.workouts.map(
                               (workout) => {
                                 const isSelected =
-                                  selectedTitles.includes(
-                                    workout.title,
+                                  selectedIds.includes(
+                                    workout.id,
                                   );
 
                                 return (
                                   <button
                                     key={
-                                      workout.href
+                                      workout.id
                                     }
                                     type="button"
                                     onClick={() =>
                                       handleWorkoutSelect(
                                         day.day,
-                                        workout.title,
+                                        workout.id,
                                       )
                                     }
                                     className={`group flex items-center justify-between rounded-[1rem] border px-4 py-4 text-left transition ${

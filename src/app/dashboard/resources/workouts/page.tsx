@@ -9,25 +9,14 @@ import {
 } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { workouts, type Workout } from "@/lib/workouts";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
 type IconProps = {
   className?: string;
 };
 
-type Workout = {
-  id: string;
-  title: string;
-  subtitle: string;
-  locations: string[];
-  level: string;
-  type: string;
-  types?: string[];
-  time: string;
-  equipment: string | string[];
-  exercises: string;
-  icon: ComponentType<IconProps>;
-};
+
 
 /* ---------------------------------
    WORKOUT TYPE ICONS
@@ -157,7 +146,33 @@ function CardioIcon({ className = "" }: IconProps) {
     </svg>
   );
 }
+function getWorkoutIcon(
+  workout: Workout,
+): ComponentType<IconProps> {
+  const types = workout.types ?? [workout.type];
 
+  if (types.includes("Glutes")) {
+    return GlutesIcon;
+  }
+
+  if (types.includes("Lower Body")) {
+    return LowerBodyIcon;
+  }
+
+  if (types.includes("Upper Body")) {
+    return UpperBodyIcon;
+  }
+
+  if (types.includes("Core")) {
+    return CoreIcon;
+  }
+
+  if (types.includes("Cardio")) {
+    return CardioIcon;
+  }
+
+  return FullBodyIcon;
+}
 /* ---------------------------------
    EQUIPMENT ICONS
 --------------------------------- */
@@ -390,177 +405,8 @@ function ExerciseIcon({ className = "" }: IconProps) {
    WORKOUT DATA
 --------------------------------- */
 
-const workouts: Workout[] = [
-  {
-    id: "lower-body-foundation",
-    title: "Lower Body Foundation",
-    subtitle: "build the base.",
-    locations: ["Home", "Gym"],
-    level: "Beginner",
-    type: "Lower Body",
-    types: ["Lower Body"],
-    time: "35 MIN",
-    equipment: "DUMBBELLS",
-    exercises: "6 EXERCISES",
-    icon: LowerBodyIcon,
-  },
-  {
-    id: "home-glute-legs",
-    title: "Home Glute & Legs",
-    subtitle: "home. strong. locked in.",
-    locations: ["Home"],
-    level: "Beginner / Intermediate",
-    type: "Lower Body",
-    types: ["Lower Body", "Glutes"],
-    time: "35 MIN",
-    equipment: ["DUMBBELLS", "HOUSEHOLD ITEMS"],
-    exercises: "7 EXERCISES",
-    icon: GlutesIcon,
-  },
-  {
-    id: "home-back-biceps",
-    title: "Home Back & Biceps",
-    subtitle: "strong back. strong girl.",
-    locations: ["Home"],
-    level: "Beginner / Intermediate",
-    type: "Upper Body",
-    types: ["Upper Body"],
-    time: "35 MIN",
-    equipment: ["DUMBBELLS", "HOUSEHOLD ITEMS"],
-    exercises: "7 EXERCISES",
-    icon: UpperBodyIcon,
-  },
-  {
-    id: "home-chest-triceps",
-    title: "Home Chest & Triceps",
-    subtitle: "push. tone. lock in.",
-    locations: ["Home"],
-    level: "Beginner / Intermediate",
-    type: "Upper Body",
-    types: ["Upper Body"],
-    time: "35 MIN",
-    equipment: ["DUMBBELLS", "HOUSEHOLD ITEMS"],
-    exercises: "7 EXERCISES",
-    icon: UpperBodyIcon,
-  },
-  {
-    id: "glute-builder",
-    title: "Glute Builder",
-    subtitle: "slow reps. strong finish.",
-    locations: ["Home", "Gym"],
-    level: "Intermediate",
-    type: "Glutes",
-    types: ["Lower Body", "Glutes"],
-    time: "40 MIN",
-    equipment: ["DUMBBELLS", "BAND"],
-    exercises: "7 EXERCISES",
-    icon: GlutesIcon,
-  },
-  {
-    id: "gym-glute-legs",
-    title: "Gym Glute & Legs",
-    subtitle: "heavy. controlled. locked in.",
-    locations: ["Gym"],
-    level: "Intermediate",
-    type: "Lower Body",
-    types: ["Lower Body", "Glutes"],
-    time: "45 MIN",
-    equipment: ["GYM"],
-    exercises: "7 EXERCISES",
-    icon: GlutesIcon,
-  },
-  {
-    id: "gym-back-biceps",
-    title: "Gym Back & Biceps",
-    subtitle: "pull. squeeze. repeat.",
-    locations: ["Gym"],
-    level: "Intermediate",
-    type: "Upper Body",
-    types: ["Upper Body"],
-    time: "40 MIN",
-    equipment: ["GYM"],
-    exercises: "7 EXERCISES",
-    icon: UpperBodyIcon,
-  },
-  {
-    id: "gym-chest-triceps",
-    title: "Gym Chest & Triceps",
-    subtitle: "press. squeeze. lock in.",
-    locations: ["Gym"],
-    level: "Intermediate",
-    type: "Upper Body",
-    types: ["Upper Body"],
-    time: "40 MIN",
-    equipment: ["GYM"],
-    exercises: "6 EXERCISES",
-    icon: UpperBodyIcon,
-  },
-  {
-    id: "gym-machine-cardio",
-    title: "Gym Machine Cardio",
-    subtitle: "move. sweat. reset.",
-    locations: ["Gym"],
-    level: "Intermediate",
-    type: "Cardio",
-    types: ["Cardio"],
-    time: "40 MIN",
-    equipment: ["GYM"],
-    exercises: "6 BLOCKS",
-    icon: CardioIcon,
-  },
-  {
-    id: "full-body-reset",
-    title: "Full Body Reset",
-    subtitle: "move everything.",
-    locations: ["Home", "Gym", "No Equipment"],
-    level: "Beginner",
-    type: "Full Body",
-    types: ["Full Body"],
-    time: "25 MIN",
-    equipment: "BODYWEIGHT",
-    exercises: "6 EXERCISES",
-    icon: FullBodyIcon,
-  },
-  {
-    id: "upper-body-build",
-    title: "Upper Body Build",
-    subtitle: "strong looks good on you.",
-    locations: ["Home", "Gym"],
-    level: "Intermediate",
-    type: "Upper Body",
-    types: ["Upper Body"],
-    time: "45 MIN",
-    equipment: "GYM",
-    exercises: "7 EXERCISES",
-    icon: UpperBodyIcon,
-  },
-  {
-    id: "core-control",
-    title: "Core Control",
-    subtitle: "strength from the centre.",
-    locations: ["Home", "Gym"],
-    level: "Beginner",
-    type: "Core",
-    types: ["Core"],
-    time: "20 MIN",
-    equipment: "MAT",
-    exercises: "6 EXERCISES",
-    icon: CoreIcon,
-  },
-  {
-    id: "cardio-lock-in",
-    title: "Cardio Lock In",
-    subtitle: "heart up. head clear.",
-    locations: ["Home", "Gym", "No Equipment"],
-    level: "Intermediate",
-    type: "Cardio",
-    types: ["Cardio"],
-    time: "30 MIN",
-    equipment: "BODYWEIGHT",
-    exercises: "8 INTERVALS",
-    icon: CardioIcon,
-  },
-];
+
+
 
 const locations = [
   "All",
@@ -1198,8 +1044,7 @@ export default function WorkoutsPage() {
                       workout,
                       index,
                     ) => {
-                      const Icon =
-                        workout.icon;
+                     const Icon = getWorkoutIcon(workout);
 
                       const isSelected =
                         selectedWorkoutIds.includes(
