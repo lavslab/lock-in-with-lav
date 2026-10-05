@@ -889,24 +889,17 @@ export default function WorkoutsPage() {
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
           {/* HEADER */}
 
-          <header className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                LOCK IN WITH LAV
-              </p>
+          <header>
+  <div>
+    <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+      LOCK IN WITH LAV
+    </p>
 
-              <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                your workout library. ♡
-              </p>
-            </div>
-
-            <Link
-              href="/dashboard/resources"
-              className="shrink-0 rounded-full border border-[#CBA9A2] px-5 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
-            >
-              ← RESOURCES
-            </Link>
-          </header>
+    <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
+      your workout library. ♡
+    </p>
+  </div>
+</header>
 
           {/* FILTERS */}
 

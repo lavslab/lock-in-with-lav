@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type DashboardMobileNavProps = {
   initial: string;
@@ -81,9 +81,27 @@ function ResourcesIcon({ className = "" }: IconProps) {
       <path d="M5 7.5h14" />
       <path d="M5 12h14" />
       <path d="M5 16.5h14" />
-      <circle cx="7" cy="7.5" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="17" cy="16.5" r="1.5" fill="currentColor" stroke="none" />
+      <circle
+        cx="7"
+        cy="7.5"
+        r="1.5"
+        fill="currentColor"
+        stroke="none"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="1.5"
+        fill="currentColor"
+        stroke="none"
+      />
+      <circle
+        cx="17"
+        cy="16.5"
+        r="1.5"
+        fill="currentColor"
+        stroke="none"
+      />
     </svg>
   );
 }
@@ -136,23 +154,44 @@ const navigation = [
   },
 ];
 
-function getParentHref(pathname: string) {
-  if (pathname === "/dashboard") return null;
-
-  const parts = pathname.split("/").filter(Boolean);
-
-  if (parts.length <= 2) {
-    return "/dashboard";
-  }
-
-  return `/${parts.slice(0, -1).join("/")}`;
-}
-
 export default function DashboardMobileNav({
   initial,
 }: DashboardMobileNavProps) {
   const pathname = usePathname();
-  const parentHref = getParentHref(pathname);
+  const router = useRouter();
+
+  /*
+   * Individual workout pages already use WorkoutBackNav.
+   * Hide this global mobile BACK button there so we don't
+   * show two back buttons.
+   */
+  const isWorkoutDetailPage =
+    pathname.startsWith("/dashboard/resources/workouts/") &&
+    pathname !== "/dashboard/resources/workouts";
+
+  /*
+   * TODAY is the dashboard home, so it doesn't need BACK.
+   * Workout detail pages use WorkoutBackNav instead.
+   */
+  const showBackButton =
+    pathname !== "/dashboard" && !isWorkoutDetailPage;
+
+  const handleBack = () => {
+    /*
+     * Go back to the page the user actually came from
+     * instead of calculating a parent folder.
+     */
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    /*
+     * Fallback for a page opened directly without
+     * useful navigation history.
+     */
+    router.push("/dashboard");
+  };
 
   return (
     <>
@@ -161,14 +200,16 @@ export default function DashboardMobileNav({
         <div className="relative flex h-16 items-center justify-between px-4">
           {/* BACK */}
           <div className="w-[76px]">
-            {parentHref && (
-              <Link
-                href={parentHref}
+            {showBackButton && (
+              <button
+                type="button"
+                onClick={handleBack}
+                aria-label="Go back"
                 className="inline-flex items-center gap-1 text-[9px] tracking-[0.16em] text-[#8F655E]"
               >
                 <span className="font-serif text-base">←</span>
                 BACK
-              </Link>
+              </button>
             )}
           </div>
 

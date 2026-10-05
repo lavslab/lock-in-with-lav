@@ -1075,15 +1075,8 @@ export default function MealPlansPage() {
                 plan it once. make the week easier. ♡
               </p>
             </div>
-
-            <Link
-              href="/dashboard/resources"
-              className="shrink-0 rounded-full border border-[#CBA9A2] px-4 py-2.5 text-[7px] tracking-[0.2em] transition hover:bg-[#EAD8D3] sm:px-5 sm:py-3 sm:text-[8px]"
-            >
-              ← RESOURCES
-            </Link>
-          </header>
-
+            </header>
+            
           <section className="mx-auto max-w-6xl pb-10 pt-14 md:pb-12 md:pt-20">
             <div className="grid gap-8 border-b border-[#DED0CB] pb-10 md:grid-cols-[1.2fr_0.8fr] md:items-end md:pb-12">
               <div>

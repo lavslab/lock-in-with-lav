@@ -196,13 +196,7 @@ export default function RecoveryPage() {
               </p>
             </div>
 
-            <Link
-              href="/dashboard/resources"
-              className="shrink-0 rounded-full border border-[#CBA9A2] px-4 py-2.5 text-[7px] tracking-[0.2em] transition hover:bg-[#EAD8D3] sm:px-5 sm:py-3 sm:text-[8px]"
-            >
-              ← RESOURCES
-            </Link>
-          </header>
+            </header>
 
           {/* INTRO */}
 

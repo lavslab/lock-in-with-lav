@@ -1027,14 +1027,7 @@ export default function RecipesPage() {
               </p>
             </div>
 
-            <Link
-              href="/dashboard/resources"
-              className="shrink-0 rounded-full border border-[#CBA9A2] px-5 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
-            >
-              ← RESOURCES
-            </Link>
-          </header>
-
+            </header>
           {/* SEARCH + FILTERS */}
 
           <section className="pb-10 pt-10">
