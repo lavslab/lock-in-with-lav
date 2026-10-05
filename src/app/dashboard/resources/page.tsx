@@ -114,32 +114,7 @@ function BeginnerIcon({ className = "" }: IconProps) {
   );
 }
 
-function ToolsIcon({ className = "" }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.45"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M4 7h10" />
-      <path d="M18 7h2" />
-      <circle cx="16" cy="7" r="2" />
 
-      <path d="M4 12h3" />
-      <path d="M11 12h9" />
-      <circle cx="9" cy="12" r="2" />
-
-      <path d="M4 17h8" />
-      <path d="M16 17h4" />
-      <circle cx="14" cy="17" r="2" />
-    </svg>
-  );
-}
 
 /* ---------------------------------
    RESOURCE DATA
@@ -191,15 +166,7 @@ const resources = [
     href: "/dashboard/resources/beginners",
     icon: BeginnerIcon,
   },
-  {
-    number: "06",
-    title: "TOOLS",
-    subtitle: "make the process easier.",
-    items: "Protein • Water • Planning • Templates",
-    tag: "TOOLS",
-    href: "/dashboard/resources/tools",
-    icon: ToolsIcon,
-  },
+
 ];
 
 /* ---------------------------------
@@ -286,8 +253,8 @@ export default function ResourcesPage() {
                 </h1>
 
                 <p className="mt-4 max-w-xl text-[11px] leading-6 text-[#806E68] md:text-xs">
-                  Workouts, meals, recovery and the tools to make your
-                  routine feel a little easier.
+                  Workouts, meals, recovery and guidance to make your
+routine feel a little easier.
                 </p>
               </div>
 

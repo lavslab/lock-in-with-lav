@@ -1254,7 +1254,7 @@ export default function DashboardPage() {
 
               <div>
                 <p className="max-w-3xl font-serif text-xl italic leading-snug text-[#A77B73] sm:text-2xl md:text-3xl">
-                  consistency over perfection ♡
+                  just focus on being 1% better today ♡
                 </p>
 
                 
