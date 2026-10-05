@@ -209,159 +209,108 @@ export default function DashboardPage() {
         setFirstName(user.email.split("@")[0]);
       }
 
-      const todayKey =
-        formatDateForDatabase(new Date());
-
-      const selectedWorkoutKey =
-        `selected-workout-${user.id}-${todayKey}`;
-
-      const savedSelectedWorkout =
-        localStorage.getItem(selectedWorkoutKey);
-
-      if (savedSelectedWorkout) {
-        try {
-          const parsedWorkout =
-            JSON.parse(
-              savedSelectedWorkout
-            ) as SelectedWorkout & {
-              workouts?: SelectedWorkout[];
-            };
-
-          if (
-            Array.isArray(parsedWorkout?.workouts) &&
-            parsedWorkout.workouts.length > 0
-          ) {
-            setSelectedWorkouts(
-              parsedWorkout.workouts
-            );
-
-            setSelectedWorkout(
-              parsedWorkout.workouts[0]
-            );
-          } else if (
-            parsedWorkout?.id &&
-            parsedWorkout?.title
-          ) {
-            setSelectedWorkouts([
-              parsedWorkout,
-            ]);
-
-            setSelectedWorkout(
-              parsedWorkout
-            );
-          }
-        } catch {
-          localStorage.removeItem(
-            selectedWorkoutKey
-          );
-        }
-      }
-
       const {
-        data: profile,
-        error: profileError,
-      } = await supabase
-        .from("profiles")
-        .select(
-          "challenge_start_date, challenge_length"
-        )
-        .eq("id", user.id)
-        .single();
+  data: profile,
+  error: profileError,
+} = await supabase
+  .from("profiles")
+  .select("challenge_start_date, challenge_length")
+  .eq("id", user.id)
+  .single();
 
-      if (profileError) {
-        console.error(
-          "Could not load profile:",
-          profileError
-        );
+if (profileError) {
+  console.error(
+    "Could not load profile:",
+    profileError
+  );
 
-        setIsLoadingUser(false);
-        setIsLoadingProgress(false);
-        return;
-      }
+  setIsLoadingUser(false);
+  setIsLoadingProgress(false);
+  return;
+}
 
-      if (!profile?.challenge_start_date) {
-        setIsLoadingUser(false);
-        setIsLoadingProgress(false);
-        return;
-      }
+if (!profile?.challenge_start_date) {
+  setIsLoadingUser(false);
+  setIsLoadingProgress(false);
+  return;
+}
 
-      const profileChallengeLength =
-        profile.challenge_length ?? 75;
+const profileChallengeLength =
+  profile.challenge_length ?? 75;
 
-      setChallengeStartDate(
-        profile.challenge_start_date
-      );
+setChallengeStartDate(
+  profile.challenge_start_date
+);
 
-      setChallengeLength(
-        profileChallengeLength
-      );
+setChallengeLength(
+  profileChallengeLength
+);
 
-      const calculatedDay =
-        getCurrentChallengeDay(
-          profile.challenge_start_date,
-          profileChallengeLength
-        );
+const calculatedDay =
+  getCurrentChallengeDay(
+    profile.challenge_start_date,
+    profileChallengeLength
+  );
 
-      const savedWaterBottles = Number(
-        localStorage.getItem(
-          `water-bottles-${user.id}-${calculatedDay}`
-        ) || "0"
-      );
+const {
+  data: savedProgress,
+  error: progressError,
+} = await supabase
+  .from("daily_progress")
+  .select(
+    "move, get_outside, hydrate, read, nourish, document, no_alcohol, water_bottles, selected_workouts"
+  )
+  .eq("user_id", user.id)
+  .eq("challenge_day", calculatedDay)
+  .maybeSingle();
 
-      setWaterBottles(
-        Math.min(
-          Math.max(savedWaterBottles, 0),
-          8
-        )
-      );
+if (progressError) {
+  console.error(
+    "Could not load daily progress:",
+    progressError
+  );
+} else if (savedProgress) {
+  const savedWaterBottles =
+    typeof savedProgress.water_bottles === "number"
+      ? savedProgress.water_bottles
+      : savedProgress.hydrate
+        ? 8
+        : 0;
 
-      const {
-        data: savedProgress,
-        error: progressError,
-      } = await supabase
-        .from("daily_progress")
-        .select(
-          "move, get_outside, hydrate, read, nourish, document, no_alcohol"
-        )
-        .eq("user_id", user.id)
-        .eq(
-          "challenge_day",
-          calculatedDay
-        )
-        .maybeSingle();
+  setWaterBottles(
+    Math.min(
+      Math.max(savedWaterBottles, 0),
+      8
+    )
+  );
 
-      if (progressError) {
-        console.error(
-          "Could not load daily progress:",
-          progressError
-        );
-      } else if (savedProgress) {
-        if (
-          savedProgress.hydrate &&
-          !localStorage.getItem(
-            `water-bottles-${user.id}-${calculatedDay}`
-          )
-        ) {
-          setWaterBottles(8);
+  const savedWorkouts =
+    Array.isArray(savedProgress.selected_workouts)
+      ? (savedProgress.selected_workouts as SelectedWorkout[])
+      : [];
 
-          localStorage.setItem(
-            `water-bottles-${user.id}-${calculatedDay}`,
-            "8"
-          );
-        }
+  setSelectedWorkouts(savedWorkouts);
+  setSelectedWorkout(
+    savedWorkouts.length > 0
+      ? savedWorkouts[0]
+      : null
+  );
 
-        setProgress({
-          move: savedProgress.move,
-          get_outside:
-            savedProgress.get_outside,
-          hydrate: savedProgress.hydrate,
-          read: savedProgress.read,
-          nourish: savedProgress.nourish,
-          document: savedProgress.document,
-          no_alcohol:
-            savedProgress.no_alcohol ?? false,
-        });
-      }
+  setProgress({
+    move: savedProgress.move,
+    get_outside: savedProgress.get_outside,
+    hydrate: savedProgress.hydrate,
+    read: savedProgress.read,
+    nourish: savedProgress.nourish,
+    document: savedProgress.document,
+    no_alcohol:
+      savedProgress.no_alcohol ?? false,
+  });
+} else {
+  setWaterBottles(0);
+  setSelectedWorkouts([]);
+  setSelectedWorkout(null);
+}
 
       /*
        * A progress photo now completes the DOCUMENT
@@ -465,75 +414,84 @@ export default function DashboardPage() {
   };
 
   const updateWaterBottles = async (
-    nextCount: number
-  ) => {
-    if (
-      !userId ||
-      !challengeStartDate ||
-      isLoadingProgress
-    ) {
-      return;
-    }
+  nextCount: number
+) => {
+  if (
+    !userId ||
+    !challengeStartDate ||
+    isLoadingProgress
+  ) {
+    return;
+  }
 
-    const clampedCount = Math.min(
-      Math.max(nextCount, 0),
-      8
-    );
+  const clampedCount = Math.min(
+    Math.max(nextCount, 0),
+    8
+  );
 
-    const hydrateComplete =
-      clampedCount === 8;
+  const hydrateComplete =
+    clampedCount === 8;
 
-    setWaterBottles(clampedCount);
+  const previousWaterBottles =
+    waterBottles;
 
-    localStorage.setItem(
-      `water-bottles-${userId}-${currentDay}`,
-      String(clampedCount)
-    );
+  const previousProgress =
+    progress;
 
-    const updatedProgress = {
-      ...progress,
-      hydrate: hydrateComplete,
-    };
-
-    setProgress(updatedProgress);
-
-    const progressDate =
-      formatDateForDatabase(today);
-
-    const { error } = await supabase
-      .from("daily_progress")
-      .upsert(
-        {
-          user_id: userId,
-          challenge_day: currentDay,
-          progress_date: progressDate,
-          move: updatedProgress.move,
-          get_outside:
-            updatedProgress.get_outside,
-          hydrate: updatedProgress.hydrate,
-          read: updatedProgress.read,
-          nourish: updatedProgress.nourish,
-          document:
-            updatedProgress.document,
-          no_alcohol:
-            updatedProgress.no_alcohol,
-          updated_at:
-            new Date().toISOString(),
-        },
-        {
-          onConflict:
-            "user_id,challenge_day",
-        }
-      );
-
-    if (error) {
-      console.error(
-        "Could not save water progress:",
-        error
-      );
-    }
+  const updatedProgress = {
+    ...progress,
+    hydrate: hydrateComplete,
   };
 
+  setWaterBottles(clampedCount);
+  setProgress(updatedProgress);
+
+  const progressDate =
+    formatDateForDatabase(today);
+
+  const { error } = await supabase
+    .from("daily_progress")
+    .upsert(
+      {
+        user_id: userId,
+        challenge_day: currentDay,
+        progress_date: progressDate,
+        move: updatedProgress.move,
+        get_outside:
+          updatedProgress.get_outside,
+        hydrate:
+          updatedProgress.hydrate,
+        read: updatedProgress.read,
+        nourish:
+          updatedProgress.nourish,
+        document:
+          updatedProgress.document,
+        no_alcohol:
+          updatedProgress.no_alcohol,
+        water_bottles:
+          clampedCount,
+        updated_at:
+          new Date().toISOString(),
+      },
+      {
+        onConflict:
+          "user_id,challenge_day",
+      }
+    );
+
+  if (error) {
+    console.error(
+      "Could not save water progress:",
+      error
+    );
+
+    setWaterBottles(
+      previousWaterBottles
+    );
+
+    setProgress(previousProgress);
+  }
+};
   const completedCount =
     commitments.filter(
       (item) => progress[item.column]

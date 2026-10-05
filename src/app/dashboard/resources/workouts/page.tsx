@@ -404,7 +404,6 @@ const workouts: Workout[] = [
     exercises: "6 EXERCISES",
     icon: LowerBodyIcon,
   },
-
   {
     id: "home-glute-legs",
     title: "Home Glute & Legs",
@@ -418,7 +417,6 @@ const workouts: Workout[] = [
     exercises: "7 EXERCISES",
     icon: GlutesIcon,
   },
-
   {
     id: "home-back-biceps",
     title: "Home Back & Biceps",
@@ -432,7 +430,6 @@ const workouts: Workout[] = [
     exercises: "7 EXERCISES",
     icon: UpperBodyIcon,
   },
-
   {
     id: "home-chest-triceps",
     title: "Home Chest & Triceps",
@@ -446,7 +443,6 @@ const workouts: Workout[] = [
     exercises: "7 EXERCISES",
     icon: UpperBodyIcon,
   },
-
   {
     id: "glute-builder",
     title: "Glute Builder",
@@ -460,7 +456,6 @@ const workouts: Workout[] = [
     exercises: "7 EXERCISES",
     icon: GlutesIcon,
   },
-
   {
     id: "gym-glute-legs",
     title: "Gym Glute & Legs",
@@ -474,7 +469,6 @@ const workouts: Workout[] = [
     exercises: "7 EXERCISES",
     icon: GlutesIcon,
   },
-
   {
     id: "gym-back-biceps",
     title: "Gym Back & Biceps",
@@ -488,7 +482,6 @@ const workouts: Workout[] = [
     exercises: "7 EXERCISES",
     icon: UpperBodyIcon,
   },
-
   {
     id: "gym-chest-triceps",
     title: "Gym Chest & Triceps",
@@ -502,7 +495,6 @@ const workouts: Workout[] = [
     exercises: "6 EXERCISES",
     icon: UpperBodyIcon,
   },
-
   {
     id: "gym-machine-cardio",
     title: "Gym Machine Cardio",
@@ -516,7 +508,6 @@ const workouts: Workout[] = [
     exercises: "6 BLOCKS",
     icon: CardioIcon,
   },
-
   {
     id: "full-body-reset",
     title: "Full Body Reset",
@@ -530,7 +521,6 @@ const workouts: Workout[] = [
     exercises: "6 EXERCISES",
     icon: FullBodyIcon,
   },
-
   {
     id: "upper-body-build",
     title: "Upper Body Build",
@@ -544,7 +534,6 @@ const workouts: Workout[] = [
     exercises: "7 EXERCISES",
     icon: UpperBodyIcon,
   },
-
   {
     id: "core-control",
     title: "Core Control",
@@ -558,7 +547,6 @@ const workouts: Workout[] = [
     exercises: "6 EXERCISES",
     icon: CoreIcon,
   },
-
   {
     id: "cardio-lock-in",
     title: "Cardio Lock In",
@@ -593,11 +581,9 @@ const types = [
 
 function formatLocalDate(date: Date) {
   const year = date.getFullYear();
-
   const month = String(
     date.getMonth() + 1,
   ).padStart(2, "0");
-
   const day = String(
     date.getDate(),
   ).padStart(2, "0");
@@ -619,8 +605,15 @@ export default function WorkoutsPage() {
   const [userId, setUserId] =
     useState<string | null>(null);
 
-  const [selectedWorkoutIds, setSelectedWorkoutIds] =
-    useState<string[]>([]);
+  const [
+    currentChallengeDay,
+    setCurrentChallengeDay,
+  ] = useState<number | null>(null);
+
+  const [
+    selectedWorkoutIds,
+    setSelectedWorkoutIds,
+  ] = useState<string[]>([]);
 
   const [location, setLocation] =
     useState("All");
@@ -632,7 +625,15 @@ export default function WorkoutsPage() {
     const getUser = async () => {
       const {
         data: { user },
+        error: userError,
       } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error(
+          "Could not load user:",
+          userError,
+        );
+      }
 
       if (!user) {
         setIsLoadingUser(false);
@@ -652,53 +653,97 @@ export default function WorkoutsPage() {
         );
       }
 
-      const todayKey =
-        formatLocalDate(new Date());
+      const {
+        data: profile,
+        error: profileError,
+      } = await supabase
+        .from("profiles")
+        .select(
+          "challenge_start_date, challenge_length",
+        )
+        .eq("id", user.id)
+        .single();
 
-      const storageKey =
-        `selected-workout-${user.id}-${todayKey}`;
+      if (profileError) {
+        console.error(
+          "Could not load profile:",
+          profileError,
+        );
 
-      const savedWorkout =
-        localStorage.getItem(storageKey);
+        setIsLoadingUser(false);
+        return;
+      }
 
-      if (savedWorkout) {
-        try {
-          const parsedWorkout =
-            JSON.parse(savedWorkout);
+      if (!profile?.challenge_start_date) {
+        setIsLoadingUser(false);
+        return;
+      }
 
-          if (
-            Array.isArray(
-              parsedWorkout?.workouts,
-            )
-          ) {
-            setSelectedWorkoutIds(
-              parsedWorkout.workouts
-                .map(
-                  (
-                    item: {
-                      id?: string;
-                    },
-                  ) => item?.id,
-                )
-                .filter(
-                  (
-                    id: unknown,
-                  ): id is string =>
-                    typeof id === "string",
-                ),
-            );
-          } else if (
-            parsedWorkout?.id
-          ) {
-            setSelectedWorkoutIds([
-              parsedWorkout.id,
-            ]);
-          }
-        } catch {
-          localStorage.removeItem(
-            storageKey,
+      const challengeLength =
+        profile.challenge_length ?? 75;
+
+      const startDate = new Date(
+        `${profile.challenge_start_date}T00:00:00`,
+      );
+
+      const today = new Date();
+
+      startDate.setHours(0, 0, 0, 0);
+      today.setHours(0, 0, 0, 0);
+
+      const differenceInDays =
+        Math.floor(
+          (today.getTime() -
+            startDate.getTime()) /
+            86400000,
+        ) + 1;
+
+      const calculatedDay = Math.min(
+        Math.max(differenceInDays, 1),
+        challengeLength,
+      );
+
+      setCurrentChallengeDay(
+        calculatedDay,
+      );
+
+      const {
+        data: savedProgress,
+        error: progressError,
+      } = await supabase
+        .from("daily_progress")
+        .select("selected_workouts")
+        .eq("user_id", user.id)
+        .eq(
+          "challenge_day",
+          calculatedDay,
+        )
+        .maybeSingle();
+
+      if (progressError) {
+        console.error(
+          "Could not load today's workouts:",
+          progressError,
+        );
+      } else {
+        const savedWorkouts =
+          Array.isArray(
+            savedProgress?.selected_workouts,
+          )
+            ? savedProgress.selected_workouts
+            : [];
+
+        const savedIds = savedWorkouts
+          .map(
+            (item: { id?: unknown }) =>
+              item?.id,
+          )
+          .filter(
+            (id: unknown): id is string =>
+              typeof id === "string",
           );
-        }
+
+        setSelectedWorkoutIds(savedIds);
       }
 
       setIsLoadingUser(false);
@@ -742,25 +787,14 @@ export default function WorkoutsPage() {
       );
     }, [location, type]);
 
-  const saveSelectedWorkouts = (
+  const saveSelectedWorkouts = async (
     workoutIds: string[],
   ) => {
-    if (!userId) {
-      return;
-    }
-
-    const todayKey =
-      formatLocalDate(new Date());
-
-    const storageKey =
-      `selected-workout-${userId}-${todayKey}`;
-
-    if (workoutIds.length === 0) {
-      localStorage.removeItem(
-        storageKey,
-      );
-
-      return;
+    if (
+      !userId ||
+      currentChallengeDay === null
+    ) {
+      return false;
     }
 
     const selectedWorkouts =
@@ -783,76 +817,121 @@ export default function WorkoutsPage() {
           subtitle: item.subtitle,
           type: item.type,
           time: item.time,
-          equipment: item.equipment,
+          equipment: Array.isArray(
+            item.equipment,
+          )
+            ? item.equipment.join(", ")
+            : item.equipment,
           exercises: item.exercises,
         }));
 
-    localStorage.setItem(
-      storageKey,
-      JSON.stringify({
-        ...selectedWorkouts[0],
-        workouts:
-          selectedWorkouts,
-      }),
-    );
+    const progressDate =
+      formatLocalDate(new Date());
+
+    const { error } = await supabase
+      .from("daily_progress")
+      .upsert(
+        {
+          user_id: userId,
+          challenge_day:
+            currentChallengeDay,
+          progress_date:
+            progressDate,
+          selected_workouts:
+            selectedWorkouts,
+          updated_at:
+            new Date().toISOString(),
+        },
+        {
+          onConflict:
+            "user_id,challenge_day",
+        },
+      );
+
+    if (error) {
+      console.error(
+        "Could not save today's workouts:",
+        error,
+      );
+
+      return false;
+    }
+
+    return true;
   };
 
-  const chooseWorkoutForToday = (
+  const chooseWorkoutForToday = async (
     workout: Workout,
   ) => {
-    if (!userId) {
+    if (
+      !userId ||
+      currentChallengeDay === null
+    ) {
       return;
     }
 
-    setSelectedWorkoutIds(
-      (current) => {
-        if (
-          current.includes(
-            workout.id,
-          )
-        ) {
-          return current;
-        }
+    if (
+      selectedWorkoutIds.includes(
+        workout.id,
+      )
+    ) {
+      return;
+    }
 
-        const nextIds = [
-          ...current,
-          workout.id,
-        ];
+    const previousIds =
+      selectedWorkoutIds;
 
-        saveSelectedWorkouts(
-          nextIds,
-        );
+    const nextIds = [
+      ...previousIds,
+      workout.id,
+    ];
 
-        return nextIds;
-      },
-    );
+    setSelectedWorkoutIds(nextIds);
+
+    const saved =
+      await saveSelectedWorkouts(
+        nextIds,
+      );
+
+    if (!saved) {
+      setSelectedWorkoutIds(
+        previousIds,
+      );
+    }
   };
 
-  const removeWorkoutForToday = (
+  const removeWorkoutForToday = async (
     workoutId?: string,
   ) => {
-    if (!userId) {
+    if (
+      !userId ||
+      currentChallengeDay === null
+    ) {
       return;
     }
 
-    setSelectedWorkoutIds(
-      (current) => {
-        const nextIds = workoutId
-          ? current.filter(
-              (id) =>
-                id !== workoutId,
-            )
-          : [];
+    const previousIds =
+      selectedWorkoutIds;
 
-        saveSelectedWorkouts(
-          nextIds,
-        );
+    const nextIds = workoutId
+      ? previousIds.filter(
+          (id) => id !== workoutId,
+        )
+      : [];
 
-        return nextIds;
-      },
-    );
+    setSelectedWorkoutIds(nextIds);
+
+    const saved =
+      await saveSelectedWorkouts(
+        nextIds,
+      );
+
+    if (!saved) {
+      setSelectedWorkoutIds(
+        previousIds,
+      );
+    }
   };
-
   const FilterButton = ({
     label,
     active,
@@ -867,8 +946,8 @@ export default function WorkoutsPage() {
       onClick={onClick}
       className={`rounded-full border px-4 py-2 text-[8px] tracking-[0.18em] transition ${
         active
-          ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
-          : "border-[#D6C3BD] bg-[#FBF8F6] text-[#806E68] hover:border-[#A77B73]"
+          ? "border-[#A77B73] bg-[#EAD8D3] text-[#211C19]"
+          : "border-[#D6C3BD] bg-[#FBF8F6] text-[#806E68] hover:border-[#B9948B] hover:bg-[#F1E6E2]"
       }`}
     >
       {label.toUpperCase()}
@@ -877,53 +956,95 @@ export default function WorkoutsPage() {
 
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
-      <div className="flex min-h-screen">
+      <div className="mx-auto flex min-h-screen max-w-[1600px]">
+        {/* DESKTOP SIDEBAR */}
         <DashboardSidebar
-          firstName={firstName}
-          initial={initial}
-          isLoadingUser={
-            isLoadingUser
-          }
-        />
+  initial={initial}
+  firstName={firstName}
+  isLoadingUser={isLoadingUser}
+/>
 
-        <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
-          {/* HEADER */}
+        {/* MAIN */}
+        <section className="min-w-0 flex-1">
+          {/* DESKTOP TOP BAR */}
+          <header className="hidden border-b border-[#E1D3CE] px-8 py-5 md:flex md:items-center md:justify-between lg:px-12">
+            <div>
+              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
+                RESOURCES
+              </p>
 
-          <header>
-  <div>
-    <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-      LOCK IN WITH LAV
-    </p>
+              <p className="mt-1 font-serif text-xl">
+                Workout Library
+              </p>
+            </div>
 
-    <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-      your workout library. ♡
-    </p>
-  </div>
-</header>
+            <Link
+              href="/dashboard/account"
+              aria-label="My account"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#D6C3BD] bg-[#EAD8D3] font-serif text-base"
+            >
+              {initial}
+            </Link>
+          </header>
 
-          {/* FILTERS */}
+          <section className="px-5 pb-28 pt-8 sm:px-7 md:px-8 md:pb-16 md:pt-10 lg:px-12">
+            {/* INTRO */}
+            <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] px-6 py-8 md:px-9 md:py-10">
+              <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+                <div className="max-w-2xl">
+                  <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
+                    WORKOUT LIBRARY
+                  </p>
 
-          <section className="pb-10 pt-10">
-            <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-              <div className="grid gap-8 md:grid-cols-2">
+                  <h1 className="mt-4 font-serif text-4xl leading-[0.95] sm:text-5xl md:text-6xl">
+                    Pick your
+                    <span className="block italic text-[#A77B73]">
+                      movement.
+                    </span>
+                  </h1>
+
+                  <p className="mt-5 max-w-xl text-sm leading-6 text-[#806E68]">
+                    Choose what works for your
+                    body, your space and your
+                    energy today. One workout is
+                    enough. A few together works
+                    too. ♡
+                  </p>
+                </div>
+
+                <div className="rounded-[1.5rem] bg-[#EAD8D3] px-5 py-4 lg:max-w-xs">
+                  <p className="text-[8px] tracking-[0.25em] text-[#8F655E]">
+                    LOCK IN REMINDER
+                  </p>
+
+                  <p className="mt-2 font-serif text-xl italic text-[#6F514B]">
+                    consistency over perfection.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* FILTERS */}
+            <section className="py-8">
+              <div className="grid gap-5 lg:grid-cols-2">
                 <div>
-                  <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
+                  <p className="mb-3 text-[8px] tracking-[0.3em] text-[#9D6F67]">
                     WHERE ARE YOU TRAINING?
                   </p>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {locations.map(
-                      (option) => (
+                      (item) => (
                         <FilterButton
-                          key={option}
-                          label={option}
+                          key={item}
+                          label={item}
                           active={
                             location ===
-                            option
+                            item
                           }
                           onClick={() =>
                             setLocation(
-                              option,
+                              item,
                             )
                           }
                         />
@@ -933,44 +1054,46 @@ export default function WorkoutsPage() {
                 </div>
 
                 <div>
-                  <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
-                    WHAT DO YOU WANT TO WORK ON?
+                  <p className="mb-3 text-[8px] tracking-[0.3em] text-[#9D6F67]">
+                    WHAT ARE WE WORKING?
                   </p>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {types.map(
-                      (option) => (
-                        <FilterButton
-                          key={option}
-                          label={option}
-                          active={
-                            type === option
-                          }
-                          onClick={() =>
-                            setType(option)
-                          }
-                        />
-                      ),
-                    )}
+                  <div className="flex flex-wrap gap-2">
+                    {types.map((item) => (
+                      <FilterButton
+                        key={item}
+                        label={item}
+                        active={
+                          type === item
+                        }
+                        onClick={() =>
+                          setType(item)
+                        }
+                      />
+                    ))}
                   </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
 
-          {/* TODAY'S SELECTED WORKOUTS */}
-
-          {selectedWorkoutIds.length >
-            0 && (
-            <section className="pb-8">
-              <div className="rounded-[1.75rem] border border-[#CBA9A2] bg-[#EAD8D3] px-6 py-5 md:px-7">
-                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+            {/* TODAY'S WORKOUTS */}
+            {selectedWorkoutIds.length >
+              0 && (
+              <section className="mb-10 rounded-[2rem] border border-[#CBA9A2] bg-[#EAD8D3]/45 p-6 md:p-8">
+                <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
                   <div>
-                    <p className="text-[8px] tracking-[0.3em] text-[#8F655E]">
-                      TODAY&apos;S WORKOUTS
+                    <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
+                      TODAY&apos;S MOVEMENT
                     </p>
 
-                    <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
+                    <h2 className="mt-3 font-serif text-3xl">
+                      You&apos;re locked in.{" "}
+                      <span className="italic text-[#A77B73]">
+                        ♡
+                      </span>
+                    </h2>
+
+                    <p className="mt-2 text-sm text-[#725F5A]">
                       {
                         selectedWorkoutIds.length
                       }{" "}
@@ -982,10 +1105,8 @@ export default function WorkoutsPage() {
                     </p>
 
                     <p className="mt-1 text-xs text-[#725F5A]">
-                      Mix strength,
-                      cardio, core or
-                      whatever fits your
-                      day.
+                      Mix strength, cardio, core
+                      or whatever fits your day.
                     </p>
 
                     <div className="mt-4 flex flex-wrap gap-2">
@@ -998,9 +1119,7 @@ export default function WorkoutsPage() {
                                 id,
                             );
 
-                          if (
-                            !workout
-                          ) {
+                          if (!workout) {
                             return null;
                           }
 
@@ -1035,314 +1154,308 @@ export default function WorkoutsPage() {
                     WORKOUTS
                   </button>
                 </div>
-              </div>
-            </section>
-          )}
+              </section>
+            )}
 
-          {/* WORKOUTS */}
+            {/* WORKOUTS */}
+            <section className="pb-12">
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
+                    BROWSE WORKOUTS
+                  </p>
 
-          <section className="pb-12">
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-              <div>
-                <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
-                  BROWSE WORKOUTS
+                  <h1 className="mt-3 font-serif text-3xl md:text-4xl">
+                    Build your{" "}
+                    <span className="italic text-[#A77B73]">
+                      session.
+                    </span>
+                  </h1>
+
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-[#806E68]">
+                    Choose one workout or add a
+                    few together. You can mix
+                    strength, cardio, core and
+                    more.
+                  </p>
+                </div>
+
+                <p className="font-serif text-lg italic text-[#A77B73]">
+                  {filteredWorkouts.length}{" "}
+                  {filteredWorkouts.length ===
+                  1
+                    ? "workout"
+                    : "workouts"}{" "}
+                  ♡
                 </p>
-
-                <h1 className="mt-3 font-serif text-3xl md:text-4xl">
-                  Build your{" "}
-                  <span className="italic text-[#A77B73]">
-                    session.
-                  </span>
-                </h1>
-
-                <p className="mt-3 max-w-xl text-sm leading-6 text-[#806E68]">
-                  Choose one workout or
-                  add a few together. You
-                  can mix strength, cardio,
-                  core and more.
-                </p>
               </div>
 
-              <p className="font-serif text-lg italic text-[#A77B73]">
-                {filteredWorkouts.length}{" "}
-                {filteredWorkouts.length ===
-                1
-                  ? "workout"
-                  : "workouts"}{" "}
-                ♡
-              </p>
-            </div>
+              {filteredWorkouts.length >
+              0 ? (
+                <div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+                  {filteredWorkouts.map(
+                    (
+                      workout,
+                      index,
+                    ) => {
+                      const Icon =
+                        workout.icon;
 
-            {filteredWorkouts.length >
-            0 ? (
-              <div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {filteredWorkouts.map(
-                  (
-                    workout,
-                    index,
-                  ) => {
-                    const Icon =
-                      workout.icon;
+                      const isSelected =
+                        selectedWorkoutIds.includes(
+                          workout.id,
+                        );
 
-                    const isSelected =
-                      selectedWorkoutIds.includes(
-                        workout.id,
-                      );
+                      const equipmentItems =
+                        Array.isArray(
+                          workout.equipment,
+                        )
+                          ? workout.equipment
+                          : [
+                              workout.equipment,
+                            ];
 
-                    const equipmentItems =
-                      Array.isArray(
-                        workout.equipment,
-                      )
-                        ? workout.equipment
-                        : [
-                            workout.equipment,
-                          ];
+                      return (
+                        <article
+                          key={workout.id}
+                          className={`group flex min-h-[300px] flex-col justify-between rounded-[1.75rem] border bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:shadow-sm ${
+                            isSelected
+                              ? "border-[#A77B73]"
+                              : "border-[#DED0CB] hover:border-[#CBA9A2]"
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex items-center gap-3">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#EAD8D3] text-[#9D6F67] transition duration-300 group-hover:bg-[#E3CCC6]">
+                                  <Icon className="h-6 w-6" />
+                                </div>
 
-                    return (
-                      <article
-                        key={
-                          workout.id
-                        }
-                        className={`group flex min-h-[300px] flex-col justify-between rounded-[1.75rem] border bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:shadow-sm ${
-                          isSelected
-                            ? "border-[#A77B73]"
-                            : "border-[#DED0CB] hover:border-[#CBA9A2]"
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#EAD8D3] text-[#9D6F67] transition duration-300 group-hover:bg-[#E3CCC6]">
-                                <Icon className="h-6 w-6" />
+                                <span className="font-serif text-sm text-[#C6A29A]">
+                                  {String(
+                                    index +
+                                      1,
+                                  ).padStart(
+                                    2,
+                                    "0",
+                                  )}
+                                </span>
                               </div>
 
-                              <span className="font-serif text-sm text-[#C6A29A]">
-                                {String(
-                                  index + 1,
-                                ).padStart(
-                                  2,
-                                  "0",
-                                )}
+                              <span className="rounded-full border border-[#D6C3BD] px-3 py-1.5 text-[7px] tracking-[0.18em] text-[#8F655E]">
+                                {workout.level.toUpperCase()}
                               </span>
                             </div>
 
-                            <span className="rounded-full border border-[#D6C3BD] px-3 py-1.5 text-[7px] tracking-[0.18em] text-[#8F655E]">
-                              {workout.level.toUpperCase()}
-                            </span>
+                            <p className="mt-6 text-[8px] tracking-[0.25em] text-[#806E68]">
+                              {workout.type.toUpperCase()}{" "}
+                              •{" "}
+                              {workout.locations
+                                .filter(
+                                  (
+                                    location,
+                                  ) =>
+                                    location !==
+                                    "No Equipment",
+                                )
+                                .join(
+                                  " + ",
+                                )
+                                .toUpperCase()}
+                              {workout.locations.includes(
+                                "No Equipment",
+                              )
+                                ? " • NO EQUIPMENT"
+                                : ""}
+                            </p>
+
+                            <h2 className="mt-3 font-serif text-3xl leading-tight">
+                              {
+                                workout.title
+                              }
+                            </h2>
+
+                            <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
+                              {
+                                workout.subtitle
+                              }
+                            </p>
                           </div>
 
-                          <p className="mt-6 text-[8px] tracking-[0.25em] text-[#806E68]">
-                            {workout.type.toUpperCase()}{" "}
-                            •{" "}
-                            {workout.locations
-                              .filter(
-                                (
-                                  location,
-                                ) =>
-                                  location !==
-                                  "No Equipment",
-                              )
-                              .join(
-                                " + ",
-                              )
-                              .toUpperCase()}
-                            {workout.locations.includes(
-                              "No Equipment",
-                            )
-                              ? " • NO EQUIPMENT"
-                              : ""}
-                          </p>
+                          <div className="mt-8">
+                            <div className="grid grid-cols-3 gap-2 border-t border-[#E1D3CE] pt-4">
+                              {/* TIME */}
+                              <div className="flex min-w-0 items-center gap-2">
+                                <ClockIcon className="h-4 w-4 shrink-0 text-[#B48A82]" />
 
-                          <h2 className="mt-3 font-serif text-3xl leading-tight">
-                            {
-                              workout.title
-                            }
-                          </h2>
+                                <span className="block text-[7px] leading-3 tracking-[0.1em] text-[#806E68]">
+                                  {
+                                    workout.time
+                                  }
+                                </span>
+                              </div>
 
-                          <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                            {
-                              workout.subtitle
-                            }
-                          </p>
-                        </div>
+                              {/* EQUIPMENT */}
+                              <div className="flex min-w-0 items-start gap-2">
+                                <div className="flex min-w-0 flex-col gap-1">
+                                  {equipmentItems.map(
+                                    (
+                                      item,
+                                    ) => {
+                                      const EquipmentIcon =
+                                        getEquipmentIcon(
+                                          item,
+                                        );
 
-                        <div className="mt-8">
-                          <div className="grid grid-cols-3 gap-2 border-t border-[#E1D3CE] pt-4">
-                            {/* TIME */}
-
-                            <div className="flex min-w-0 items-center gap-2">
-                              <ClockIcon className="h-4 w-4 shrink-0 text-[#B48A82]" />
-
-                              <span className="block text-[7px] leading-3 tracking-[0.1em] text-[#806E68]">
-                                {
-                                  workout.time
-                                }
-                              </span>
-                            </div>
-
-                            {/* EQUIPMENT */}
-
-                            <div className="flex min-w-0 items-start gap-2">
-                              <div className="flex min-w-0 flex-col gap-1">
-                                {equipmentItems.map(
-                                  (
-                                    item,
-                                  ) => {
-                                    const EquipmentIcon =
-                                      getEquipmentIcon(
-                                        item,
-                                      );
-
-                                    return (
-                                      <div
-                                        key={
-                                          item
-                                        }
-                                        className="flex items-center gap-1.5"
-                                      >
-                                        <EquipmentIcon className="h-3.5 w-3.5 shrink-0 text-[#B48A82]" />
-
-                                        <span className="block text-[7px] leading-3 tracking-[0.08em] text-[#806E68]">
-                                          {
+                                      return (
+                                        <div
+                                          key={
                                             item
                                           }
-                                        </span>
-                                      </div>
-                                    );
-                                  },
-                                )}
+                                          className="flex items-center gap-1.5"
+                                        >
+                                          <EquipmentIcon className="h-3.5 w-3.5 shrink-0 text-[#B48A82]" />
+
+                                          <span className="block text-[7px] leading-3 tracking-[0.08em] text-[#806E68]">
+                                            {
+                                              item
+                                            }
+                                          </span>
+                                        </div>
+                                      );
+                                    },
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* EXERCISES */}
+                              <div className="flex min-w-0 items-center justify-end gap-2">
+                                <ExerciseIcon className="h-4 w-4 shrink-0 text-[#B48A82]" />
+
+                                <span className="block text-[7px] leading-3 tracking-[0.08em] text-[#806E68]">
+                                  {
+                                    workout.exercises
+                                  }
+                                </span>
                               </div>
                             </div>
-
-                            {/* EXERCISES */}
-
-                            <div className="flex min-w-0 items-center justify-end gap-2">
-                              <ExerciseIcon className="h-4 w-4 shrink-0 text-[#B48A82]" />
-
-                              <span className="block text-[7px] leading-3 tracking-[0.08em] text-[#806E68]">
-                                {
-                                  workout.exercises
+                                                        <div className="mt-5 grid gap-2">
+                              <button
+                                type="button"
+                                disabled={
+                                  !userId ||
+                                  currentChallengeDay ===
+                                    null
                                 }
-                              </span>
+                                onClick={() => {
+                                  if (
+                                    isSelected
+                                  ) {
+                                    removeWorkoutForToday(
+                                      workout.id,
+                                    );
+                                  } else {
+                                    chooseWorkoutForToday(
+                                      workout,
+                                    );
+                                  }
+                                }}
+                                className={`flex w-full items-center justify-center rounded-full border px-4 py-3 text-[7px] tracking-[0.22em] transition ${
+                                  isSelected
+                                    ? "border-[#A77B73] bg-[#EAD8D3] text-[#6F514B]"
+                                    : "border-[#CBA9A2] text-[#9D6F67] hover:bg-[#EAD8D3]"
+                                } ${
+                                  !userId ||
+                                  currentChallengeDay ===
+                                    null
+                                    ? "cursor-wait opacity-60"
+                                    : ""
+                                }`}
+                              >
+                                {isSelected
+                                  ? "ADDED TO TODAY ✓"
+                                  : "ADD TO TODAY"}
+                              </button>
+
+                              <Link
+                                href={`/dashboard/resources/workouts/${workout.id}`}
+                                className="flex items-center justify-between border-t border-[#E1D3CE] pt-3 text-[7px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
+                              >
+                                <span>
+                                  VIEW WORKOUT
+                                </span>
+
+                                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition hover:bg-[#EAD8D3]">
+                                  →
+                                </span>
+                              </Link>
                             </div>
                           </div>
+                        </article>
+                      );
+                    },
+                  )}
+                </div>
+              ) : (
+                <div className="mt-8 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-6 py-16 text-center">
+                  <p className="font-serif text-3xl italic text-[#A77B73]">
+                    nothing here yet. ♡
+                  </p>
 
-                          <div className="mt-5 grid gap-2">
-                            <button
-                              type="button"
-                              disabled={!userId}
-                              onClick={() => {
-                                if (
-                                  isSelected
-                                ) {
-                                  removeWorkoutForToday(
-                                    workout.id,
-                                  );
-                                } else {
-                                  chooseWorkoutForToday(
-                                    workout,
-                                  );
-                                }
-                              }}
-                              className={`flex w-full items-center justify-center rounded-full border px-4 py-3 text-[7px] tracking-[0.22em] transition ${
-                                isSelected
-                                  ? "border-[#A77B73] bg-[#EAD8D3] text-[#6F514B]"
-                                  : "border-[#CBA9A2] text-[#9D6F67] hover:bg-[#EAD8D3]"
-                              } ${
-                                !userId
-                                  ? "cursor-wait opacity-60"
-                                  : ""
-                              }`}
-                            >
-                              {isSelected
-                                ? "ADDED TO TODAY ✓"
-                                : "ADD TO TODAY"}
-                            </button>
+                  <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#806E68]">
+                    Try another combination —
+                    we&apos;re still growing the
+                    workout library.
+                  </p>
 
-                            <Link
-                              href={`/dashboard/resources/workouts/${workout.id}`}
-                              className="flex items-center justify-between border-t border-[#E1D3CE] pt-3 text-[7px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
-                            >
-                              <span>
-                                VIEW
-                                WORKOUT
-                              </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocation("All");
+                      setType("All");
+                    }}
+                    className="mt-6 rounded-full border border-[#CBA9A2] px-6 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
+                  >
+                    CLEAR FILTERS
+                  </button>
+                </div>
+              )}
+            </section>
 
-                              <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition hover:bg-[#EAD8D3]">
-                                →
-                              </span>
-                            </Link>
-                          </div>
-                        </div>
-                      </article>
-                    );
-                  },
-                )}
-              </div>
-            ) : (
-              <div className="mt-8 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-6 py-16 text-center">
-                <p className="font-serif text-3xl italic text-[#A77B73]">
-                  nothing here yet. ♡
-                </p>
+            {/* BEGINNER HELP */}
+            <section className="rounded-[2rem] bg-[#EAD8D3] px-7 py-8 md:px-9">
+              <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+                <div>
+                  <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
+                    YOUR BODY. YOUR PACE.
+                  </p>
 
-                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[#806E68]">
-                  Try another combination —
-                  we&apos;re still growing
-                  the workout library.
-                </p>
+                  <h2 className="mt-3 font-serif text-3xl">
+                    Modify when you need to.{" "}
+                    <span className="italic text-[#9D6F67]">
+                      keep moving. ♡
+                    </span>
+                  </h2>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocation(
-                      "All",
-                    );
-                    setType("All");
-                  }}
-                  className="mt-6 rounded-full border border-[#CBA9A2] px-6 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
+                <Link
+                  href="/dashboard/resources/beginners"
+                  className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#211C19] px-7 py-3.5 text-[8px] tracking-[0.22em] text-[#F7F1ED] transition hover:-translate-y-0.5"
                 >
-                  CLEAR FILTERS
-                </button>
+                  EXERCISE HELP →
+                </Link>
               </div>
-            )}
-          </section>
+            </section>
 
-          {/* BEGINNER HELP */}
-
-          <section className="rounded-[2rem] bg-[#EAD8D3] px-7 py-8 md:px-9">
-            <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-              <div>
-                <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
-                  YOUR BODY. YOUR PACE.
-                </p>
-
-                <h2 className="mt-3 font-serif text-3xl">
-                  Modify when you need
-                  to.{" "}
-                  <span className="italic text-[#9D6F67]">
-                    keep moving. ♡
-                  </span>
-                </h2>
-              </div>
-
+            {/* BACK TO RESOURCES */}
+            <section className="py-14 text-center">
               <Link
-                href="/dashboard/resources/beginners"
-                className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#211C19] px-7 py-3.5 text-[8px] tracking-[0.22em] text-[#F7F1ED] transition hover:-translate-y-0.5"
+                href="/dashboard/resources"
+                className="text-[8px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
               >
-                EXERCISE HELP →
+                ← BACK TO ALL RESOURCES
               </Link>
-            </div>
-          </section>
-
-          {/* BACK TO RESOURCES */}
-
-          <section className="py-14 text-center">
-            <Link
-              href="/dashboard/resources"
-              className="text-[8px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
-            >
-              ← BACK TO ALL RESOURCES
-            </Link>
+            </section>
           </section>
         </section>
       </div>
