@@ -1207,11 +1207,11 @@ export default function RecipesPage() {
                       recipe.icon;
 
                     const originalIndex =
-                      recipes.findIndex(
-                        (item) =>
-                          item.id ===
-                          recipe.id
-                      );
+  allRecipes.findIndex(
+    (item) =>
+      item.id ===
+      recipe.id
+  );
 
                     return (
                       <article
