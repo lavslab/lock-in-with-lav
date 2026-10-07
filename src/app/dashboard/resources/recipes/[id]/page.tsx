@@ -1,46 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { recipes } from "@/lib/recipes";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
-const ingredients = [
-  "1 cup low-fat cottage cheese",
-  "1/2 cup cucumber slices",
-  "1/2 cup bell pepper strips",
-  "1/2 cup cherry tomatoes",
-  "1 hard-boiled egg",
-  "1 tbsp everything bagel seasoning or fresh herbs",
-  "Black pepper, to taste",
-  "Lemon wedge or hot sauce, optional",
-];
+export default function DynamicRecipePage() {
+  const params = useParams();
 
-const instructions = [
-  "Spoon the cottage cheese into one section of a meal-prep container or snack plate.",
-  "Season it with everything bagel seasoning, fresh herbs or black pepper.",
-  "Wash and slice the cucumber and bell pepper, then add them with the cherry tomatoes.",
-  "Peel and halve the hard-boiled egg and add it to the box.",
-  "Finish with a squeeze of lemon or hot sauce if desired.",
-  "Serve immediately or refrigerate in a sealed container until snack time.",
-];
+  const recipeId = Array.isArray(params.id) ? params.id[0] : params.id;
 
-const swaps = [
-  {
-    label: "LOWER CARB",
-    text: "Keep the cottage cheese, egg and non-starchy veggies exactly as written — this box is already one of the lower-carb choices in the library.",
-  },
-  {
-    label: "FUEL YOUR WORKOUT",
-    text: "Add fruit, whole-grain crackers or a rice cake when you want a little more carbohydrate before or after training.",
-  },
-  {
-    label: "MAKE IT YOURS",
-    text: "Swap in carrots, snap peas or celery, add turkey slices, or make the cottage cheese savoury with dill, chili flakes or ranch-style seasoning.",
-  },
-];
+  const recipe = recipes.find((item) => item.id === recipeId);
 
-export default function ProteinSnackBoxPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
@@ -74,6 +47,45 @@ export default function ProteinSnackBoxPage() {
       ? firstName.charAt(0).toUpperCase()
       : "♡";
 
+  if (!recipe) {
+    return (
+      <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
+        <div className="flex min-h-screen">
+          <DashboardSidebar
+            firstName={firstName}
+            initial={initial}
+            isLoadingUser={isLoadingUser}
+          />
+
+          <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
+            <Link
+              href="/dashboard/resources/recipes"
+              className="text-[8px] tracking-[0.22em] text-[#8F655E]"
+            >
+              ← BACK TO RECIPES
+            </Link>
+
+            <h1 className="mt-10 font-serif text-4xl">
+              Recipe not found ♡
+            </h1>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  const macroCards = [
+    [String(recipe.calories), "CALORIES"],
+    [`${recipe.protein}G`, "PROTEIN"],
+    [`${recipe.carbs}G`, "CARBS"],
+    [`${recipe.fat}G`, "FAT"],
+    [recipe.time, "TOTAL TIME"],
+    [
+      String(recipe.servings),
+      recipe.servings === 1 ? "SERVING" : "SERVINGS",
+    ],
+  ];
+
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
       <div className="flex min-h-screen">
@@ -92,7 +104,7 @@ export default function ProteinSnackBoxPage() {
               </p>
 
               <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                recipe 09. ♡
+                recipe. ♡
               </p>
             </div>
 
@@ -109,33 +121,27 @@ export default function ProteinSnackBoxPage() {
             <div className="max-w-4xl">
               {/* TAGS */}
               <div className="flex flex-wrap gap-2">
-                {["SNACKS", "HIGH PROTEIN", "LOWER CARB", "QUICK"].map(
-                  (tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full border border-[#D6C3BD] bg-[#FBF8F6] px-3 py-1.5 text-[7px] tracking-[0.18em] text-[#8F655E]"
-                    >
-                      {tag}
-                    </span>
-                  )
-                )}
+                {[recipe.meal, ...recipe.goals].map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-full border border-[#D6C3BD] bg-[#FBF8F6] px-3 py-1.5 text-[7px] uppercase tracking-[0.18em] text-[#8F655E]"
+                  >
+                    {tag}
+                  </span>
+                ))}
               </div>
 
               {/* TITLE */}
               <h1 className="mt-6 font-serif text-4xl leading-[0.95] md:text-5xl lg:text-6xl">
-                Protein{" "}
-                <span className="italic text-[#A77B73]">
-                  Snack Box
-                </span>
+                {recipe.title}
               </h1>
 
               <p className="mt-4 font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-                snacky, but make it useful. ♡
+                {recipe.subtitle} ♡
               </p>
 
-              <p className="mt-5 max-w-xl text-[9px] leading-5 tracking-[0.13em] text-[#806E68]">
-                A QUICK PROTEIN-PACKED SNACK BOX FOR WHEN YOU WANT SOMETHING
-                EASY, FRESH AND ACTUALLY FILLING.
+              <p className="mt-5 max-w-xl text-[9px] uppercase leading-5 tracking-[0.13em] text-[#806E68]">
+                {recipe.description}
               </p>
             </div>
           </section>
@@ -143,14 +149,7 @@ export default function ProteinSnackBoxPage() {
           {/* MACROS */}
           <section className="pb-8">
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-              {[
-                ["260", "CALORIES"],
-                ["28G", "PROTEIN"],
-                ["18G", "CARBS"],
-                ["9G", "FAT"],
-                ["5 MIN", "TOTAL TIME"],
-                ["1", "SERVING"],
-              ].map(([value, label]) => (
+              {macroCards.map(([value, label]) => (
                 <div
                   key={label}
                   className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] px-4 py-5 text-center"
@@ -177,20 +176,16 @@ export default function ProteinSnackBoxPage() {
 
               <h2 className="mt-3 font-serif text-3xl">
                 What you&apos;ll{" "}
-                <span className="italic text-[#A77B73]">
-                  need.
-                </span>
+                <span className="italic text-[#A77B73]">need.</span>
               </h2>
 
               <div className="mt-7 space-y-3">
-                {ingredients.map((ingredient) => (
+                {recipe.ingredients.map((ingredient, index) => (
                   <div
-                    key={ingredient}
+                    key={`${recipe.id}-ingredient-${index}`}
                     className="flex gap-3 border-b border-[#E8DDD9] pb-3 text-sm leading-6 text-[#5F504B]"
                   >
-                    <span className="font-serif text-[#A77B73]">
-                      ♡
-                    </span>
+                    <span className="font-serif text-[#A77B73]">♡</span>
 
                     <span>{ingredient}</span>
                   </div>
@@ -205,15 +200,16 @@ export default function ProteinSnackBoxPage() {
               </p>
 
               <h2 className="mt-3 font-serif text-3xl">
-                Build your{" "}
-                <span className="italic text-[#A77B73]">
-                  snack box.
-                </span>
+                Let&apos;s make{" "}
+                <span className="italic text-[#A77B73]">your meal.</span>
               </h2>
 
               <div className="mt-7 space-y-5">
-                {instructions.map((instruction, index) => (
-                  <div key={instruction} className="flex gap-4">
+                {recipe.instructions.map((instruction, index) => (
+                  <div
+                    key={`${recipe.id}-step-${index}`}
+                    className="flex gap-4"
+                  >
                     <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EAD8D3] font-serif text-[#8F655E]">
                       {String(index + 1).padStart(2, "0")}
                     </span>
@@ -235,7 +231,7 @@ export default function ProteinSnackBoxPage() {
               </p>
 
               <h2 className="mt-3 font-serif text-3xl">
-                Same snack box.{" "}
+                Same meal.{" "}
                 <span className="italic text-[#9D6F67]">
                   make it yours.
                 </span>
@@ -243,7 +239,7 @@ export default function ProteinSnackBoxPage() {
             </div>
 
             <div className="mt-7 grid gap-3 lg:grid-cols-3">
-              {swaps.map((swap) => (
+              {recipe.swaps.map((swap) => (
                 <div
                   key={swap.label}
                   className="rounded-2xl border border-[#D0B5AF] bg-[#F7F1ED]/55 p-5"
@@ -269,8 +265,8 @@ export default function ProteinSnackBoxPage() {
 
               <p className="mt-3 max-w-3xl text-sm leading-6 text-[#806E68]">
                 Nutrition values are approximate and can change based on the
-                cottage cheese, egg, vegetables, seasonings and any extras you
-                add. Adjust portions to match your individual needs.
+                ingredients, portions and brands you use. Adjust portions to
+                match your individual needs.
               </p>
             </div>
           </section>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import { recipes as sharedRecipes } from "@/lib/recipes";
 
 type IconProps = {
   className?: string;
@@ -372,18 +373,7 @@ const recipes = [
     time: "15 MIN",
     icon: PancakeIcon,
   },
-  {
-    id: "breakfast-wrap",
-    title: "High-Protein Breakfast Wrap",
-    subtitle: "the breakfast that keeps up.",
-    meal: "Breakfast",
-    goals: ["High Protein", "Quick"],
-    calories: 390,
-    protein: 36,
-    carbs: 30,
-    time: "10 MIN",
-    icon: BreakfastIcon,
-  },
+  
   {
     id: "greek-yogurt-crunch-bowl",
     title: "Greek Yogurt Crunch Bowl",
@@ -577,6 +567,10 @@ const recipes = [
     icon: PlantMealIcon,
   },
 ];
+const allRecipes = sharedRecipes.map((recipe) => ({
+  ...recipe,
+  icon: BreakfastIcon,
+}));
 
 const mealTypes = [
   "All",
@@ -801,7 +795,7 @@ export default function RecipesPage() {
     const searchTerm =
       search.trim().toLowerCase();
 
-    return recipes.filter((recipe) => {
+    return allRecipes.filter((recipe) => {
       const mealMatch =
         meal === "All" ||
         recipe.meal === meal;
