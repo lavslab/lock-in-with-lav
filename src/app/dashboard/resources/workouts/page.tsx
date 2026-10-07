@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   useEffect,
   useMemo,
@@ -442,6 +443,12 @@ function formatLocalDate(date: Date) {
 --------------------------------- */
 
 export default function WorkoutsPage() {
+
+    const searchParams = useSearchParams();
+
+  const isChangeMode =
+    searchParams.get("mode") === "change";
+
   const [firstName, setFirstName] =
     useState("there");
 
@@ -642,7 +649,23 @@ export default function WorkoutsPage() {
     ) {
       return false;
     }
+  const { data: currentProgress } =
+    await supabase
+      .from("daily_progress")
+      .select("selected_workouts")
+      .eq("user_id", userId)
+      .eq(
+        "challenge_day",
+        currentChallengeDay,
+      )
+      .maybeSingle();
 
+  const existingWorkouts =
+    Array.isArray(
+      currentProgress?.selected_workouts,
+    )
+      ? currentProgress.selected_workouts
+      : [];
     const selectedWorkouts =
       workoutIds
         .map((id) =>
@@ -668,8 +691,16 @@ export default function WorkoutsPage() {
           )
             ? item.equipment.join(", ")
             : item.equipment,
-          exercises: item.exercises,
-        }));
+            exercises: item.exercises,
+source:
+  existingWorkouts.find(
+    (existing: { id?: string }) =>
+      existing.id === item.id,
+  )?.source === "guide"
+    ? "guide"
+    : "manual",
+            
+}));
 
     const progressDate =
       formatLocalDate(new Date());
@@ -727,10 +758,9 @@ export default function WorkoutsPage() {
     const previousIds =
       selectedWorkoutIds;
 
-    const nextIds = [
-      ...previousIds,
-      workout.id,
-    ];
+    const nextIds = isChangeMode
+  ? [workout.id]
+  : [...previousIds, workout.id];
 
     setSelectedWorkoutIds(nextIds);
 
@@ -755,6 +785,24 @@ export default function WorkoutsPage() {
     ) {
       return;
     }
+
+    const { data: currentProgress } =
+  await supabase
+    .from("daily_progress")
+    .select("selected_workouts")
+    .eq("user_id", userId)
+    .eq(
+      "challenge_day",
+      currentChallengeDay,
+    )
+    .maybeSingle();
+
+const existingWorkouts =
+  Array.isArray(
+    currentProgress?.selected_workouts,
+  )
+    ? currentProgress.selected_workouts
+    : [];
 
     const previousIds =
       selectedWorkoutIds;

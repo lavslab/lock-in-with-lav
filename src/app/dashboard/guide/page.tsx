@@ -522,27 +522,125 @@ export default function GuidePage() {
     }
 
     // Save the weekly schedule to Supabase.
-    if (userId) {
-      const { error } = await supabase
-        .from("user_templates")
-        .upsert(
-          {
-            user_id: userId,
-            workouts: nextSelections,
-            updated_at: new Date().toISOString(),
-          },
-          {
-            onConflict: "user_id",
-          },
-        );
+   if (userId) {
+  const { error } = await supabase
+    .from("user_templates")
+    .upsert(
+      {
+        user_id: userId,
+        workouts: nextSelections,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id",
+      },
+    );
 
-      if (error) {
-        console.error(
-          "Could not save Guide workout schedule:",
-          error,
-        );
+  if (error) {
+    console.error(
+      "Could not save Guide workout schedule:",
+      error,
+    );
+  }
+
+  /*
+   * If the user is ADDING a workout back into today's
+   * Guide schedule, clear any previous Today dismissal
+   * for that workout so it can appear on Today again.
+   */
+  if (!isCurrentlySelected) {
+    const today = new Date();
+    const jsDay = today.getDay();
+
+    const todayGuideDay =
+      jsDay === 0 ? "07" : String(jsDay).padStart(2, "0");
+
+    if (dayId === todayGuideDay) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select(
+            "challenge_start_date, challenge_length",
+          )
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profile?.challenge_start_date) {
+          const start = new Date(
+            `${profile.challenge_start_date}T00:00:00`,
+          );
+
+          const current = new Date();
+          current.setHours(0, 0, 0, 0);
+
+          const differenceInDays = Math.floor(
+            (current.getTime() - start.getTime()) /
+              (1000 * 60 * 60 * 24),
+          );
+
+          const challengeDay =
+            differenceInDays + 1;
+
+          if (challengeDay > 0) {
+            const { data: progress } =
+              await supabase
+                .from("daily_progress")
+                .select(
+                  "dismissed_guide_workouts",
+                )
+                .eq("user_id", userId)
+                .eq(
+                  "challenge_day",
+                  challengeDay,
+                )
+                .maybeSingle();
+
+            const dismissed =
+              Array.isArray(
+                progress?.dismissed_guide_workouts,
+              )
+                ? progress.dismissed_guide_workouts
+                : [];
+
+            if (dismissed.includes(workoutId)) {
+              const updatedDismissed =
+                dismissed.filter(
+                  (id: string) =>
+                    id !== workoutId,
+                );
+
+              const { error: dismissalError } =
+                await supabase
+                  .from("daily_progress")
+                  .update({
+                    dismissed_guide_workouts:
+                      updatedDismissed,
+                    updated_at:
+                      new Date().toISOString(),
+                  })
+                  .eq("user_id", userId)
+                  .eq(
+                    "challenge_day",
+                    challengeDay,
+                  );
+
+              if (dismissalError) {
+                console.error(
+                  "Could not restore Guide workout to Today:",
+                  dismissalError,
+                );
+              }
+            }
+          }
+        }
       }
     }
+  }
+}
   };
 
   const handleChangeWorkout = (dayId: string) => {

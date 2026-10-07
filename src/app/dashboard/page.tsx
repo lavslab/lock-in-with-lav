@@ -72,6 +72,7 @@ type SelectedWorkout = {
   time: string;
   equipment: string;
   exercises: string;
+  source?: "guide" | "manual";
 };
 
 const emptyProgress: DailyProgress = {
@@ -329,12 +330,11 @@ const scheduledGuideWorkouts: SelectedWorkout[] =
           ? workout.equipment.join(" + ")
           : workout.equipment,
         exercises: workout.exercises,
+        source: "guide" as const,
       };
     })
     .filter(
-      (
-        workout
-      ): workout is SelectedWorkout =>
+      (workout): workout is NonNullable<typeof workout> =>
         workout !== null
     );
 
@@ -344,8 +344,8 @@ const {
 } = await supabase
   .from("daily_progress")
   .select(
-    "move, get_outside, hydrate, read, nourish, document, no_alcohol, water_bottles, selected_workouts"
-  )
+  "move, get_outside, hydrate, read, nourish, document, no_alcohol, water_bottles, selected_workouts, dismissed_guide_workouts"
+)
   .eq("user_id", user.id)
   .eq("challenge_day", calculatedDay)
   .maybeSingle();
@@ -370,27 +370,51 @@ if (progressError) {
     )
   );
 
-  const savedWorkouts =
-  Array.isArray(savedProgress.selected_workouts)
-    ? (savedProgress.selected_workouts as SelectedWorkout[])
+ const savedWorkouts: SelectedWorkout[] =
+  Array.isArray(
+    savedProgress.selected_workouts
+  )
+    ? savedProgress.selected_workouts
+    : [];
+
+const dismissedGuideWorkouts: string[] =
+  Array.isArray(
+    savedProgress.dismissed_guide_workouts
+  )
+    ? savedProgress.dismissed_guide_workouts
     : [];
 
 /*
- * Merge today's Guide workouts with anything
- * already saved manually on Today.
+ * Keep manually chosen workouts.
  *
- * Existing Today selections are kept.
- * Guide workouts are only added if they aren't
- * already in selected_workouts.
+ * Older saved workouts may not have a source yet,
+ * so keep those too rather than accidentally
+ * deleting a user's existing selection.
  */
+const savedNonGuideWorkouts =
+  savedWorkouts.filter(
+    (workout) => workout.source !== "guide"
+  );
+
+/*
+ * Only bring in Guide workouts that the user
+ * has NOT removed from Today.
+ */
+const activeGuideWorkouts =
+  scheduledGuideWorkouts.filter(
+    (workout) =>
+      !dismissedGuideWorkouts.includes(
+        workout.id
+      )
+  );
+
 const mergedWorkouts = [
-  ...savedWorkouts,
-  ...scheduledGuideWorkouts.filter(
-    (scheduledWorkout) =>
-      !savedWorkouts.some(
+  ...savedNonGuideWorkouts,
+  ...activeGuideWorkouts.filter(
+    (guideWorkout) =>
+      !savedNonGuideWorkouts.some(
         (savedWorkout) =>
-          savedWorkout.id ===
-          scheduledWorkout.id
+          savedWorkout.id === guideWorkout.id
       )
   ),
 ];
@@ -408,12 +432,14 @@ setSelectedWorkout(
  * persist the merged list to today's
  * daily_progress row.
  */
-if (
-  mergedWorkouts.length !==
-  savedWorkouts.length
-) {
+const workoutsChanged =
+  JSON.stringify(mergedWorkouts) !==
+  JSON.stringify(savedWorkouts);
+
+if (workoutsChanged) {
   const { error: workoutSyncError } =
     await supabase
+
       .from("daily_progress")
       .update({
         selected_workouts:
@@ -663,6 +689,113 @@ if (
     setProgress(previousProgress);
   }
 };
+
+  /**
+   * REMOVE WORKOUT FROM TODAY
+   *
+   * Removes one individual workout from today's
+   * selected_workouts list and saves the new list
+   * back to daily_progress.
+   */
+  const removeWorkoutFromToday = async (
+    workoutId: string
+  ) => {
+    if (
+      !userId ||
+      !challengeStartDate ||
+      isLoadingProgress
+    ) {
+      return;
+    }
+
+    const previousWorkouts = selectedWorkouts;
+
+const workoutBeingRemoved =
+  selectedWorkouts.find(
+    (workout) => workout.id === workoutId
+  );
+
+const updatedWorkouts =
+  selectedWorkouts.filter(
+    (workout) => workout.id !== workoutId
+  );
+
+let dismissedGuideWorkouts: string[] = [];
+
+if (workoutBeingRemoved?.source === "guide") {
+  const { data: currentProgress } =
+    await supabase
+      .from("daily_progress")
+      .select("dismissed_guide_workouts")
+      .eq("user_id", userId)
+      .eq("challenge_day", currentDay)
+      .maybeSingle();
+
+  const existingDismissed =
+    Array.isArray(
+      currentProgress?.dismissed_guide_workouts
+    )
+      ? currentProgress.dismissed_guide_workouts
+      : [];
+
+  dismissedGuideWorkouts = Array.from(
+    new Set([
+      ...existingDismissed,
+      workoutId,
+    ])
+  );
+}
+
+    // Update the screen immediately.
+    setSelectedWorkouts(updatedWorkouts);
+
+    setSelectedWorkout(
+      updatedWorkouts.length > 0
+        ? updatedWorkouts[0]
+        : null
+    );
+
+    const progressDate =
+      formatDateForDatabase(today);
+
+    const { error } = await supabase
+      .from("daily_progress")
+      .upsert(
+        {
+  user_id: userId,
+  challenge_day: currentDay,
+  progress_date: progressDate,
+  selected_workouts: updatedWorkouts,
+  ...(workoutBeingRemoved?.source === "guide"
+    ? {
+        dismissed_guide_workouts:
+          dismissedGuideWorkouts,
+      }
+    : {}),
+  updated_at: new Date().toISOString(),
+},
+        {
+          onConflict:
+            "user_id,challenge_day",
+        }
+      );
+
+    if (error) {
+      console.error(
+        "Could not remove workout from Today:",
+        error
+      );
+
+      // Put it back if Supabase failed.
+      setSelectedWorkouts(previousWorkouts);
+
+      setSelectedWorkout(
+        previousWorkouts.length > 0
+          ? previousWorkouts[0]
+          : null
+      );
+    }
+  };
   const completedCount =
     commitments.filter(
       (item) => progress[item.column]
@@ -1070,20 +1203,30 @@ if (
                                 </div>
 
                                 <div className="mt-2 flex items-center justify-between gap-4">
-                                  <Link
-                                    href={`/dashboard/resources/workouts/${workout.id}`}
-                                    className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
-                                  >
-                                    <span>
-                                      OPEN{" "}
-                                      {workout.title.toUpperCase()}
-                                    </span>
+  <Link
+    href={`/dashboard/resources/workouts/${workout.id}`}
+    className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
+  >
+    <span>
+      OPEN{" "}
+      {workout.title.toUpperCase()}
+    </span>
 
-                                    <span className="font-serif text-sm">
-                                      →
-                                    </span>
-                                  </Link>
-                                </div>
+    <span className="font-serif text-sm">
+      →
+    </span>
+  </Link>
+
+  <button
+    type="button"
+    onClick={() =>
+      removeWorkoutFromToday(workout.id)
+    }
+    className="shrink-0 text-[7px] tracking-[0.16em] text-[#B08A82] transition hover:text-[#211C19]"
+  >
+    REMOVE
+  </button>
+</div>
                               </div>
                             )
                           )}
@@ -1101,7 +1244,7 @@ if (
                             </span>
 
                             <Link
-                              href="/dashboard/resources/workouts"
+                              href="/dashboard/resources/workouts?mode=change"
                               className="shrink-0 text-[7px] tracking-[0.16em] text-[#9D6F67] transition hover:text-[#211C19]"
                             >
                               CHANGE
