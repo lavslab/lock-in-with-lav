@@ -213,7 +213,6 @@ const normalizeWorkoutSelections = (value: unknown) => {
 
 const weekdays = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
-type ScheduleView = "numbers" | "weekdays";
 
 /* ---------------------------------
  * TRAINING LEVELS
@@ -285,10 +284,20 @@ export default function GuidePage() {
     string | null
   >(null);
 
-  const [scheduleView, setScheduleView] =
-    useState<ScheduleView>("numbers");
+const [scheduleView, setScheduleView] = useState<
+  "numbers" | "weekdays"
+>("weekdays");
+
+useEffect(() => {
+  const savedView = localStorage.getItem("lockin-guide-schedule-view");
+
+  if (savedView === "numbers" || savedView === "weekdays") {
+    setScheduleView(savedView);
+  }
+}, []);
 
   const [weekStart, setWeekStart] = useState("MON");
+  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(null);
 
   const [scheduleViewStorageKey, setScheduleViewStorageKey] = useState<
     string | null
@@ -310,6 +319,23 @@ export default function GuidePage() {
       }
 
       setUserId(user.id);
+      const { data: challengeProfile, error: challengeProfileError } =
+  await supabase
+    .from("profiles")
+    .select("challenge_start_date")
+    .eq("id", user.id)
+    .maybeSingle();
+
+if (challengeProfileError) {
+  console.error(
+    "Could not load challenge start date:",
+    challengeProfileError,
+  );
+}
+
+setChallengeStartDate(
+  challengeProfile?.challenge_start_date ?? null,
+);
 
       const storageKey = `lockInGuideWorkoutSelections:${user.id}`;
       const viewStorageKey = `lockInGuideScheduleView:${user.id}`;
@@ -319,30 +345,6 @@ export default function GuidePage() {
       setScheduleViewStorageKey(viewStorageKey);
       setWeekStartStorageKey(startStorageKey);
 
-      try {
-        const savedScheduleView =
-          window.localStorage.getItem(viewStorageKey);
-
-        if (
-          savedScheduleView === "numbers" ||
-          savedScheduleView === "weekdays"
-        ) {
-          setScheduleView(savedScheduleView);
-        }
-      } catch {
-        // Keep the default view if local storage is unavailable.
-      }
-
-      try {
-        const savedWeekStart =
-          window.localStorage.getItem(startStorageKey);
-
-        if (savedWeekStart && weekdays.includes(savedWeekStart)) {
-          setWeekStart(savedWeekStart);
-        }
-      } catch {
-        // Keep Monday as the default if local storage is unavailable.
-      }
 
       /*
        * Supabase is now the main source for the user's
@@ -446,35 +448,8 @@ export default function GuidePage() {
 
     void getUser();
   }, []); 
-    const handleScheduleViewChange = (view: ScheduleView) => {
-    setScheduleView(view);
+   
 
-    if (scheduleViewStorageKey) {
-      try {
-        window.localStorage.setItem(
-          scheduleViewStorageKey,
-          view,
-        );
-      } catch {
-        // Keep the setting in state if local storage is unavailable.
-      }
-    }
-  };
-
-  const handleWeekStartChange = (day: string) => {
-    setWeekStart(day);
-
-    if (weekStartStorageKey) {
-      try {
-        window.localStorage.setItem(
-          weekStartStorageKey,
-          day,
-        );
-      } catch {
-        // Keep the setting in state if local storage is unavailable.
-      }
-    }
-  };
 
   const handleWorkoutSelect = async (
     dayId: string,
@@ -548,14 +523,7 @@ export default function GuidePage() {
    * Guide schedule, clear any previous Today dismissal
    * for that workout so it can appear on Today again.
    */
-  if (!isCurrentlySelected) {
-    const today = new Date();
-    const jsDay = today.getDay();
-
-    const todayGuideDay =
-      jsDay === 0 ? "07" : String(jsDay).padStart(2, "0");
-
-    if (dayId === todayGuideDay) {
+      if (!isCurrentlySelected) {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -563,76 +531,69 @@ export default function GuidePage() {
       if (user) {
         const { data: profile } = await supabase
           .from("profiles")
-          .select(
-            "challenge_start_date, challenge_length",
-          )
+          .select("challenge_start_date, challenge_length")
           .eq("id", user.id)
           .maybeSingle();
 
         if (profile?.challenge_start_date) {
-          const start = new Date(
-            `${profile.challenge_start_date}T00:00:00`,
-          );
+          const [year, month, day] = profile.challenge_start_date
+            .split("-")
+            .map(Number);
 
-          const current = new Date();
-          current.setHours(0, 0, 0, 0);
+          const today = new Date();
 
-          const differenceInDays = Math.floor(
-            (current.getTime() - start.getTime()) /
-              (1000 * 60 * 60 * 24),
+          const startUTC = Date.UTC(year, month - 1, day);
+
+          const todayUTC = Date.UTC(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate(),
           );
 
           const challengeDay =
-            differenceInDays + 1;
+            Math.round((todayUTC - startUTC) / 86400000) + 1;
 
-          if (challengeDay > 0) {
-            const { data: progress } =
-              await supabase
+          const challengeLength = profile.challenge_length ?? 75;
+
+          if (challengeDay >= 1 && challengeDay <= challengeLength) {
+            const todayGuideDay = String(
+              ((challengeDay - 1) % 7) + 1,
+            ).padStart(2, "0");
+
+            if (dayId === todayGuideDay) {
+              const { data: progress } = await supabase
                 .from("daily_progress")
-                .select(
-                  "dismissed_guide_workouts",
-                )
+                .select("dismissed_guide_workouts")
                 .eq("user_id", userId)
-                .eq(
-                  "challenge_day",
-                  challengeDay,
-                )
+                .eq("challenge_day", challengeDay)
                 .maybeSingle();
 
-            const dismissed =
-              Array.isArray(
+              const dismissed = Array.isArray(
                 progress?.dismissed_guide_workouts,
               )
                 ? progress.dismissed_guide_workouts
                 : [];
 
-            if (dismissed.includes(workoutId)) {
-              const updatedDismissed =
-                dismissed.filter(
-                  (id: string) =>
-                    id !== workoutId,
+              if (dismissed.includes(workoutId)) {
+                const updatedDismissed = dismissed.filter(
+                  (id: string) => id !== workoutId,
                 );
 
-              const { error: dismissalError } =
-                await supabase
+                const { error: dismissalError } = await supabase
                   .from("daily_progress")
                   .update({
-                    dismissed_guide_workouts:
-                      updatedDismissed,
-                    updated_at:
-                      new Date().toISOString(),
+                    dismissed_guide_workouts: updatedDismissed,
+                    updated_at: new Date().toISOString(),
                   })
                   .eq("user_id", userId)
-                  .eq(
-                    "challenge_day",
-                    challengeDay,
-                  );
+                  .eq("challenge_day", challengeDay);
 
-              if (dismissalError) {
-                console.error(
-                  "Could not restore Guide workout to Today:",
-                  dismissalError,
-                );
+                                if (dismissalError) {
+                  console.error(
+                    "Could not restore Guide workout to Today:",
+                    dismissalError,
+                  );
+                }
               }
             }
           }
@@ -640,7 +601,6 @@ export default function GuidePage() {
       }
     }
   }
-}
   };
 
   const handleChangeWorkout = (dayId: string) => {
@@ -651,24 +611,33 @@ export default function GuidePage() {
     setExpandedDay(null);
   };
 
-  const getDayLabel = (
-    index: number,
-    fallbackDay: string,
-  ) => {
-    if (scheduleView === "numbers") {
-      return fallbackDay;
-    }
+  const getDayLabel = (index: number) => {
+  if (scheduleView === "numbers") {
+    return `DAY ${String(index + 1).padStart(2, "0")}`;
+  }
 
-    const startIndex = weekdays.indexOf(weekStart);
+  if (!challengeStartDate) {
+    return `DAY ${String(index + 1).padStart(2, "0")}`;
+  }
 
-    if (startIndex === -1) {
-      return weekdays[index];
-    }
+  const [year, month, day] = challengeStartDate.split("-").map(Number);
 
-    return weekdays[
-      (startIndex + index) % weekdays.length
-    ];
-  };
+  const startWeekday = new Date(
+    Date.UTC(year, month - 1, day),
+  ).getUTCDay();
+
+  const weekdayNames = [
+    "SUN",
+    "MON",
+    "TUE",
+    "WED",
+    "THU",
+    "FRI",
+    "SAT",
+  ];
+
+  return weekdayNames[(startWeekday + index) % 7];
+};
 
   const initial =
     firstName && firstName !== "there"
@@ -776,88 +745,37 @@ export default function GuidePage() {
               </p>
             </div>
 
-            {/* SCHEDULE DISPLAY SETTINGS */}
-
-            <div className="mt-7 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] p-5 md:p-6">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div>
-                  <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                    VIEW YOUR WEEK AS
-                  </p>
-
-                  <div className="mt-3 flex w-fit rounded-full border border-[#D8C7C1] bg-[#F7F1ED] p-1">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleScheduleViewChange(
-                          "numbers",
-                        )
-                      }
-                      className={`rounded-full px-4 py-2 text-[8px] tracking-[0.18em] transition ${
-                        scheduleView === "numbers"
-                          ? "bg-[#211C19] text-[#F7F1ED]"
-                          : "text-[#8F655E] hover:bg-[#EAD8D3]"
-                      }`}
-                    >
-                      DAY NUMBERS
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleScheduleViewChange(
-                          "weekdays",
-                        )
-                      }
-                      className={`rounded-full px-4 py-2 text-[8px] tracking-[0.18em] transition ${
-                        scheduleView === "weekdays"
-                          ? "bg-[#211C19] text-[#F7F1ED]"
-                          : "text-[#8F655E] hover:bg-[#EAD8D3]"
-                      }`}
-                    >
-                      WEEKDAYS
-                    </button>
-                  </div>
-                </div>
-
-                {scheduleView === "weekdays" && (
-                  <div className="lg:text-right">
-                    <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                      MY WEEK STARTS
-                    </p>
-
-                    <div className="mt-3 flex max-w-full gap-1.5 overflow-x-auto pb-1 lg:justify-end">
-                      {weekdays.map((day) => (
-                        <button
-                          key={day}
-                          type="button"
-                          onClick={() =>
-                            handleWeekStartChange(day)
-                          }
-                          className={`h-9 min-w-11 shrink-0 rounded-full border px-3 text-[7px] tracking-[0.14em] transition ${
-                            weekStart === day
-                              ? "border-[#A77B73] bg-[#EAD8D3] text-[#211C19]"
-                              : "border-[#D8C7C1] bg-[#F7F1ED] text-[#8F655E] hover:border-[#B9948B]"
-                          }`}
-                        >
-                          {day}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <p className="mt-4 max-w-2xl text-[10px] leading-5 text-[#927D76]">
-                {scheduleView === "numbers"
-                  ? "Keep your training week flexible with Day 01–07."
-                  : `Starting on ${weekStart}, the rest of your training week follows in order.`}
-              </p>
-            </div>
+            
 
             {/* TRAINING WEEK */}
 
-            <div className="mt-4 overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
+           <div className="mb-4">
+  <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9D6F67]">
+    View your week as
+  </p>
+
+  <div className="inline-flex rounded-full border border-[#DED0CB] bg-[#FBF8F6] p-1">
+    {(["weekdays", "numbers"] as const).map((view) => (
+      <button
+        key={view}
+        type="button"
+        onClick={() => {
+  setScheduleView(view);
+  localStorage.setItem("lockin-guide-schedule-view", view);
+}}
+        className={`rounded-full px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] transition ${
+          scheduleView === view
+            ? "bg-[#211C19] text-white"
+            : "text-[#9D6F67] hover:bg-[#F0E5E0]"
+        }`}
+      >
+        {view === "weekdays" ? "Weekdays" : "Day Numbers"}
+      </button>
+    ))}
+  </div>
+</div>
+
+<div className="mt-4 overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
               {trainingWeek.map((day, index) => {
                 const isExpanded =
                   expandedDay === day.day;
@@ -900,10 +818,7 @@ export default function GuidePage() {
                       {/* DAY NUMBER / WEEKDAY */}
 
                       <span className="font-serif text-xl text-[#B48A82]">
-                        {getDayLabel(
-                          index,
-                          day.day,
-                        )}
+                        {getDayLabel(index)}
                       </span>
 
                       {/* DAY / WORKOUT INFO */}
@@ -1350,7 +1265,7 @@ export default function GuidePage() {
               just keep showing up. ♡
             </p>
           </div>
-        </section>
+       </section>
       </div>
     </main>
   );

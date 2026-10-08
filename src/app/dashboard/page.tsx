@@ -262,15 +262,15 @@ const calculatedDay =
  * Challenge Day 08 → Guide Day 01
  * etc.
  */
-const today = new Date();
-const jsDay = today.getDay();
-
 const guideDayNumber =
-  jsDay === 0 ? 7 : jsDay;
+  calculatedDay > 0
+    ? ((calculatedDay - 1) % 7) + 1
+    : 0;
 
-const guideDayId = String(
-  guideDayNumber
-).padStart(2, "0");
+const guideDayId =
+  guideDayNumber > 0
+    ? String(guideDayNumber).padStart(2, "0")
+    : "";
 
 const {
   data: userTemplate,
