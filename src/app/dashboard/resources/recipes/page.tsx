@@ -567,11 +567,46 @@ const recipes = [
     icon: PlantMealIcon,
   },
 ];
-const allRecipes = sharedRecipes.map((recipe) => ({
-  ...recipe,
-  icon: BreakfastIcon,
-}));
+const allRecipes = sharedRecipes.map((recipe) => {
+  const matchingRecipe = recipes.find(
+    (item) => item.id === recipe.id
+  );
 
+  const title = recipe.title.toLowerCase();
+
+  let icon = matchingRecipe?.icon ?? BreakfastIcon;
+
+  if (!matchingRecipe) {
+    if (title.includes("smoothie") || title.includes("shake")) {
+      icon = SmoothieIcon;
+    } else if (title.includes("pancake")) {
+      icon = PancakeIcon;
+    } else if (title.includes("salmon") || title.includes("fish")) {
+      icon = FishIcon;
+    } else if (title.includes("shrimp")) {
+      icon = ShrimpIcon;
+    } else if (title.includes("pasta")) {
+      icon = PastaIcon;
+    } else if (title.includes("taco") || title.includes("quesadilla")) {
+      icon = TacoIcon;
+    } else if (title.includes("potato")) {
+      icon = PotatoIcon;
+    } else if (title.includes("chicken")) {
+      icon = ChickenIcon;
+    } else if (title.includes("turkey")) {
+      icon = TurkeyMealIcon;
+    } else if (title.includes("yogurt") || title.includes("bowl")) {
+      icon = BowlIcon;
+    } else if (title.includes("snack")) {
+      icon = SnackBoxIcon;
+    }
+  }
+
+  return {
+    ...recipe,
+    icon,
+  };
+});
 const mealTypes = [
   "All",
   "Breakfast",
@@ -687,6 +722,9 @@ export default function RecipesPage() {
   const [meal, setMeal] = useState("All");
   const [goal, setGoal] = useState("All");
   const [search, setSearch] = useState("");
+  const [favoriteRecipeIds, setFavoriteRecipeIds] = useState<string[]>([]);
+const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+const [savingFavoriteId, setSavingFavoriteId] = useState<string | null>(null);
 
   const [weekStartDate, setWeekStartDate] =
     useState(
@@ -743,6 +781,19 @@ export default function RecipesPage() {
       }
 
       setUserId(user.id);
+      const { data: savedFavorites, error: favoritesError } =
+  await supabase
+    .from("recipe_favorites")
+    .select("recipe_id")
+    .eq("user_id", user.id);
+
+if (favoritesError) {
+  console.error("Could not load recipe favorites:", favoritesError);
+} else {
+  setFavoriteRecipeIds(
+    (savedFavorites ?? []).map((favorite) => favorite.recipe_id)
+  );
+}
 
       try {
         const savedWeekStart =
@@ -804,6 +855,10 @@ export default function RecipesPage() {
         goal === "All" ||
         recipe.goals.includes(goal);
 
+        const favoriteMatch =
+  !showFavoritesOnly ||
+  favoriteRecipeIds.includes(recipe.id);
+
       const searchableText = [
         recipe.title,
         recipe.subtitle,
@@ -820,23 +875,67 @@ export default function RecipesPage() {
         );
 
       return (
-        mealMatch &&
-        goalMatch &&
-        searchMatch
-      );
+  mealMatch &&
+  goalMatch &&
+  searchMatch &&
+  favoriteMatch
+);
     });
-  }, [meal, goal, search]);
+  }, [meal, goal, search, showFavoritesOnly, favoriteRecipeIds]);
+
+  const toggleFavorite = async (recipeId: string) => {
+  if (!userId || savingFavoriteId) return;
+
+  const isFavorite = favoriteRecipeIds.includes(recipeId);
+
+  setSavingFavoriteId(recipeId);
+
+  if (isFavorite) {
+    const { error } = await supabase
+      .from("recipe_favorites")
+      .delete()
+      .eq("user_id", userId)
+      .eq("recipe_id", recipeId);
+
+    if (error) {
+      console.error("Could not remove favorite:", error);
+      alert("Couldn't remove this favorite. Please try again. ♡");
+    } else {
+      setFavoriteRecipeIds((current) =>
+        current.filter((id) => id !== recipeId)
+      );
+    }
+  } else {
+    const { error } = await supabase
+      .from("recipe_favorites")
+      .insert({
+        user_id: userId,
+        recipe_id: recipeId,
+      });
+
+    if (error) {
+      console.error("Could not save favorite:", error);
+      alert("Couldn't save this favorite. Please try again. ♡");
+    } else {
+      setFavoriteRecipeIds((current) => [...current, recipeId]);
+    }
+  }
+
+  setSavingFavoriteId(null);
+};
 
   const hasActiveFilters =
-    search.trim() !== "" ||
-    meal !== "All" ||
-    goal !== "All";
+  search.trim() !== "" ||
+  meal !== "All" ||
+  goal !== "All" ||
+  showFavoritesOnly;
 
   const clearFilters = () => {
-    setSearch("");
-    setMeal("All");
-    setGoal("All");
-  };
+  setSearch("");
+  setMeal("All");
+  setGoal("All");
+  setShowFavoritesOnly(false);
+};
 
   /* ---------------------------------
    * MEAL PLANNER
@@ -1101,6 +1200,16 @@ export default function RecipesPage() {
                         />
                       )
                     )}
+
+<FilterButton
+  label="♥ My Favorites"
+  active={showFavoritesOnly}
+  onClick={() => {
+    setShowFavoritesOnly(!showFavoritesOnly);
+    setMeal("All");
+  }}
+/>
+
                   </div>
                 </div>
 
@@ -1238,9 +1347,33 @@ export default function RecipesPage() {
                               </span>
                             </div>
 
-                            <span className="rounded-full border border-[#D6C3BD] px-3 py-1.5 text-[7px] tracking-[0.18em] text-[#8F655E]">
-                              {recipe.meal.toUpperCase()}
-                            </span>
+                            <div className="flex items-center gap-2">
+  <span className="rounded-full border border-[#D6C3BD] px-3 py-1.5 text-[7px] tracking-[0.18em] text-[#8F655E]">
+    {recipe.meal.toUpperCase()}
+  </span>
+
+  <button
+    type="button"
+    onClick={() => toggleFavorite(recipe.id)}
+    disabled={!userId || savingFavoriteId !== null}
+    aria-label={
+      favoriteRecipeIds.includes(recipe.id)
+        ? `Remove ${recipe.title} from favorites`
+        : `Add ${recipe.title} to favorites`
+    }
+    aria-pressed={favoriteRecipeIds.includes(recipe.id)}
+    title={
+      favoriteRecipeIds.includes(recipe.id)
+        ? "Remove from favorites"
+        : "Save to favorites"
+    }
+    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#D6C3BD] bg-[#F7F1ED] text-[#A77B73] transition hover:border-[#A77B73] hover:bg-[#EAD8D3] disabled:opacity-50"
+  >
+    <span className="text-lg leading-none">
+      {favoriteRecipeIds.includes(recipe.id) ? "♥" : "♡"}
+    </span>
+  </button>
+</div>
                           </div>
 
                           <h2 className="mt-7 font-serif text-3xl leading-tight">
