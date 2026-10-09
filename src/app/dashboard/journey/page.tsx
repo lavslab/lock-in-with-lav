@@ -1,5 +1,9 @@
 "use client";
 
+import { Capacitor } from "@capacitor/core";
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
+
 import Link from "next/link";
 
 import DashboardSidebar from "@/components/DashboardSidebar";
@@ -482,6 +486,87 @@ const selectedIsUpcoming =
 
     setDayDetailsLoading(false);
   }
+
+async function saveSelectedDayPhoto() {
+  if (!selectedPhotoPath) {
+    setPhotoError("No photo is available to save.");
+    return;
+  }
+
+  setPhotoError(null);
+
+  try {
+    const { data, error } = await supabase.storage
+      .from("progress-photos")
+      .download(selectedPhotoPath);
+
+    if (error || !data) {
+      throw error ?? new Error("Could not download this photo.");
+    }
+
+    const extension =
+      selectedPhotoPath.split(".").pop()?.toLowerCase() || "jpg";
+
+    const fileName = `lock-in-with-lav-day-${String(
+      activeSelectedDay
+    ).padStart(2, "0")}.${extension}`;
+
+    if (Capacitor.isNativePlatform()) {
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+          const result = reader.result;
+
+          if (typeof result !== "string") {
+            reject(new Error("Could not prepare this photo."));
+            return;
+          }
+
+          resolve(result.split(",")[1]);
+        };
+
+        reader.onerror = () => {
+          reject(new Error("Could not read this photo."));
+        };
+
+        reader.readAsDataURL(data);
+      });
+
+      const savedFile = await Filesystem.writeFile({
+        path: fileName,
+        data: base64,
+        directory: Directory.Cache,
+      });
+
+      await Share.share({
+        title: "Save Progress Photo",
+        url: savedFile.uri,
+        dialogTitle: "Save your Lock In With Lav photo",
+      });
+    } else {
+      const url = URL.createObjectURL(data);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  } catch (error) {
+    console.error("Could not save progress photo:", error);
+
+    setPhotoError(
+      error instanceof Error
+        ? error.message
+        : "Could not save this photo. Please try again."
+    );
+  }
+}
 
   function triggerPhotoUpload() {
     setPhotoError(null);
@@ -1197,18 +1282,29 @@ const isComplete =
                           />
                         </div>
 
-                        <div className="mt-4 flex justify-center">
-                          <button
-                            type="button"
-                            onClick={triggerPhotoUpload}
-                            disabled={isUploadingPhoto}
-                            className="rounded-full border border-[#CBA9A2] bg-[#FBF8F6] px-5 py-2.5 text-[8px] tracking-[0.20em] text-[#806E68] transition hover:bg-[#EAD8D3] disabled:cursor-wait disabled:opacity-60"
-                          >
-                            {isUploadingPhoto
-                              ? "UPLOADING..."
-                              : "CHANGE PHOTO"}
-                          </button>
-                        </div>
+                        
+<div className="mt-4 flex flex-wrap justify-center gap-3">
+  <button
+    type="button"
+    onClick={triggerPhotoUpload}
+    disabled={isUploadingPhoto}
+    className="rounded-full border border-[#CBA9A2] bg-[#FBF8F6] px-5 py-2.5 text-[8px] tracking-[0.20em] text-[#806E68] transition hover:bg-[#EAD8D3] disabled:cursor-wait disabled:opacity-60"
+  >
+    {isUploadingPhoto
+      ? "UPLOADING..."
+      : "CHANGE PHOTO"}
+  </button>
+
+  <button
+    type="button"
+    onClick={saveSelectedDayPhoto}
+    disabled={isUploadingPhoto || !selectedPhotoPath}
+    className="rounded-full border border-[#CBA9A2] bg-[#FBF8F6] px-5 py-2.5 text-[8px] tracking-[0.20em] text-[#806E68] transition hover:bg-[#EAD8D3] disabled:opacity-60"
+  >
+    SAVE PHOTO ↓
+  </button>
+</div>
+
                       </div>
                     ) : (
                       <div className="flex aspect-[4/5] w-full items-center justify-center rounded-[1.6rem] border border-dashed border-[#CBA9A2] bg-[#F7F1ED] px-8 text-center">
