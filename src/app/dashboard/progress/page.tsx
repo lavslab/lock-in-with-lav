@@ -635,6 +635,46 @@ export default function ProgressPage() {
     }
   };
 
+
+const saveProgressPhoto = async (day: number) => {
+  const path = photoPaths[day];
+
+  if (!path) return;
+
+  setPhotoError(null);
+  setPhotoTargetDay(day);
+
+  try {
+    const { data, error } = await supabase.storage
+      .from("progress-photos")
+      .download(path);
+
+    if (error) throw error;
+
+    const url = URL.createObjectURL(data);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `lock-in-with-lav-day-${String(day).padStart(2, "0")}.jpg`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+
+    setEditingPhotoDay(null);
+  } catch (error) {
+    console.error("Could not save progress photo:", error);
+
+    setPhotoError(
+      error instanceof Error
+        ? error.message
+        : "Could not save your photo. Please try again."
+    );
+  }
+};
+
   const openPhotoPicker = async (
     day: number
   ) => {
@@ -1575,6 +1615,15 @@ export default function ProgressPage() {
                           >
                             REMOVE PHOTO
                           </button>
+                          <button
+  type="button"
+  onClick={() => saveProgressPhoto(1)}
+  className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[12px] tracking-[0.15em] text-[#8F655E] hover:bg-[#EADCD7]"
+>
+  SAVE PHOTO
+</button>
+
+
                         </div>
                       )}
                     </>
@@ -1680,7 +1729,13 @@ export default function ProgressPage() {
                           >
                             REPLACE PHOTO
                           </button>
-
+<button
+  type="button"
+  onClick={() => saveProgressPhoto(safeCurrentDay)}
+  className="block w-full border-t border-[#D7C4BE] px-4 py-3 text-left text-[12px] tracking-[0.15em] text-[#8F655E] hover:bg-[#EADCD7]"
+>
+  SAVE PHOTO
+</button>
                           <button
                             type="button"
                             onClick={() =>
