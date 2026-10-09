@@ -2,9 +2,11 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { createClient } from "@/lib/supabase/client";
+
 
 export default function AccountPage() {
   const router = useRouter();
@@ -514,6 +516,35 @@ export default function AccountPage() {
               </form>
             </section>
 
+
+
+{/* MY JOURNEYS */}
+<section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-9">
+  <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
+    YOUR PERSONAL ARCHIVE
+  </p>
+
+  <div className="mt-3 flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
+    <div className="max-w-xl">
+      <h2 className="font-serif text-3xl">
+        My Journeys ♡
+      </h2>
+
+      <p className="mt-2 text-sm leading-6 text-[#806E68]">
+        Every chapter matters. Revisit your previous challenges,
+        progress photos, milestones and moments of growth.
+      </p>
+    </div>
+
+    <Link
+      href="/dashboard/journeys"
+      className="shrink-0 rounded-full border border-[#A77B73] px-7 py-3 text-center text-[10px] tracking-[0.25em] text-[#6F514B] transition hover:bg-[#EAD8D3]"
+    >
+      VIEW MY JOURNEYS →
+    </Link>
+  </div>
+</section>
+
             {/* CHALLENGE RESET */}
             <section className="rounded-[2rem] border border-[#DDB5AE] bg-[#FBF8F6] p-7 md:p-9">
               <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
@@ -644,11 +675,11 @@ export default function AccountPage() {
             </h2>
 
             <p className="mt-4 text-sm leading-7 text-[#806E68]">
-              This will permanently clear your current challenge
-              progress, check-ins, measurements, little wins and
-              progress photos.
-            </p>
-
+  Ready for a fresh chapter? Your current journey,
+  including your progress, check-ins, measurements,
+  little wins and progress photos, will be saved
+  in My Journeys before you begin again.
+</p>
             <p className="mt-4 font-serif text-lg italic text-[#A77B73]">
               Your account and personalized plan will stay. ♡
             </p>
@@ -659,7 +690,7 @@ export default function AccountPage() {
             </p>
 
             <p className="mt-5 text-[10px] tracking-[0.2em] text-[#9D6F67]">
-              THIS CAN&apos;T BE UNDONE
+              YOUR PREVIOUS JOURNEY WILL BE ARCHIVED ♡
             </p>
 
             {resetMessage && (

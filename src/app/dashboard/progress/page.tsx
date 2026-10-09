@@ -7,6 +7,8 @@ import {
   CameraResultType,
   CameraSource,
 } from "@capacitor/camera";
+import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
 
 import { Capacitor } from "@capacitor/core";
 
@@ -567,48 +569,22 @@ export default function ProgressPage() {
         throw recordError;
       }
 
-      const oldPath =
-        photoPaths[day];
+      setPhotoUrls((previous) => ({
+  ...previous,
+  [day]: signedData.signedUrl,
+}));
 
-      setPhotoUrls(
-        (previous) => ({
-          ...previous,
-          [day]:
-            signedData.signedUrl,
-        })
-      );
+setPhotoPaths((previous) => ({
+  ...previous,
+  [day]: newFilePath!,
+}));
 
-      setPhotoPaths(
-        (previous) => ({
-          ...previous,
-          [day]:
-            newFilePath!,
-        })
-      );
+setEditingPhotoDay(null);
 
-      setEditingPhotoDay(null);
-
-      if (
-        oldPath &&
-        oldPath !== newFilePath
-      ) {
-        const {
-          error: removeError,
-        } =
-          await supabase.storage
-            .from("progress-photos")
-            .remove([
-              oldPath,
-            ]);
-
-        if (removeError) {
-          console.warn(
-            "New photo saved, but old photo could not be removed:",
-            removeError
-          );
-        }
-      }
-    } catch (error) {
+// Previous files are retained in private Storage.
+// This prevents replacement from deleting a photo
+// that may be referenced by an archived journey.
+        } catch (error) {
       console.error(
         "Progress photo upload error:",
         error
@@ -623,18 +599,13 @@ export default function ProgressPage() {
       if (newFilePath) {
         await supabase.storage
           .from("progress-photos")
-          .remove([
-            newFilePath,
-          ])
+          .remove([newFilePath])
           .catch(() => {});
       }
     } finally {
-      setIsUploadingPhoto(
-        false
-      );
+      setIsUploadingPhoto(false);
     }
   };
-
 
 const saveProgressPhoto = async (day: number) => {
   const path = photoPaths[day];
@@ -651,17 +622,58 @@ const saveProgressPhoto = async (day: number) => {
 
     if (error) throw error;
 
-    const url = URL.createObjectURL(data);
-    const link = document.createElement("a");
+    const fileName = `lock-in-with-lav-day-${String(day).padStart(2, "0")}.jpg`;
 
-    link.href = url;
-    link.download = `lock-in-with-lav-day-${String(day).padStart(2, "0")}.jpg`;
+    if (Capacitor.isNativePlatform()) {
+      // Convert the downloaded photo into base64 for Capacitor.
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
 
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+        reader.onload = () => {
+          const result = reader.result;
 
-    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+          if (typeof result !== "string") {
+            reject(new Error("Could not prepare photo for saving."));
+            return;
+          }
+
+          resolve(result.split(",")[1]);
+        };
+
+        reader.onerror = () => {
+          reject(new Error("Could not read the photo."));
+        };
+
+        reader.readAsDataURL(data);
+      });
+
+      // Create a temporary file the iPhone can share.
+      const savedFile = await Filesystem.writeFile({
+        path: fileName,
+        data: base64,
+        directory: Directory.Cache,
+      });
+
+      // Open the iPhone's native share menu.
+      await Share.share({
+        title: "Save Progress Photo",
+        url: savedFile.uri,
+        dialogTitle: "Save your Lock In With Lav photo",
+      });
+    } else {
+      // Keep the existing website download functionality.
+      const url = URL.createObjectURL(data);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = fileName;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
 
     setEditingPhotoDay(null);
   } catch (error) {
@@ -894,94 +906,55 @@ const saveProgressPhoto = async (day: number) => {
       );
     };
 
-  const removeProgressPhoto =
-    async (day: number) => {
-      const path =
-        photoPaths[day];
+  
+const removeProgressPhoto = async (day: number) => {
+  const path = photoPaths[day];
 
-      if (!path) return;
+  if (!path) return;
 
-      setPhotoError(null);
+  setPhotoError(null);
 
-      const {
-        data: userData,
-      } =
-        await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-      if (!userData.user) {
-        setPhotoError(
-          "You need to be signed in."
-        );
-        return;
-      }
+  if (userError || !user) {
+    setPhotoError("You need to be signed in.");
+    return;
+  }
 
-      const {
-        error: storageError,
-      } =
-        await supabase.storage
-          .from("progress-photos")
-          .remove([path]);
+  // Remove the photo from the active challenge only.
+  // Keep the actual file in private Storage so an
+  // archived journey can still access it if needed.
+  const { error: recordError } = await supabase
+    .from("progress_photos")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("challenge_day", day)
+    .eq("photo_type", "progress")
+    .eq("storage_path", path);
 
-      if (storageError) {
-        setPhotoError(
-          storageError.message
-        );
-        return;
-      }
+  if (recordError) {
+    setPhotoError(recordError.message);
+    return;
+  }
 
-      const {
-        error: recordError,
-      } = await supabase
-        .from("progress_photos")
-        .delete()
-        .eq(
-          "user_id",
-          userData.user.id
-        )
-        .eq(
-          "challenge_day",
-          day
-        )
-        .eq(
-          "photo_type",
-          "progress"
-        );
+  setPhotoUrls((previous) => {
+    const next = { ...previous };
+    delete next[day];
+    return next;
+  });
 
-      if (recordError) {
-        setPhotoError(
-          recordError.message
-        );
-        return;
-      }
+  setPhotoPaths((previous) => {
+    const next = { ...previous };
+    delete next[day];
+    return next;
+  });
 
-      setPhotoUrls(
-        (previous) => {
-          const next = {
-            ...previous,
-          };
+  setEditingPhotoDay(null);
+};
 
-          delete next[day];
-
-          return next;
-        }
-      );
-
-      setPhotoPaths(
-        (previous) => {
-          const next = {
-            ...previous,
-          };
-
-          delete next[day];
-
-          return next;
-        }
-      );
-
-      setEditingPhotoDay(
-        null
-      );
-    };
 
   const openMeasurementModal =
     () => {
