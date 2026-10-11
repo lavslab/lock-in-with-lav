@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Capacitor } from "@capacitor/core";
-import { Browser } from "@capacitor/browser";
+import { AppLauncher } from "@capacitor/app-launcher";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthPage() {
@@ -232,22 +232,21 @@ export default function AuthPage() {
       setResending(false);
     }
   }
-  async function handleForgotPassword() {
+  
+async function handleForgotPassword() {
   if (Capacitor.isNativePlatform()) {
     try {
-      await Browser.open({
-        url: "https://www.lockinwithlav.com/auth/forgot-password",
-      });
-      return;
-    } catch (browserError) {
-      console.error(
-        "Could not open password reset in browser:",
-        browserError
-      );
-
-      window.location.href =
+      const url =
         "https://www.lockinwithlav.com/auth/forgot-password";
 
+      await AppLauncher.openUrl({ url });
+      return;
+    } catch (error) {
+      console.error("Could not open password reset:", error);
+
+      setError(
+        "Could not open the password reset page. Please try again."
+      );
       return;
     }
   }
