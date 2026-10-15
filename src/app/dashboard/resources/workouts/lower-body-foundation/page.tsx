@@ -1,11 +1,9 @@
+
 "use client";
 
 import Link from "next/link";
-
 import { useEffect, useState } from "react";
-
 import { supabase } from "@/lib/supabase";
-
 import DashboardSidebar from "@/components/DashboardSidebar";
 
 type SwapOption = {
@@ -103,8 +101,6 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
   ],
 };
 
-/* SWAP EXERCISE INSTRUCTIONS */
-
 const swapExerciseDetails: Record<
   string,
   SwapExerciseDetails
@@ -200,7 +196,6 @@ const exercises: WorkoutExercise[] = [
     home: "Goblet Squat — 3 sets × 10–12 reps",
     gym: "Leg Press — 3 sets × 10–12 reps",
   },
-
   {
     number: "02",
     name: "Dumbbell Romanian Deadlift",
@@ -208,11 +203,11 @@ const exercises: WorkoutExercise[] = [
     prescription: "3 SETS × 10–12 REPS",
     rest: "60 SEC REST",
     cue: "Push your hips back with soft knees and keep the dumbbells close to your legs.",
-    modification: "Use lighter weights and shorten your range of motion.",
+    modification:
+      "Use lighter weights and shorten your range of motion.",
     home: "Dumbbell Romanian Deadlift — 3 sets × 10–12 reps",
     gym: "Smith Machine Romanian Deadlift — 3 sets × 10–12 reps",
   },
-
   {
     number: "03",
     name: "Reverse Lunge",
@@ -225,7 +220,6 @@ const exercises: WorkoutExercise[] = [
     home: "Dumbbell Reverse Lunge — 3 sets × 8–10 / side",
     gym: "Smith Machine Reverse Lunge — 3 sets × 8–10 / side",
   },
-
   {
     number: "04",
     name: "Glute Bridge",
@@ -233,11 +227,11 @@ const exercises: WorkoutExercise[] = [
     prescription: "3 SETS × 12–15 REPS",
     rest: "45 SEC REST",
     cue: "Drive through your heels and squeeze your glutes at the top without overextending your back.",
-    modification: "Use bodyweight and reduce the range if needed.",
+    modification:
+      "Use bodyweight and reduce the range if needed.",
     home: "Dumbbell Glute Bridge — 3 sets × 12–15 reps",
     gym: "Hip Thrust Machine — 3 sets × 12–15 reps",
   },
-
   {
     number: "05",
     name: "Dumbbell Sumo Squat",
@@ -248,7 +242,6 @@ const exercises: WorkoutExercise[] = [
     home: "Dumbbell Sumo Squat — 3 sets × 10–12 reps",
     gym: "Hack Squat or Leg Press — 3 sets × 10–12 reps",
   },
-
   {
     number: "06",
     name: "Standing Calf Raise",
@@ -277,13 +270,9 @@ const cooldown = [
 
 export default function LowerBodyFoundationPage() {
   const [firstName, setFirstName] = useState("there");
-
-  const [isLoadingUser, setIsLoadingUser] =
-    useState(true);
-
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [workoutExercises, setWorkoutExercises] =
     useState(exercises);
-
   const [openSwapFor, setOpenSwapFor] =
     useState<string | null>(null);
 
@@ -328,13 +317,11 @@ export default function LowerBodyFoundationPage() {
 
         <section className="min-w-0 flex-1 px-5 py-6 sm:px-6 md:px-10 md:py-8 lg:px-14">
           {/* TOP NAV */}
-
           <header className="flex items-center justify-between gap-4">
             <div>
               <p className="text-[8px] tracking-[0.34em] text-[#9D6F67]">
                 LOCK IN WITH LAV
               </p>
-
               <p className="mt-1.5 font-serif text-lg italic text-[#A77B73]">
                 workout library. ♡
               </p>
@@ -349,7 +336,6 @@ export default function LowerBodyFoundationPage() {
           </header>
 
           {/* WORKOUT HEADER */}
-
           <section className="mt-9 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6 sm:px-7 sm:py-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -365,8 +351,8 @@ export default function LowerBodyFoundationPage() {
                 </h1>
 
                 <p className="mt-3 max-w-xl text-sm leading-6 text-[#806E68]">
-                  Build strength through your legs and glutes with
-                  controlled, beginner-friendly movement.
+                  Build strength through your legs and glutes
+                  with controlled, beginner-friendly movement.
                 </p>
               </div>
 
@@ -376,13 +362,11 @@ export default function LowerBodyFoundationPage() {
             </div>
 
             {/* STATS */}
-
             <div className="mt-6 grid grid-cols-2 border-t border-[#E1D3CE] sm:grid-cols-4">
               <div className="border-b border-r border-[#E1D3CE] py-4 pr-3 sm:border-b-0">
                 <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
                   TIME
                 </p>
-
                 <p className="mt-1.5 font-serif text-lg">
                   35 min
                 </p>
@@ -392,7 +376,6 @@ export default function LowerBodyFoundationPage() {
                 <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
                   EXERCISES
                 </p>
-
                 <p className="mt-1.5 font-serif text-lg">
                   06
                 </p>
@@ -402,7 +385,6 @@ export default function LowerBodyFoundationPage() {
                 <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
                   FOCUS
                 </p>
-
                 <p className="mt-1.5 font-serif text-lg">
                   Legs + glutes
                 </p>
@@ -412,7 +394,6 @@ export default function LowerBodyFoundationPage() {
                 <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
                   EQUIPMENT
                 </p>
-
                 <p className="mt-1.5 font-serif text-lg">
                   Home or gym
                 </p>
@@ -421,7 +402,6 @@ export default function LowerBodyFoundationPage() {
           </section>
 
           {/* WARM UP */}
-
           <section className="mt-5 rounded-[1.5rem] bg-[#EAD8D3] px-5 py-5 sm:px-6">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
               <div>
@@ -461,7 +441,6 @@ export default function LowerBodyFoundationPage() {
           </section>
 
           {/* WORKOUT */}
-
           <section className="mt-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -478,25 +457,23 @@ export default function LowerBodyFoundationPage() {
               </div>
 
               <p className="max-w-sm text-xs leading-5 text-[#806E68]">
-                Work through each movement in order. Choose the
-                setup that fits where you&apos;re training today.
+                Work through each movement in order. Choose
+                the setup that fits where you&apos;re training
+                today.
               </p>
             </div>
 
-            {/* ONE WORKOUT CARD */}
-
+            {/* EXERCISE CARDS */}
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
               {workoutExercises.map((exercise, index) => (
                 <article
                   key={exercise.number}
                   className={`px-4 py-6 sm:px-6 ${
-                    index !== exercises.length - 1
+                    index !== workoutExercises.length - 1
                       ? "border-b border-[#DED0CB]"
                       : ""
                   }`}
                 >
-                  {/* MAIN ROW */}
-
                   <div className="grid gap-4 md:grid-cols-[42px_minmax(0,1fr)_auto] md:items-start">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-[11px] text-[#A77B73]">
                       {exercise.number}
@@ -523,8 +500,7 @@ export default function LowerBodyFoundationPage() {
                     </div>
                   </div>
 
-                  {/* OPTIONS */}
-
+                  {/* HOME / GYM / EASIER */}
                   <div className="mt-5 md:ml-[58px]">
                     <div className="grid gap-3 border-t border-[#E7DAD6] pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#E1D3CE]">
                       <div className="sm:pr-5">
@@ -559,8 +535,7 @@ export default function LowerBodyFoundationPage() {
                     </div>
                   </div>
 
-                  {/* SWAP */}
-
+                  {/* SWAP EXERCISE */}
                   {exerciseSwaps[
                     exercise.swapKey ?? exercise.name
                   ] && (
@@ -571,7 +546,7 @@ export default function LowerBodyFoundationPage() {
                           setOpenSwapFor((current) =>
                             current === exercise.number
                               ? null
-                              : exercise.number,
+                              : exercise.number
                           )
                         }
                         className="flex w-full items-center justify-between rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:bg-[#EAD8D3]"
@@ -605,24 +580,23 @@ export default function LowerBodyFoundationPage() {
 
                                   setWorkoutExercises(
                                     (current) =>
-                                      current.map(
-                                        (item) =>
-                                          item.number ===
-                                          exercise.number
-                                            ? {
-                                                ...item,
-                                                name: swap.name,
-                                                cue:
-                                                  swapDetails?.cue ??
-                                                  swap.note,
-                                                modification:
-                                                  swapDetails?.modification ??
-                                                  item.modification,
-                                                home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                                gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                              }
-                                            : item,
-                                      ),
+                                      current.map((item) =>
+                                        item.number ===
+                                        exercise.number
+                                          ? {
+                                              ...item,
+                                              name: swap.name,
+                                              cue:
+                                                swapDetails?.cue ??
+                                                swap.note,
+                                              modification:
+                                                swapDetails?.modification ??
+                                                item.modification,
+                                              home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                              gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+                                            }
+                                          : item
+                                      )
                                   );
 
                                   setOpenSwapFor(null);
@@ -659,7 +633,6 @@ export default function LowerBodyFoundationPage() {
           </section>
 
           {/* COOL DOWN */}
-
           <section className="mt-8 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-5 sm:px-6">
             <div className="grid gap-5 lg:grid-cols-[220px_1fr] lg:items-center">
               <div>
@@ -699,7 +672,6 @@ export default function LowerBodyFoundationPage() {
           </section>
 
           {/* FINISH */}
-
           <section className="py-10 text-center">
             <p className="text-[7px] tracking-[0.25em] text-[#9D6F67]">
               LOWER BODY FOUNDATION
