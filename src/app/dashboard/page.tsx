@@ -129,6 +129,8 @@ export default function DashboardPage() {
   );
 
   const [waterBottles, setWaterBottles] = useState(0);
+  const [moveMinutes, setMoveMinutes] = useState(0);
+  const [showMoveWorkouts, setShowMoveWorkouts] = useState(false);
 
   const [selectedWorkout, setSelectedWorkout] =
     useState<SelectedWorkout | null>(null);
@@ -350,6 +352,71 @@ const {
   .eq("challenge_day", calculatedDay)
   .maybeSingle();
 
+
+  
+/**
+ * MOVE — COMPLETED WORKOUT MINUTES
+ *
+ * Sum completed workouts for the current challenge day.
+ * Exclude workouts completed before this challenge started.
+ */
+let completedMoveMinutes = 0;
+let moveGoalReached = false;
+
+const { data: completedWorkouts, error: workoutMinutesError } =
+  await supabase
+    .from("workout_sessions")
+    .select("duration_minutes")
+    .eq("user_id", user.id)
+    .eq("status", "completed")
+    .eq("challenge_day", calculatedDay)
+    .gte(
+      "completed_at",
+      `${profile.challenge_start_date}T00:00:00`
+    );
+
+if (workoutMinutesError) {
+  console.error(
+    "Could not load completed workout minutes:",
+    workoutMinutesError
+  );
+} else {
+  completedMoveMinutes = (completedWorkouts ?? []).reduce(
+    (total, session) =>
+      total + Math.max(0, session.duration_minutes ?? 0),
+    0
+  );
+
+  setMoveMinutes(completedMoveMinutes);
+
+  moveGoalReached = completedMoveMinutes >= 45;
+
+  if (moveGoalReached && !savedProgress?.move) {
+    const { error: moveUpdateError } = await supabase
+      .from("daily_progress")
+      .upsert(
+        {
+          user_id: user.id,
+          challenge_day: calculatedDay,
+          progress_date: formatDateForDatabase(new Date()),
+          move: true,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "user_id,challenge_day",
+        }
+      );
+
+    if (moveUpdateError) {
+      console.error(
+        "Could not automatically complete MOVE:",
+        moveUpdateError
+      );
+      moveGoalReached = false;
+    }
+  }
+}
+
 if (progressError) {
   console.error(
     "Could not load daily progress:",
@@ -460,7 +527,7 @@ if (workoutsChanged) {
 }
 
   setProgress({
-    move: savedProgress.move,
+  move: savedProgress.move || moveGoalReached,
     get_outside: savedProgress.get_outside,
     hydrate: savedProgress.hydrate,
     read: savedProgress.read,
@@ -472,14 +539,21 @@ if (workoutsChanged) {
 } else {
   setWaterBottles(0);
 
+
   // No daily_progress row exists yet for today.
   // Still show any workouts scheduled from The Guide.
   setSelectedWorkouts(scheduledGuideWorkouts);
+setProgress({
+  ...emptyProgress,
+  move: moveGoalReached,
+});
 
   setSelectedWorkout(
     scheduledGuideWorkouts.length > 0
       ? scheduledGuideWorkouts[0]
       : null
+
+      
   );
 
   // If The Guide has a workout scheduled for today,
@@ -1104,7 +1178,8 @@ if (workoutBeingRemoved?.source === "guide") {
                 }
 
                 if (item.column === "move") {
-                  return (
+                  return ( 
+                    
                     <div
                       key={item.number}
                       className={`rounded-[1.25rem] border px-4 py-4 transition duration-300 ${
@@ -1148,15 +1223,7 @@ if (workoutBeingRemoved?.source === "guide") {
                               </p>
 
                               <p className="mt-1 text-[12px] text-[#8C7770]">
-                                {selectedWorkouts.length >
-                                0
-                                  ? selectedWorkouts
-                                      .map(
-                                        (workout) =>
-                                          workout.title
-                                      )
-                                      .join(" + ")
-                                  : "45 min movement"}
+                                Your daily movement
                               </p>
                             </div>
 
@@ -1169,8 +1236,66 @@ if (workoutBeingRemoved?.source === "guide") {
                         </div>
                       </div>
 
-                      {selectedWorkouts.length >
-                      0 ? (
+                      
+<div className="ml-[46px] mt-4">
+  <div className="flex items-end justify-between gap-3">
+    <div>
+      <p className="font-serif text-xl text-[#211C19]">
+        {moveMinutes}
+        <span className="text-[#B79B95]"> / 45</span>
+        <span className="ml-2 text-[9px] tracking-[0.16em] text-[#9D6F67]">
+          MIN
+        </span>
+      </p>
+    </div>
+
+    <span className="text-right font-serif text-xs italic text-[#A77B73]">
+      {moveMinutes >= 45
+        ? "goal reached ♡"
+        : moveMinutes > 0
+          ? `${45 - moveMinutes} min to go ♡`
+          : "every minute counts ♡"}
+    </span>
+  </div>
+
+  <div
+    role="progressbar"
+    aria-label="Logged workout minutes toward daily MOVE goal"
+    aria-valuemin={0}
+    aria-valuemax={45}
+    aria-valuenow={Math.min(moveMinutes, 45)}
+    className="mt-3 h-[5px] overflow-hidden rounded-full bg-[#E7DAD6]"
+  >
+    <div
+      className="h-full rounded-full bg-[#A77B73] transition-all duration-500"
+      style={{
+        width: `${Math.min(100, (moveMinutes / 45) * 100)}%`,
+      }}
+    />
+  </div>
+
+</div>
+<button
+  type="button"
+  onClick={() => setShowMoveWorkouts((previous) => !previous)}
+  aria-expanded={showMoveWorkouts}
+  className="ml-[46px] mt-4 flex w-[calc(100%-46px)] items-center justify-between gap-3 border-t border-[#E1D3CE] pt-3 text-left"
+>
+  <span className="flex items-center gap-2">
+    <span className="text-[10px] text-[#9D6F67]">♡</span>
+    <span className="text-[10px] tracking-[0.08em] text-[#211C19]">
+      Today's workouts
+    </span>
+    <span className="text-[9px] text-[#9D6F67]">
+      {selectedWorkouts.length} selected
+    </span>
+  </span>
+  <span className="text-sm text-[#9D6F67]">
+    {showMoveWorkouts ? "⌃" : "⌄"}
+  </span>
+</button>
+
+                      {showMoveWorkouts && (selectedWorkouts.length > 0 ? (
                         <div className="ml-[46px] mt-3 border-t border-[#E1D3CE] pt-3">
                           {selectedWorkouts.map(
                             (workout, index) => (
@@ -1264,7 +1389,7 @@ if (workoutBeingRemoved?.source === "guide") {
                             →
                           </span>
                         </Link>
-                      )}
+              ))}
                     </div>
                   );
                 }
