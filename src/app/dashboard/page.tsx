@@ -131,6 +131,7 @@ export default function DashboardPage() {
   const [waterBottles, setWaterBottles] = useState(0);
   const [moveMinutes, setMoveMinutes] = useState(0);
   const [showMoveWorkouts, setShowMoveWorkouts] = useState(false);
+  const [showDayDetails, setShowDayDetails] = useState(false);
 
   const [selectedWorkout, setSelectedWorkout] =
     useState<SelectedWorkout | null>(null);
@@ -943,94 +944,103 @@ if (workoutBeingRemoved?.source === "guide") {
             </div>
           </header>
 
-          <section className="mt-7 rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-6 sm:px-7 sm:py-7 md:px-8">
-            <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
-                    TODAY
-                  </p>
+          <section className="mt-5 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] px-4 py-4 sm:px-7 sm:py-6">
+  <button
+    type="button"
+    onClick={() => setShowDayDetails((previous) => !previous)}
+    aria-expanded={showDayDetails}
+    aria-controls="today-progress-details"
+    className="flex w-full items-center justify-between gap-3 text-left"
+  >
+    <div className="min-w-0">
+      <p className="text-[10px] tracking-[0.2em] text-[#9D6F67]">
+        TODAY · DAY {dayNumber} OF {challengeLength}
+      </p>
 
-                  <span className="h-px w-7 bg-[#CBA9A2]" />
+      <h2 className="mt-2 font-serif text-3xl leading-none text-[#211C19] sm:text-4xl">
+        Day {dayNumber}
+      </h2>
+    </div>
 
-                  <p className="text-[8px] tracking-[0.22em] text-[#9D6F67]">
-                    DAY {dayNumber} OF{" "}
-                    {challengeLength}
-                  </p>
-                </div>
+    <div className="flex shrink-0 items-center gap-4">
+      <div className="text-right">
+        <p className="font-serif text-xl text-[#211C19]">
+          {completedCount}/{commitments.length}
+        </p>
+        <p className="mt-1 text-[10px] tracking-[0.12em] text-[#9D6F67]">
+          COMPLETE
+        </p>
+      </div>
 
-                <h2 className="mt-3 font-serif text-4xl leading-none sm:text-5xl">
-                  Day {dayNumber}
-                </h2>
+      <span
+        aria-hidden="true"
+        className="font-serif text-xl text-[#A77B73]"
+      >
+        {showDayDetails ? "⌃" : "⌄"}
+      </span>
+    </div>
+  </button>
 
-                <p className="mt-3 font-serif text-base italic text-[#A77B73]">
-                  keep showing up.
-                </p>
-              </div>
+  <div
+    role="progressbar"
+    aria-label="Today's commitments completed"
+    aria-valuemin={0}
+    aria-valuemax={commitments.length}
+    aria-valuenow={completedCount}
+    className="mt-4 h-[4px] overflow-hidden rounded-full bg-[#E7DAD6]"
+  >
+    <div
+      className="h-full rounded-full bg-[#A77B73] transition-all duration-500"
+      style={{ width: `${percentage}%` }}
+    />
+  </div>
 
-              <div className="flex items-end gap-8 sm:gap-12">
-                <div>
-                  <p className="font-serif text-2xl text-[#211C19]">
-                    {percentage}%
-                  </p>
+  <div
+    id="today-progress-details"
+    hidden={!showDayDetails}
+  >
+    {showDayDetails && (
+      <div className="mt-4 border-t border-[#E7DAD6] pt-4">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="text-[10px] tracking-[0.14em] text-[#9D6F67]">
+              TODAY'S PROGRESS
+            </p>
+            <p className="mt-1 font-serif text-2xl text-[#211C19]">
+              {percentage}%
+            </p>
+          </div>
 
-                  <p className="mt-1 text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                    TODAY
-                  </p>
-                </div>
+          <p className="font-serif text-sm italic text-[#A77B73]">
+            keep showing up. ♡
+          </p>
+        </div>
 
-                <div>
-                  <p className="font-serif text-2xl text-[#211C19]">
-                    {completedCount}
-                    <span className="text-[#B79B95]">
-                      /{commitments.length}
-                    </span>
-                  </p>
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <p className="text-[10px] tracking-[0.12em] text-[#9D6F67]">
+            {dayComplete
+              ? "ALL SEVEN COMPLETE ♡"
+              : `${
+                  commitments.length - completedCount
+                } ${
+                  commitments.length - completedCount === 1
+                    ? "COMMITMENT"
+                    : "COMMITMENTS"
+                } LEFT TODAY`}
+          </p>
 
-                  <p className="mt-1 text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                    COMPLETE
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 h-[3px] overflow-hidden rounded-full bg-[#E7DAD6]">
-              <div
-                className="h-full rounded-full bg-[#A77B73] transition-all duration-500"
-                style={{
-                  width: `${percentage}%`,
-                }}
-              />
-            </div>
-
-            <div className="mt-3 flex items-center justify-between gap-4">
-              <p className="text-[7px] tracking-[0.18em] text-[#9D6F67]">
-                {dayComplete
-                  ? "ALL SEVEN COMPLETE ♡"
-                  : `${
-                      commitments.length -
-                      completedCount
-                    } ${
-                      commitments.length -
-                        completedCount ===
-                      1
-                        ? "COMMITMENT"
-                        : "COMMITMENTS"
-                    } LEFT TODAY`}
-              </p>
-
-              <Link
-                href="/dashboard/journey"
-                className="flex shrink-0 items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
-              >
-                <span>VIEW JOURNEY</span>
-
-                <span className="font-serif text-sm">
-                  →
-                </span>
-              </Link>
-            </div>
-          </section>
+          <Link
+            href="/dashboard/journey"
+            className="flex shrink-0 items-center gap-2 text-[10px] tracking-[0.12em] text-[#8F655E] transition hover:text-[#211C19]"
+          >
+            VIEW JOURNEY
+            <span className="font-serif text-sm">→</span>
+          </Link>
+        </div>
+      </div>
+    )}
+  </div>
+</section>
 
           <section className="mt-10 md:mt-12">
             <div className="flex items-end justify-between gap-5 border-b border-[#DED0CB] pb-4">
@@ -1053,7 +1063,7 @@ if (workoutBeingRemoved?.source === "guide") {
                   {commitments.length}
                 </p>
 
-                <p className="mt-0.5 text-[7px] tracking-[0.18em] text-[#9D6F67]">
+                <p className="mt-0.5 text-[10px] tracking-[0.18em] text-[#9D6F67]">
                   COMPLETE
                 </p>
               </div>
@@ -1624,42 +1634,59 @@ if (workoutBeingRemoved?.source === "guide") {
             </div>
           </section>
 
-          {dayComplete && (
-            <section className="mt-8 border-y border-[#D4B0A8] py-8 text-center">
-              <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                DAY {dayNumber} COMPLETE
-              </p>
 
-              <p className="mt-3 font-serif text-2xl italic text-[#A77B73] sm:text-3xl">
-                You kept your promise to yourself. ♡
-              </p>
+        {/* DAILY COMPLETION — SMALL ACHIEVEMENT */}
+{dayComplete && (
+  <section className="mt-8 flex flex-col items-center text-center">
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-[#A77B73]">✓</span>
+      <p className="text-[9px] uppercase tracking-[0.22em] text-[#9D6F67]">
+        DAY {dayNumber} COMPLETE
+      </p>
+    </div>
 
-              <p className="mx-auto mt-3 max-w-lg text-xs leading-5 text-[#806E68]">
-                One day down. Keep choosing yourself,
-                one day at a time.
-              </p>
-            </section>
-          )}
-
-          <section className="mb-6 mt-10 border-t border-[#DED0CB] pt-7">
-            <div className="grid gap-3 md:grid-cols-[130px_1fr] md:gap-8">
-              <div>
-                <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                  A NOTE FROM LAV:
-                </p>
-              </div>
-
-              <div>
-                <p className="max-w-3xl font-serif text-xl italic leading-snug text-[#A77B73] sm:text-2xl md:text-3xl">
-  um... look at you showing up ready to lock in
-  <br />
-  proud of you ♡
+    <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-[#806E68]">
+  You kept your promise to yourself.
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#A77B73"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-label="Locked in"
+    role="img"
+  >
+    <rect x="4" y="11" width="16" height="10" rx="2" />
+    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+  </svg>
 </p>
 
-                
-              </div>
-            </div>
-          </section>
+
+  </section>
+)}
+
+{/* A NOTE FROM LAV — PERSONAL SIGN-OFF */}
+<section
+  className={`mb-8 text-center ${
+    dayComplete
+      ? "mt-7 border-t border-[#E4D5CE] pt-7"
+      : "mt-10"
+  }`}
+>
+  <p className="text-[9px] uppercase tracking-[0.25em] text-[#9D6F67]">
+    A NOTE FROM LAV:
+  </p>
+
+  <p className="mx-auto mt-4 max-w-xl font-serif text-xl italic leading-snug text-[#A77B73] sm:text-2xl">
+    um... look at you showing up ready to lock in
+    <br />
+    proud of you ♡
+  </p>
+</section>
         </section>
       </div>
     </main>
