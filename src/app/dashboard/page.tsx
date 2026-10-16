@@ -1645,14 +1645,16 @@ if (workoutBeingRemoved?.source === "guide") {
             <div className="grid gap-3 md:grid-cols-[130px_1fr] md:gap-8">
               <div>
                 <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                  A NOTE FOR TODAY
+                  A NOTE FROM LAV:
                 </p>
               </div>
 
               <div>
                 <p className="max-w-3xl font-serif text-xl italic leading-snug text-[#A77B73] sm:text-2xl md:text-3xl">
-                  just focus on being 1% better today ♡
-                </p>
+  um... look at you showing up ready to lock in
+  <br />
+  proud of you ♡
+</p>
 
                 
               </div>
