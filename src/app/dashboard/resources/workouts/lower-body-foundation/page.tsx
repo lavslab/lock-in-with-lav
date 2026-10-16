@@ -38,11 +38,6 @@ const exerciseSwaps: Record<string, SwapOption[]> = {
 
   "Dumbbell Romanian Deadlift": [
     {
-      name: "Dumbbell RDL",
-      location: "BOTH",
-      note: "Keeps the same hip-hinge pattern.",
-    },
-    {
       name: "Cable Pull-Through",
       location: "GYM",
       note: "Hip-dominant option with less loading in the hands.",
@@ -121,12 +116,6 @@ const swapExerciseDetails: Record<
     cue: "Stand in a staggered stance, lower your back knee toward the floor while keeping your front foot planted, then drive through your front foot to return to standing.",
     modification:
       "Hold onto a stable surface or reduce your range of motion.",
-  },
-
-  "Dumbbell RDL": {
-    cue: "Hold the dumbbells close to your legs, soften your knees, push your hips back, then squeeze your glutes to return to standing while keeping your back neutral.",
-    modification:
-      "Use lighter dumbbells or shorten your range of motion.",
   },
 
   "Cable Pull-Through": {
@@ -271,8 +260,10 @@ const cooldown = [
 export default function LowerBodyFoundationPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+
   const [workoutExercises, setWorkoutExercises] =
-    useState(exercises);
+    useState<WorkoutExercise[]>(exercises);
+
   const [openSwapFor, setOpenSwapFor] =
     useState<string | null>(null);
 
@@ -305,6 +296,50 @@ export default function LowerBodyFoundationPage() {
     !isLoadingUser && firstName !== "there"
       ? firstName.charAt(0).toUpperCase()
       : "♡";
+
+  const restoreOriginalExercise = (exerciseNumber: string) => {
+    const original = exercises.find(
+      (item) => item.number === exerciseNumber
+    );
+
+    if (!original) return;
+
+    setWorkoutExercises((current) =>
+      current.map((item) =>
+        item.number === exerciseNumber
+          ? { ...original }
+          : item
+      )
+    );
+
+    setOpenSwapFor(null);
+  };
+
+  const swapExercise = (
+    exerciseNumber: string,
+    swap: SwapOption
+  ) => {
+    const swapDetails = swapExerciseDetails[swap.name];
+
+    setWorkoutExercises((current) =>
+      current.map((item) =>
+        item.number === exerciseNumber
+          ? {
+              ...item,
+              name: swap.name,
+              cue: swapDetails?.cue ?? swap.note,
+              modification:
+                swapDetails?.modification ??
+                item.modification,
+              home: `${swap.name} — ${item.prescription.toLowerCase()}`,
+              gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
+            }
+          : item
+      )
+    );
+
+    setOpenSwapFor(null);
+  };
 
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
@@ -465,170 +500,200 @@ export default function LowerBodyFoundationPage() {
 
             {/* EXERCISE CARDS */}
             <div className="mt-6 overflow-hidden rounded-[1.6rem] border border-[#DED0CB] bg-[#FBF8F6]">
-              {workoutExercises.map((exercise, index) => (
-                <article
-                  key={exercise.number}
-                  className={`px-4 py-6 sm:px-6 ${
-                    index !== workoutExercises.length - 1
-                      ? "border-b border-[#DED0CB]"
-                      : ""
-                  }`}
-                >
-                  <div className="grid gap-4 md:grid-cols-[42px_minmax(0,1fr)_auto] md:items-start">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-[11px] text-[#A77B73]">
-                      {exercise.number}
-                    </div>
+              {workoutExercises.map((exercise, index) => {
+                const originalExercise = exercises.find(
+                  (item) => item.number === exercise.number
+                );
 
-                    <div className="min-w-0">
-                      <h3 className="font-serif text-xl leading-tight sm:text-2xl">
-                        {exercise.name}
-                      </h3>
+                const hasBeenSwapped =
+                  originalExercise !== undefined &&
+                  exercise.name !== originalExercise.name;
 
-                      <p className="mt-2 max-w-2xl text-xs leading-5 text-[#806E68]">
-                        {exercise.cue}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 md:max-w-[240px] md:justify-end">
-                      <span className="rounded-full bg-[#EAD8D3] px-3 py-2 text-[8px] tracking-[0.11em] text-[#6F514B]">
-                        {exercise.prescription}
-                      </span>
-
-                      <span className="rounded-full border border-[#D6C3BD] px-3 py-2 text-[8px] tracking-[0.11em] text-[#806E68]">
-                        {exercise.rest}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* HOME / GYM / EASIER */}
-                  <div className="mt-5 md:ml-[58px]">
-                    <div className="grid gap-3 border-t border-[#E7DAD6] pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#E1D3CE]">
-                      <div className="sm:pr-5">
-                        <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                          HOME
-                        </p>
-
-                        <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
-                          {exercise.home}
-                        </p>
-                      </div>
-
-                      <div className="sm:px-5">
-                        <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                          GYM
-                        </p>
-
-                        <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
-                          {exercise.gym}
-                        </p>
-                      </div>
-
-                      <div className="sm:pl-5">
-                        <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
-                          EASIER OPTION
-                        </p>
-
-                        <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
-                          {exercise.modification}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* SWAP EXERCISE */}
-                  {exerciseSwaps[
+                const availableSwaps =
+                  exerciseSwaps[
                     exercise.swapKey ?? exercise.name
-                  ] && (
-                    <div className="mt-4 md:ml-[58px]">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setOpenSwapFor((current) =>
-                            current === exercise.number
-                              ? null
-                              : exercise.number
-                          )
-                        }
-                        className="flex w-full items-center justify-between rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:bg-[#EAD8D3]"
-                      >
-                        <span className="text-[8px] tracking-[0.18em] text-[#8F655E]">
-                          ↔ SWAP EXERCISE
+                  ];
+
+                return (
+                  <article
+                    key={exercise.number}
+                    className={`px-4 py-6 sm:px-6 ${
+                      index !== workoutExercises.length - 1
+                        ? "border-b border-[#DED0CB]"
+                        : ""
+                    }`}
+                  >
+                    <div className="grid gap-4 md:grid-cols-[42px_minmax(0,1fr)_auto] md:items-start">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-[11px] text-[#A77B73]">
+                        {exercise.number}
+                      </div>
+
+                      <div className="min-w-0">
+                        <h3 className="font-serif text-xl leading-tight sm:text-2xl">
+                          {exercise.name}
+                        </h3>
+
+                        <p className="mt-2 max-w-2xl text-xs leading-5 text-[#806E68]">
+                          {exercise.cue}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 md:max-w-[240px] md:justify-end">
+                        <span className="rounded-full bg-[#EAD8D3] px-3 py-2 text-[8px] tracking-[0.11em] text-[#6F514B]">
+                          {exercise.prescription}
                         </span>
 
-                        <span className="text-sm text-[#A77B73]">
-                          {openSwapFor === exercise.number
-                            ? "−"
-                            : "+"}
+                        <span className="rounded-full border border-[#D6C3BD] px-3 py-2 text-[8px] tracking-[0.11em] text-[#806E68]">
+                          {exercise.rest}
                         </span>
-                      </button>
-
-                      {openSwapFor === exercise.number && (
-                        <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
-                          <div className="divide-y divide-[#D8C3BD]">
-                            {exerciseSwaps[
-                              exercise.swapKey ??
-                                exercise.name
-                            ].map((swap) => (
-                              <button
-                                key={`${exercise.number}-${swap.name}`}
-                                type="button"
-                                onClick={() => {
-                                  const swapDetails =
-                                    swapExerciseDetails[
-                                      swap.name
-                                    ];
-
-                                  setWorkoutExercises(
-                                    (current) =>
-                                      current.map((item) =>
-                                        item.number ===
-                                        exercise.number
-                                          ? {
-                                              ...item,
-                                              name: swap.name,
-                                              cue:
-                                                swapDetails?.cue ??
-                                                swap.note,
-                                              modification:
-                                                swapDetails?.modification ??
-                                                item.modification,
-                                              home: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                              gym: `${swap.name} — ${item.prescription.toLowerCase()}`,
-                                            }
-                                          : item
-                                      )
-                                  );
-
-                                  setOpenSwapFor(null);
-                                }}
-                                className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
-                              >
-                                <span className="min-w-0">
-                                  <span className="block font-serif text-base text-[#211C19]">
-                                    {swap.name}
-                                  </span>
-
-                                  <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
-                                    {swap.note}
-                                  </span>
-
-                                  <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
-                                    {swap.location}
-                                  </span>
-                                </span>
-
-                                <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
-                                  →
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      </div>
                     </div>
-                  )}
-                </article>
-              ))}
+
+                    {/* HOME / GYM / EASIER */}
+                    <div className="mt-5 md:ml-[58px]">
+                      <div className="grid gap-3 border-t border-[#E7DAD6] pt-4 sm:grid-cols-3 sm:gap-0 sm:divide-x sm:divide-[#E1D3CE]">
+                        <div className="sm:pr-5">
+                          <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                            HOME
+                          </p>
+
+                          <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
+                            {exercise.home}
+                          </p>
+                        </div>
+
+                        <div className="sm:px-5">
+                          <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                            GYM
+                          </p>
+
+                          <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
+                            {exercise.gym}
+                          </p>
+                        </div>
+
+                        <div className="sm:pl-5">
+                          <p className="text-[7px] tracking-[0.2em] text-[#9D6F67]">
+                            EASIER OPTION
+                          </p>
+
+                          <p className="mt-1.5 text-[11px] leading-5 text-[#5F504B]">
+                            {exercise.modification}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* SWAP EXERCISE */}
+                    {availableSwaps && (
+                      <div className="mt-4 md:ml-[58px]">
+                        <button
+                          type="button"
+                          aria-expanded={
+                            openSwapFor === exercise.number
+                          }
+                          onClick={() =>
+                            setOpenSwapFor((current) =>
+                              current === exercise.number
+                                ? null
+                                : exercise.number
+                            )
+                          }
+                          className="flex w-full items-center justify-between rounded-xl border border-[#D6C3BD] bg-[#F7F1ED] px-4 py-3 text-left transition hover:bg-[#EAD8D3]"
+                        >
+                          <span className="text-[8px] tracking-[0.18em] text-[#8F655E]">
+                            ↔ SWAP EXERCISE
+                          </span>
+
+                          <span className="text-sm text-[#A77B73]">
+                            {openSwapFor === exercise.number
+                              ? "−"
+                              : "+"}
+                          </span>
+                        </button>
+
+                        {openSwapFor === exercise.number && (
+                          <div className="mt-3 overflow-hidden rounded-xl border border-[#DED0CB] bg-[#EAD8D3]/40">
+                            <div className="divide-y divide-[#D8C3BD]">
+                              {/* RESTORE ORIGINAL - ONLY AFTER SWAPPING */}
+                              {hasBeenSwapped &&
+                                originalExercise && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      restoreOriginalExercise(
+                                        exercise.number
+                                      )
+                                    }
+                                    className="group flex w-full items-center justify-between gap-4 bg-[#FBF8F6] px-4 py-4 text-left transition hover:bg-[#EAD8D3]"
+                                  >
+                                    <span className="min-w-0">
+                                      <span className="block font-serif text-base text-[#8F655E]">
+                                        ↶ Back to{" "}
+                                        {originalExercise.name}
+                                      </span>
+
+                                      <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                        Restore the original
+                                        movement and instructions.
+                                      </span>
+
+                                      <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                        ORIGINAL EXERCISE
+                                      </span>
+                                    </span>
+
+                                    <span className="shrink-0 text-sm text-[#A77B73]">
+                                      ♡
+                                    </span>
+                                  </button>
+                                )}
+
+                              {/* ALTERNATIVE EXERCISES */}
+                              {availableSwaps
+                                .filter(
+                                  (swap) =>
+                                    swap.name !== exercise.name
+                                )
+                                .map((swap) => (
+                                  <button
+                                    key={`${exercise.number}-${swap.name}`}
+                                    type="button"
+                                    onClick={() =>
+                                      swapExercise(
+                                        exercise.number,
+                                        swap
+                                      )
+                                    }
+                                    className="group flex w-full items-center justify-between gap-4 px-4 py-4 text-left transition hover:bg-[#F7F1ED]"
+                                  >
+                                    <span className="min-w-0">
+                                      <span className="block font-serif text-base text-[#211C19]">
+                                        {swap.name}
+                                      </span>
+
+                                      <span className="mt-1 block text-[10px] leading-4 text-[#806E68]">
+                                        {swap.note}
+                                      </span>
+
+                                      <span className="mt-2 inline-block text-[7px] tracking-[0.16em] text-[#9D6F67]">
+                                        {swap.location}
+                                      </span>
+                                    </span>
+
+                                    <span className="shrink-0 text-sm text-[#C3AAA4] transition group-hover:translate-x-1 group-hover:text-[#A77B73]">
+                                      →
+                                    </span>
+                                  </button>
+                                ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
             </div>
           </section>
 

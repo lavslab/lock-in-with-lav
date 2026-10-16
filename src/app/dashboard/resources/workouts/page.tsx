@@ -1271,7 +1271,28 @@ const existingWorkouts =
                               </button>
 
                               <Link
-                                href={`/dashboard/resources/workouts/${workout.id}`}
+                               href={
+  [
+    "lower-body-foundation",
+    "cardio-lock-in",
+    "core-control",
+    "full-body-reset",
+    "glute-builder",
+    "gym-back-biceps",
+    "gym-chest-triceps",
+    "gym-glute-legs",
+    "gym-machine-cardio",
+    "home-back-biceps",
+    "home-chest-triceps",
+    "home-glute-legs",
+    "upper-body-build",
+
+
+
+  ].includes(workout.id)
+    ? `/dashboard/resources/workouts/workout-preview?workout=${workout.id}`
+    : `/dashboard/resources/workouts/${workout.id}`
+}
                                 className="flex items-center justify-between border-t border-[#E1D3CE] pt-3 text-[7px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
                               >
                                 <span>

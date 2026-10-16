@@ -1,0 +1,277 @@
+
+import type { WorkoutDetail } from "@/lib/workoutDetails";
+
+export const upperBodyBuild: WorkoutDetail = {
+  id: "upper-body-build",
+  eyebrow: "UPPER BODY • INTERMEDIATE",
+  title: "Upper Body",
+  accentTitle: "Build.",
+  description:
+    "Build strength through your back, shoulders, chest, and arms with controlled, steady working sets.",
+  subtitle: "strong looks good on you. ♡",
+  durationMinutes: 45,
+  focus: "Back + shoulders + arms",
+  equipmentLabel: "Home or gym",
+
+  warmup: [
+    "Easy cardio — 2 min",
+    "Arm circles — 10 each direction",
+    "Band pull-aparts — 12 reps",
+    "Light cable or machine rows — 10 reps",
+  ],
+
+  cooldown: [
+    "Chest stretch — 30 sec / side",
+    "Cross-body shoulder stretch — 30 sec / side",
+    "Overhead triceps stretch — 30 sec / side",
+    "Slow breathing — 60 sec",
+  ],
+
+  exercises: [
+    {
+      id: "lat-pulldown",
+      name: "Lat Pulldown",
+      sets: 3,
+      reps: "10–12",
+      restSeconds: 60,
+      cue: "Keep your chest tall and pull your elbows down toward your ribs without swinging or leaning far back.",
+      modification:
+        "Use a lighter weight and focus on a smooth, controlled pull.",
+      home: "Dumbbell Pullover — 3 sets × 10–12 reps",
+      gym: "Lat Pulldown — 3 sets × 10–12 reps",
+      swaps: [
+        {
+          name: "Dumbbell Pullover",
+          location: "HOME",
+          note: "Targets the lats through a controlled overhead pulling motion.",
+          cue: "Lie on a bench or the floor with a dumbbell held over your chest. Keep a slight bend in your elbows as you lower the dumbbell overhead, then pull it back over your chest using your lats.",
+          modification: "Use a lighter dumbbell or reduce the range of motion.",
+        },
+        {
+          name: "Resistance Band Pulldown",
+          location: "HOME",
+          note: "Keeps the vertical pulling pattern with a band.",
+          cue: "Anchor the band securely overhead. Pull your elbows down toward your ribs while keeping your chest lifted, then return slowly.",
+          modification: "Use a lighter band or reduce the range of motion.",
+        },
+        {
+          name: "Assisted Pull-Up",
+          location: "GYM",
+          note: "Another vertical pulling option for the back and lats.",
+          cue: "Set the assistance so you can control the movement. Pull your elbows down toward your sides to lift your body, then lower slowly.",
+          modification: "Increase the assistance or use a smaller range of motion.",
+        },
+      ],
+    },
+    {
+      id: "seated-cable-row",
+      name: "Seated Cable Row",
+      sets: 3,
+      reps: "10–12",
+      restSeconds: 60,
+      cue: "Brace your core, keep your shoulders down, and pull the handle toward your torso while squeezing your shoulder blades together.",
+      modification:
+        "Reduce the weight and shorten the range slightly if needed.",
+      home: "Dumbbell Bent-Over Row — 3 sets × 10–12 reps",
+      gym: "Seated Cable Row — 3 sets × 10–12 reps",
+      swaps: [
+        {
+          name: "Dumbbell Bent-Over Row",
+          location: "BOTH",
+          note: "Keeps the horizontal pulling pattern with free weights.",
+          cue: "Hinge at your hips with a neutral spine. Pull the dumbbells toward your ribs while keeping your elbows close, then lower with control.",
+          modification: "Use lighter dumbbells or support one hand on a bench.",
+        },
+        {
+          name: "Chest-Supported Dumbbell Row",
+          location: "BOTH",
+          note: "Provides extra support while training the upper back.",
+          cue: "Lie face down on an incline bench with a dumbbell in each hand. Pull the weights toward your ribs while keeping your chest supported, then lower slowly.",
+          modification: "Use lighter dumbbells or reduce the range of motion.",
+        },
+        {
+          name: "Machine Row",
+          location: "GYM",
+          note: "Stable machine-based alternative for the same pulling pattern.",
+          cue: "Set the seat so the handles are within comfortable reach. Keep your chest supported and pull the handles toward your torso, then return slowly.",
+          modification: "Use a lighter weight and keep the movement controlled.",
+        },
+      ],
+    },
+    {
+      id: "dumbbell-shoulder-press",
+      name: "Dumbbell Shoulder Press",
+      sets: 3,
+      reps: "8–10",
+      restSeconds: 60,
+      cue: "Keep your ribs stacked over your hips and press the dumbbells overhead without arching your lower back.",
+      modification:
+        "Use lighter dumbbells or perform one arm at a time.",
+      home: "Dumbbell Shoulder Press — 3 sets × 8–10 reps",
+      gym: "Dumbbell Shoulder Press — 3 sets × 8–10 reps",
+      swaps: [
+        {
+          name: "Arnold Press",
+          location: "BOTH",
+          note: "Another dumbbell pressing variation for the shoulders.",
+          cue: "Start with the dumbbells in front of your shoulders, palms facing you. Rotate your palms outward as you press overhead, then reverse the movement as you lower.",
+          modification: "Use lighter dumbbells or press one arm at a time.",
+        },
+        {
+          name: "Single-Arm Shoulder Press",
+          location: "BOTH",
+          note: "Allows you to focus on one side at a time.",
+          cue: "Hold one dumbbell at shoulder height and brace your core. Press the weight overhead without leaning, then lower it with control.",
+          modification: "Use a lighter dumbbell or perform the movement seated.",
+        },
+        {
+          name: "Machine Shoulder Press",
+          location: "GYM",
+          note: "Supported pressing option with a stable setup.",
+          cue: "Adjust the seat so the handles start around shoulder height. Press the handles overhead without locking your elbows, then return slowly.",
+          modification: "Use a lighter weight or reduce the range of motion.",
+        },
+      ],
+    },
+    {
+      id: "chest-press-machine",
+      name: "Chest Press Machine",
+      sets: 3,
+      reps: "10–12",
+      restSeconds: 60,
+      cue: "Set the seat so the handles line up around mid-chest, keep your shoulders supported, and press without locking your elbows.",
+      modification:
+        "Lower the resistance and stop just before your elbows travel too far behind your body.",
+      home: "Dumbbell Floor Press — 3 sets × 10–12 reps",
+      gym: "Chest Press Machine — 3 sets × 10–12 reps",
+      swaps: [
+        {
+          name: "Dumbbell Floor Press",
+          location: "HOME",
+          note: "Chest press variation that limits the range of motion.",
+          cue: "Lie on your back with a dumbbell in each hand. Lower your upper arms toward the floor with control, then press the dumbbells back up over your chest.",
+          modification: "Use lighter dumbbells or perform one arm at a time.",
+        },
+        {
+          name: "Dumbbell Bench Press",
+          location: "BOTH",
+          note: "Classic horizontal pressing movement for the chest.",
+          cue: "Lie on a stable bench with the dumbbells over your chest. Lower them toward the sides of your chest with control, then press them back up.",
+          modification: "Use lighter dumbbells or reduce the range of motion.",
+        },
+        {
+          name: "Push-Up",
+          location: "BOTH",
+          note: "Bodyweight pressing option for the chest and triceps.",
+          cue: "Place your hands slightly wider than your shoulders and keep your body in one straight line. Lower your chest with control, then press the floor away.",
+          modification: "Perform the push-up from your knees or use an elevated surface.",
+        },
+      ],
+    },
+    {
+      id: "dumbbell-lateral-raise",
+      name: "Dumbbell Lateral Raise",
+      sets: 3,
+      reps: "12–15",
+      restSeconds: 45,
+      cue: "Keep a soft bend in your elbows and raise the dumbbells with control to about shoulder height.",
+      modification:
+        "Use lighter dumbbells or alternate one arm at a time.",
+      home: "Dumbbell Lateral Raise — 3 sets × 12–15 reps",
+      gym: "Dumbbell Lateral Raise — 3 sets × 12–15 reps",
+      swaps: [
+        {
+          name: "Cable Lateral Raise",
+          location: "GYM",
+          note: "Keeps constant tension through the shoulder raise.",
+          cue: "Stand beside the cable with the handle in the hand farthest from the machine. Raise your arm out to the side to about shoulder height, then lower slowly.",
+          modification: "Use lighter resistance or reduce the range of motion.",
+        },
+        {
+          name: "Band Lateral Raise",
+          location: "HOME",
+          note: "Resistance-band option for the side delts.",
+          cue: "Stand on the band and hold the handles or ends at your sides. Raise your arms out to the sides with control, then slowly lower.",
+          modification: "Use a lighter band or raise one arm at a time.",
+        },
+        {
+          name: "Lean-Away Lateral Raise",
+          location: "BOTH",
+          note: "Creates a slightly different resistance curve for the side delts.",
+          cue: "Hold onto a stable support and lean slightly away from it. Raise the dumbbell out to the side with control, then lower slowly.",
+          modification: "Use a lighter dumbbell or reduce the range of motion.",
+        },
+      ],
+    },
+    {
+      id: "cable-triceps-pressdown",
+      name: "Cable Triceps Pressdown",
+      sets: 3,
+      reps: "10–12",
+      restSeconds: 45,
+      cue: "Keep your elbows close to your sides and straighten your arms without letting your shoulders roll forward.",
+      modification:
+        "Use a lighter weight and reduce the range if your elbows feel uncomfortable.",
+      home: "Overhead Dumbbell Triceps Extension — 3 sets × 10–12 reps",
+      gym: "Cable Triceps Pressdown — 3 sets × 10–12 reps",
+      swaps: [
+        {
+          name: "Overhead Dumbbell Triceps Extension",
+          location: "BOTH",
+          note: "Trains the triceps through an overhead position.",
+          cue: "Hold one dumbbell overhead with both hands. Bend your elbows to lower the weight behind your head, then extend your arms to return overhead.",
+          modification: "Use a lighter dumbbell or perform the movement seated.",
+        },
+        {
+          name: "Close-Grip Push-Up",
+          location: "BOTH",
+          note: "Bodyweight pressing option with more emphasis on the triceps.",
+          cue: "Set your hands slightly narrower than shoulder-width and keep your elbows close to your sides. Lower your chest with control, then press back up.",
+          modification: "Perform the movement from your knees or use an elevated surface.",
+        },
+        {
+          name: "Bench Dip",
+          location: "HOME",
+          note: "Bodyweight triceps-focused option using a stable surface.",
+          cue: "Place your hands on the edge of a stable bench or chair and keep your shoulders down. Bend your elbows to lower your body slightly, then press through your hands to rise.",
+          modification: "Keep your feet closer to the bench and use a smaller range of motion.",
+        },
+      ],
+    },
+    {
+      id: "dumbbell-biceps-curl",
+      name: "Dumbbell Biceps Curl",
+      sets: 3,
+      reps: "10–12",
+      restSeconds: 45,
+      cue: "Keep your elbows near your sides and curl without swinging your torso or letting your shoulders take over.",
+      modification:
+        "Use lighter dumbbells or alternate arms.",
+      home: "Dumbbell Biceps Curl — 3 sets × 10–12 reps",
+      gym: "Dumbbell Biceps Curl — 3 sets × 10–12 reps",
+      swaps: [
+        {
+          name: "Hammer Curl",
+          location: "BOTH",
+          note: "Neutral-grip curl that also trains the brachialis and forearms.",
+          cue: "Hold the dumbbells with your palms facing each other. Keep your elbows near your sides and curl the weights without swinging, then lower slowly.",
+          modification: "Use lighter dumbbells or alternate arms.",
+        },
+        {
+          name: "Resistance Band Curl",
+          location: "HOME",
+          note: "Band-based option for the same elbow-flexion pattern.",
+          cue: "Stand on the band and hold the handles or ends with your palms facing forward. Keep your elbows close to your sides as you curl, then lower slowly.",
+          modification: "Use a lighter band or reduce the range of motion.",
+        },
+        {
+          name: "Cable Curl",
+          location: "GYM",
+          note: "Provides consistent cable resistance through the curl.",
+          cue: "Stand tall facing the cable with the handle in your hands. Keep your elbows close to your sides and curl the handle upward, then lower with control.",
+          modification: "Use a lighter weight or reduce the range of motion.",
+        },
+      ],
+    },
+  ],
+};
