@@ -8,6 +8,8 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 /* ---------------------------------
  * WEEKLY TRAINING OPTIONS
  * --------------------------------- */
+const workoutPreviewUrl = (id: string) =>
+  `/dashboard/resources/workouts/workout-preview?workout=${id}`;
 
 const trainingWeek = [
   {
@@ -19,25 +21,25 @@ const trainingWeek = [
       {
         id: "lower-body-foundation",
         title: "Lower Body Foundation",
-        href: "/dashboard/resources/workouts/lower-body-foundation",
+        href: workoutPreviewUrl("lower-body-foundation"),
         meta: "BEGINNER • 35 MIN",
       },
       {
         id: "home-glute-legs",
         title: "Home Glute & Legs",
-        href: "/dashboard/resources/workouts/home-glute-legs",
+        href: workoutPreviewUrl("home-glute-legs"),
         meta: "HOME • 35 MIN",
       },
       {
         id: "gym-glute-legs",
         title: "Gym Glute & Legs",
-        href: "/dashboard/resources/workouts/gym-glute-legs",
+        href: workoutPreviewUrl("gym-glute-legs"),
         meta: "GYM • 45 MIN",
       },
       {
         id: "glute-builder",
         title: "Glute Builder",
-        href: "/dashboard/resources/workouts/glute-builder",
+        href: workoutPreviewUrl("glute-builder"),
         meta: "HOME / GYM • 40 MIN",
       },
     ],
@@ -51,31 +53,31 @@ const trainingWeek = [
       {
         id: "home-back-biceps",
         title: "Home Back & Biceps",
-        href: "/dashboard/resources/workouts/home-back-biceps",
+        href: workoutPreviewUrl("home-back-biceps"),
         meta: "HOME • 35 MIN",
       },
       {
         id: "home-chest-triceps",
         title: "Home Chest & Triceps",
-        href: "/dashboard/resources/workouts/home-chest-triceps",
+        href: workoutPreviewUrl("home-chest-triceps"),
         meta: "HOME • 35 MIN",
       },
       {
         id: "gym-back-biceps",
         title: "Gym Back & Biceps",
-        href: "/dashboard/resources/workouts/gym-back-biceps",
+        href: workoutPreviewUrl("gym-back-biceps"),
         meta: "GYM • 40 MIN",
       },
       {
         id: "gym-chest-triceps",
         title: "Gym Chest & Triceps",
-        href: "/dashboard/resources/workouts/gym-chest-triceps",
+        href: workoutPreviewUrl("gym-chest-triceps"),
         meta: "GYM • 40 MIN",
       },
       {
         id: "upper-body-build",
         title: "Upper Body Build",
-        href: "/dashboard/resources/workouts/upper-body-build",
+        href: workoutPreviewUrl("upper-body-build"),
         meta: "HOME / GYM • 45 MIN",
       },
     ],
@@ -89,7 +91,7 @@ const trainingWeek = [
       {
         id: "core-control",
         title: "Core Control",
-        href: "/dashboard/resources/workouts/core-control",
+        href: workoutPreviewUrl("core-control"),
         meta: "HOME / GYM • 20 MIN",
       },
     ],
@@ -103,19 +105,19 @@ const trainingWeek = [
       {
         id: "home-glute-legs",
         title: "Home Glute & Legs",
-        href: "/dashboard/resources/workouts/home-glute-legs",
+        href: workoutPreviewUrl("home-glute-legs"),
         meta: "HOME • 35 MIN",
       },
       {
         id: "glute-builder",
         title: "Glute Builder",
-        href: "/dashboard/resources/workouts/glute-builder",
+        href: workoutPreviewUrl("glute-builder"),
         meta: "HOME / GYM • 40 MIN",
       },
       {
         id: "gym-glute-legs",
         title: "Gym Glute & Legs",
-        href: "/dashboard/resources/workouts/gym-glute-legs",
+        href: workoutPreviewUrl("gym-glute-legs"),
         meta: "GYM • 45 MIN",
       },
     ],
@@ -130,7 +132,7 @@ const trainingWeek = [
       {
         id: "full-body-reset",
         title: "Full Body Reset",
-        href: "/dashboard/resources/workouts/full-body-reset",
+        href: workoutPreviewUrl("full-body-reset"),
         meta: "HOME / GYM • 25 MIN",
       },
     ],
@@ -144,13 +146,13 @@ const trainingWeek = [
       {
         id: "cardio-lock-in",
         title: "Cardio Lock In",
-        href: "/dashboard/resources/workouts/cardio-lock-in",
+        href: workoutPreviewUrl("cardio-lock-in"),
         meta: "HOME / NO EQUIPMENT • 30 MIN",
       },
       {
         id: "gym-machine-cardio",
         title: "Gym Machine Cardio",
-        href: "/dashboard/resources/workouts/gym-machine-cardio",
+        href: workoutPreviewUrl("gym-machine-cardio"),
         meta: "GYM • 40 MIN",
       },
     ],
