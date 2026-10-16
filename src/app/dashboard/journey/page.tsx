@@ -169,7 +169,7 @@ export default function JourneyPage() {
   );
 
   const [challengeLength, setChallengeLength] = useState(0);
-
+const [journeyOverviewOpen, setJourneyOverviewOpen] = useState(false);
   const [dailyProgress, setDailyProgress] =
   useState<JourneyProgressRow[]>([]);
 
@@ -341,7 +341,25 @@ const [manualCompletionError, setManualCompletionError] =
   .map((row) => row.challenge_day);
 
   const completedDays = completedDayNumbers.length;
+const todayProgress = dailyProgress.find(
+  (row) => row.challenge_day === safeCurrentDay
+);
 
+const todayCommitmentCount =
+  getCompletedCommitmentCount(todayProgress);
+
+const todayIsComplete = isDayComplete(todayProgress);
+
+const todayStatus = todayIsComplete
+  ? "day complete ♡"
+  : todayCommitmentCount > 0
+    ? "day in progress"
+    : "day not started";
+
+const todayDate =
+  startDate && safeCurrentDay > 0
+    ? getChallengeDate(startDate, safeCurrentDay)
+    : null;
   const challengeProgress =
     challengeLength > 0
       ? getChallengePercentage(completedDays, challengeLength)
@@ -914,275 +932,287 @@ async function setManualDayCompletion(complete: boolean) {
         />
 
         <section className="flex-1 px-6 py-8 md:px-10 lg:px-14">
-          <div className="flex justify-end md:hidden">
-            <Link
-              href="/dashboard"
-              className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[10px] tracking-[0.20em] transition hover:bg-[#EAD8D3]"
-            >
-              TODAY
-            </Link>
-          </div>
+        
+        
+       {/* JOURNEY OVERVIEW */}
+<section className="overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
 
-          <section className="mt-4 overflow-hidden rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6]">
-            <div className="px-7 pb-8 pt-7 md:px-10 md:pb-9 md:pt-9">
-              <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <p className="text-[9px] tracking-[0.34em] text-[#9D6F67]">
-                    {selectedIsCurrent
-                      ? "YOU ARE HERE"
-                      : "YOUR JOURNEY"}
-                  </p>
+  <button
+    type="button"
+    onClick={() => setJourneyOverviewOpen((open) => !open)}
+    aria-expanded={journeyOverviewOpen}
+    aria-controls="journey-overview-details"
+    className="w-full px-5 py-6 text-left transition hover:bg-[#F7F1ED] sm:px-7 sm:py-7"
+  >
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-[9px] font-medium tracking-[0.28em] text-[#9D6F67]">
+        YOUR LOCK-IN STATUS
+      </p>
 
-                  <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-2">
-                    <h1 className="font-serif text-5xl leading-none md:text-6xl">
-                      Day{" "}
-                      {String(activeSelectedDay).padStart(2, "0")}
-                    </h1>
+      <span
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#DED0CB] text-[#9D6F67]"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          className={`h-4 w-4 transition-transform duration-300 ${
+            journeyOverviewOpen ? "rotate-180" : ""
+          }`}
+        >
+          <path
+            d="m6 9 6 6 6-6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </span>
+    </div>
 
-                    {selectedDate && (
-                      <p className="font-serif text-lg italic text-[#A77B73] md:text-xl">
-                        {formatFullDate(selectedDate)}
-                      </p>
-                    )}
-                  </div>
-                </div>
+    <h1 className="mt-5 font-serif text-3xl italic leading-tight text-[#211C19] sm:text-4xl">
+      {isLoadingProgress ? "your journey ♡" : todayStatus}
+    </h1>
 
-                <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-                  {selectedIsComplete
-                    ? "you showed up. ♡"
-                    : selectedIsCurrent
-                      ? "keep showing up. ♡"
-                      : selectedIsPast
-                        ? "another day in your story. ♡"
-                        : "one day at a time. ♡"}
-                </p>
-              </div>
-            </div>
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <p className="font-serif text-base italic text-[#A77B73]">
+        {todayIsComplete
+          ? "you showed up for yourself. ♡"
+          : todayCommitmentCount > 0
+            ? "keep showing up. ♡"
+            : "a fresh start awaits. ♡"}
+      </p>
 
-            <div className="grid border-t border-[#E7DCD7] sm:grid-cols-3">
-              <div className="px-7 py-5 md:px-10">
-                <p className="text-[8px] tracking-[0.25em] text-[#9D6F67]">
-                  STATUS
-                </p>
+      <span className="text-[9px] tracking-[0.16em] text-[#9D6F67]">
+        DAY {String(safeCurrentDay).padStart(2, "0")}
+      </span>
+    </div>
+  </button>
 
-                <p className="mt-2 font-serif text-xl italic">
-                  {getSelectedStatus()}
-                </p>
-              </div>
+  {journeyOverviewOpen && (
+    <div
+      id="journey-overview-details"
+      className="border-t border-[#E5D8D3]"
+    >
+      <div className="grid grid-cols-1 sm:grid-cols-3">
 
-              <div className="border-t border-[#E7DCD7] px-7 py-5 sm:border-l sm:border-t-0 md:px-10">
-                <p className="text-[8px] tracking-[0.25em] text-[#9D6F67]">
-                  PROGRESS
-                </p>
+        <div className="border-b border-[#E5D8D3] px-5 py-5 sm:border-b-0 sm:border-r sm:px-7">
+          <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+            TODAY
+          </p>
 
-                <p className="mt-2 font-serif text-xl italic">
-                  {isLoadingProgress
-                    ? "—"
-                    : `${challengeProgress}%`}
-                </p>
-              </div>
+          <p className="mt-3 font-serif text-xl italic text-[#211C19]">
+            {todayDate ? formatFullDate(todayDate) : "—"}
+          </p>
+        </div>
 
-              <div className="border-t border-[#E7DCD7] px-7 py-5 sm:border-l sm:border-t-0 md:px-10">
-                <p className="text-[8px] tracking-[0.25em] text-[#9D6F67]">
-                  DAYS COMPLETE
-                </p>
+        <div className="border-b border-[#E5D8D3] px-5 py-5 sm:border-b-0 sm:border-r sm:px-7">
+          <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+            PROGRESS
+          </p>
 
-                <p className="mt-2 font-serif text-xl italic">
-                  {isLoadingProgress ? "—" : completedDays}
-                </p>
-              </div>
-            </div>
+          <p className="mt-3 font-serif text-2xl italic text-[#211C19]">
+            {isLoadingProgress ? "—" : `${challengeProgress}%`}
+          </p>
+        </div>
 
-            <div className="border-t border-[#E7DCD7] px-7 pb-7 pt-6 md:px-10 md:pb-8">
-              <div className="relative h-[4px] overflow-hidden rounded-full bg-[#E7DCD7]">
-                <div
-                  className="h-full rounded-full bg-[#A77B73] transition-all duration-500"
-                  style={{
-                    width: `${challengeProgress}%`,
-                  }}
+        <div className="px-5 py-5 sm:px-7">
+          <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+            DAYS COMPLETE
+          </p>
+
+          <p className="mt-3 font-serif text-2xl italic text-[#211C19]">
+            {isLoadingProgress ? "—" : completedDays}
+          </p>
+        </div>
+
+      </div>
+
+      <div className="border-t border-[#E5D8D3] px-5 py-6 sm:px-7">
+
+        <div className="h-[4px] overflow-hidden rounded-full bg-[#E7DCD7]">
+          <div
+            className="h-full rounded-full bg-[#A77B73] transition-all duration-500"
+            style={{ width: `${challengeProgress}%` }}
+          />
+        </div>
+
+        <div className="mt-3 flex justify-between text-[9px] tracking-[0.15em] text-[#9A8780]">
+          <span>DAY 01</span>
+          <span>DAY {String(challengeLength).padStart(2, "0")}</span>
+        </div>
+
+        <p className="mt-5 text-center font-serif text-sm italic text-[#A77B73]">
+          {todayCommitmentCount} of 7 commitments checked today ♡
+        </p>
+
+      </div>
+    </div>
+  )}
+
+</section>
+ 
+<section className="mt-8">
+  <div className="rounded-[1.5rem] border border-[#DCC6BF] bg-[#EAD8D3] px-4 py-6 sm:px-7 sm:py-8 md:px-10">
+    {/* CALENDAR HEADING */}
+    <div className="flex items-start justify-between gap-3">
+      <div>
+        <p className="text-[9px] font-medium tracking-[0.25em] text-[#8F655E]">
+          YOUR DAILY LOG
+        </p>
+
+        <h2 className="mt-2 font-serif text-2xl italic leading-tight text-[#805D55] sm:text-3xl">
+          the days you locked in
+        </h2>
+      </div>
+
+   
+    </div>
+
+    {/* LEGEND */}
+    <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-[#D4B9B1] pb-5">
+      <div className="flex items-center gap-1.5">
+        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#A77B73] text-[10px] text-white">
+          ✓
+        </span>
+        <span className="text-[9px] text-[#805D55]">
+          Complete
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <span className="h-4 w-4 rounded-[5px] border-2 border-[#805D55] bg-[#FBF8F6]" />
+        <span className="text-[9px] text-[#805D55]">
+          Today
+        </span>
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <span className="h-4 w-4 rounded-[5px] border border-[#D7C2BC] bg-[#F7F1ED]/40" />
+        <span className="text-[9px] text-[#805D55]">
+          Upcoming
+        </span>
+      </div>
+    </div>
+
+    {/* CALENDAR DAYS */}
+    <div className="mt-5 grid grid-cols-4 gap-2.5 sm:grid-cols-10 sm:gap-3 lg:grid-cols-[repeat(15,minmax(0,1fr))]">
+      {challengeDays.map((day) => {
+        const progressForDay = dailyProgress.find(
+          (row) => row.challenge_day === day
+        );
+
+        const isComplete = isDayComplete(progressForDay);
+        const isCurrent = day === safeCurrentDay;
+        const isUpcoming = day > safeCurrentDay;
+        const isSelected = day === activeSelectedDay;
+
+        const dayPhotoUrl = photoUrls[day];
+        const hasPhoto = Boolean(dayPhotoUrl);
+
+        const dayDate = startDate
+          ? getChallengeDate(startDate, day)
+          : null;
+
+        return (
+          <button
+            key={day}
+            type="button"
+            onClick={() => openDayDetails(day)}
+            disabled={isUpcoming}
+            aria-label={
+              dayDate
+                ? `Day ${day}, ${formatFullDate(dayDate)}${
+                    isComplete ? ", complete" : ""
+                  }${hasPhoto ? ", progress photo saved" : ""}`
+                : `Day ${day}`
+            }
+            className={`group relative flex aspect-square min-h-[64px] flex-col items-center justify-center overflow-hidden rounded-xl border transition duration-200 sm:min-h-[76px] ${
+              isCurrent
+                ? "border-2 border-[#805D55] bg-[#FBF8F6] text-[#805D55]"
+                : isComplete
+  ? "border-[#A77B73] bg-[#B68D85] text-[#FBF8F6]"
+                  : isUpcoming
+                    ? "cursor-default border-[#D7C2BC] bg-[#F7F1ED]/40 text-[#AA9690]"
+                    : "border-[#CBA9A2] bg-[#F7F1ED] text-[#806E68] hover:bg-white"
+            } ${
+              isSelected && !isCurrent
+                ? "ring-2 ring-[#8F655E] ring-offset-2 ring-offset-[#EAD8D3]"
+                : ""
+            }`}
+          >
+            {/* FULL PHOTO */}
+            {hasPhoto && dayPhotoUrl && (
+              <>
+                <img
+                  src={dayPhotoUrl}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
                 />
-              </div>
+                <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/10" />
+              </>
+            )}
 
-              <div className="mt-3 flex justify-between text-[8px] tracking-[0.20em] text-[#9A8780]">
-                <span>DAY 01</span>
-                <span>DAY {challengeLength}</span>
-              </div>
-            </div>
-          </section>
+            {/* DAY NUMBER */}
+            <span
+              className={`z-10 font-serif text-sm sm:text-base ${
+                hasPhoto
+                  ? "absolute left-2 top-2 text-white drop-shadow-sm"
+                  : ""
+              }`}
+            >
+              {String(day).padStart(2, "0")}
+            </span>
 
-          <section className="mt-8">
-            <div className="relative overflow-hidden rounded-[2rem] border border-[#D5BBB5] bg-[#EAD8D3] px-5 pb-8 pt-10 sm:px-8 md:px-10 md:pb-10 md:pt-12">
-              <div className="absolute -top-3 left-0 right-0 flex justify-center gap-12">
-                <span className="h-7 w-[2px] rounded-full bg-[#A77B73]" />
-                <span className="h-7 w-[2px] rounded-full bg-[#A77B73]" />
-                <span className="h-7 w-[2px] rounded-full bg-[#A77B73]" />
-              </div>
+            {/* COMPLETION CHECKMARK */}
+            {isComplete && (
+            
+  <span
+    className="absolute right-1.5 top-1.5 z-20 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-[#805D55] text-white shadow-[0_2px_6px_rgba(0,0,0,0.25)]"
+    aria-hidden="true"
+  >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-3 w-3"
+                >
+                  <path d="M5 12.5 9.5 17 19 7" />
+                </svg>
+              </span>
+            )}
 
-              <div className="flex flex-col gap-6 border-b border-[#CFB5AE] pb-7 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-[9px] tracking-[0.38em] text-[#8F655E]">
-                    YOUR
-                  </p>
+            {/* TODAY LABEL */}
+            {isCurrent && (
+  <span
+    className={`absolute bottom-1.5 left-1/2 z-20 -translate-x-1/2 rounded-full px-2 py-0.5 text-[7px] font-medium tracking-[0.08em] ${
+      hasPhoto
+        ? "bg-[#FBF8F6] text-[#805D55]"
+        : "bg-[#EAD8D3] text-[#805D55]"
+    }`}
+  >
+    TODAY
+  </span>
+)}
+          </button>
+        );
+      })}
+    </div>
 
-                  <h2 className="mt-2 font-serif text-4xl italic text-[#A77B73] md:text-5xl">
-                    {challengeLength} days.
-                  </h2>
-                </div>
+    <p className="mt-6 text-center text-[10px] tracking-[0.04em] text-[#8F655E]">
+      tap a day to revisit your progress ♡
+    </p>
+  </div>
+</section>
 
-                <div className="sm:text-right">
-                  <p className="text-[9px] tracking-[0.30em] text-[#8F655E]">
-                    LOCK IN WITH LAV
-                  </p>
 
-                  <p className="mt-2 font-serif text-lg italic text-[#A77B73]">
-                    you are here — day {dayNumber}. ♡
-                  </p>
-                </div>
-              </div>
 
-              <div className="mt-7 flex flex-wrap gap-x-8 gap-y-4">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-md bg-[#A77B73] text-[9px] text-[#F7F1ED]">
-                    ✓
-                  </span>
 
-                  <span className="text-[8px] tracking-[0.18em] text-[#806E68]">
-                    COMPLETE
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="h-5 w-5 rounded-md border-2 border-[#8F655E] bg-[#F7F1ED]" />
-
-                  <span className="text-[8px] tracking-[0.18em] text-[#806E68]">
-                    TODAY
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="h-5 w-5 rounded-md border border-[#D7C2BC] bg-[#F7F1ED]/30" />
-
-                  <span className="text-[8px] tracking-[0.18em] text-[#806E68]">
-                    UPCOMING
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="overflow-hidden rounded-full">
-                    <span className="block h-5 w-5 bg-[#A77B73]" />
-                  </span>
-
-                  <span className="text-[8px] tracking-[0.18em] text-[#806E68]">
-                    PHOTO SAVED
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-8 grid grid-cols-4 gap-4 sm:grid-cols-10 sm:gap-3 lg:grid-cols-[repeat(15,minmax(0,1fr))]">
-                {challengeDays.map((day) => {
-                  const progressForDay = dailyProgress.find(
-                    (row) => row.challenge_day === day
-                  );
-
-                  const completedForDay =
-  getCompletedCommitmentCount(progressForDay);
-
-const isComplete =
-  isDayComplete(progressForDay);
-                  const isCurrent = day === safeCurrentDay;
-                  const isUpcoming = day > safeCurrentDay;
-                  const isSelected = day === activeSelectedDay;
-
-                  const dayPhotoUrl = photoUrls[day];
-                  const hasPhoto = Boolean(dayPhotoUrl);
-
-                  const dayDate = startDate
-                    ? getChallengeDate(startDate, day)
-                    : null;
-
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      onClick={() => openDayDetails(day)}
-                      disabled={isUpcoming}
-                      aria-label={
-                        dayDate
-                          ? `Day ${day}, ${formatFullDate(dayDate)}${
-                              hasPhoto
-                                ? ", progress photo saved"
-                                : ""
-                            }`
-                          : `Day ${day}`
-                      }
-                      className={`group relative flex aspect-square min-h-[64px] flex-col items-center justify-center rounded-xl border transition duration-200 sm:min-h-[76px] ${
-                        isComplete
-                          ? "border-[#A77B73] bg-[#A77B73] text-[#F7F1ED]"
-                          : isCurrent
-                            ? "border-2 border-[#8F655E] bg-[#F7F1ED] text-[#211C19]"
-                            : isUpcoming
-                              ? "cursor-default border-[#D7C2BC] bg-[#F7F1ED]/30 text-[#AA9690]"
-                              : "border-[#CBA9A2] bg-[#F7F1ED]/65 text-[#806E68] hover:-translate-y-0.5 hover:bg-[#F7F1ED]"
-                      } ${
-                        isSelected && !isCurrent
-                          ? "ring-2 ring-[#8F655E] ring-offset-2 ring-offset-[#EAD8D3]"
-                          : ""
-                      }`}
-                    >
-                      <span
-                        className={`font-serif text-sm sm:text-base ${
-                          hasPhoto ? "absolute left-2 top-2" : ""
-                        }`}
-                      >
-                        {String(day).padStart(2, "0")}
-                      </span>
-
-                      {hasPhoto && dayPhotoUrl && (
-                        <span
-                          className={`mt-3 block ${
-                            isComplete
-                              ? "drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
-                              : ""
-                          }`}
-                          title="Progress photo saved — click to view"
-                        >
-                          <PhotoHeart
-                            src={dayPhotoUrl}
-                            complete={isComplete}
-                          />
-                        </span>
-                      )}
-
-                      {isComplete && (
-                        <span className="absolute right-1.5 top-1 text-[8px]">
-                          ✓
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="mt-8 flex flex-col gap-2 border-t border-[#CFB5AE] pt-6 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-[8px] tracking-[0.28em] text-[#8F655E]">
-                  {completedDays} DAYS COMPLETE
-                </p>
-
-                <p className="font-serif text-lg italic text-[#A77B73]">
-                  {challengeLength > 0 &&
-                  completedDays === challengeLength
-                    ? `${challengeLength} days. you did it. ♡`
-                    : "keep going. one day at a time. ♡"}
-                </p>
-              </div>
-            </div>
-          </section>
-
-          <div className="py-16 text-center">
-            <p className="font-serif text-3xl italic text-[#A77B73]">
-              imagine what choosing yourself, one day at a time, can do. ♡
-            </p>
-          </div>
+ 
         </section>
       </div>
 
@@ -1205,10 +1235,10 @@ const isComplete =
               ×
             </button>
 
-            <div className="border-b border-[#E5D8D3] px-7 pb-7 pt-8 md:px-10 md:pb-8 md:pt-10">
-              <p className="text-[9px] tracking-[0.34em] text-[#9D6F67]">
-                YOUR JOURNEY
-              </p>
+            <div className="border-b border-[#E5D8D3] px-5 pb-5 pt-6 sm:px-7 md:px-10">
+              <p className="text-[9px] tracking-[0.28em] text-[#9D6F67]">
+  DAILY ENTRY
+</p>
 
               <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-2 pr-12">
                 <h2 className="font-serif text-4xl leading-none md:text-5xl">
@@ -1254,7 +1284,7 @@ const isComplete =
               </div>
             ) : (
               <div className="grid md:grid-cols-[1.05fr_0.95fr]">
-                <div className="border-b border-[#E5D8D3] p-7 md:border-b-0 md:border-r md:p-10">
+                <div className="border-b border-[#E5D8D3] px-5 py-6 sm:p-7 md:border-b-0 md:border-r md:p-8">
                   <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
                     PROGRESS PHOTO
                   </p>
@@ -1271,7 +1301,7 @@ const isComplete =
                     className="hidden"
                   />
 
-                  <div className="mt-6">
+                  <div className="mt-4">
                     {selectedPhotoUrl ? (
                       <div>
                         <div className="overflow-hidden rounded-[1.6rem] border border-[#D8C5BF] bg-[#F1E7E3]">
@@ -1339,7 +1369,7 @@ const isComplete =
                   </div>
                 </div>
 
-                <div className="p-7 md:p-10">
+                <div className="px-5 py-6 sm:p-7 md:p-8">
                   <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
                     MEASUREMENTS
                   </p>
@@ -1349,8 +1379,8 @@ const isComplete =
                   </h3>
 
                   {selectedMeasurement ? (
-                    <div className="mt-7 grid grid-cols-2 overflow-hidden rounded-[1.5rem] border border-[#E0D2CD]">
-                      <div className="border-b border-r border-[#E0D2CD] p-5">
+                    <div className="mt-5 grid grid-cols-3 overflow-hidden rounded-[1rem] border border-[#E0D2CD]">
+                      <div className="border-b border-r border-[#E0D2CD] p-3 sm:p-5">
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           WEIGHT
                         </p>
@@ -1362,7 +1392,7 @@ const isComplete =
                         </p>
                       </div>
 
-                      <div className="border-b border-[#E0D2CD] p-5">
+                     <div className="border-b border-r border-[#E0D2CD] p-3 sm:p-5">
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           WAIST
                         </p>
@@ -1374,7 +1404,7 @@ const isComplete =
                         </p>
                       </div>
 
-                      <div className="border-b border-r border-[#E0D2CD] p-5">
+                      <div className="border-b border-[#E0D2CD] p-3 sm:p-5">
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           HIPS
                         </p>
@@ -1386,7 +1416,7 @@ const isComplete =
                         </p>
                       </div>
 
-                      <div className="border-b border-[#E0D2CD] p-5">
+                     <div className="border-r border-[#E0D2CD] p-3 sm:p-5">
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           CHEST
                         </p>
@@ -1398,7 +1428,7 @@ const isComplete =
                         </p>
                       </div>
 
-                      <div className="border-r border-[#E0D2CD] p-5">
+                     <div className="border-r border-[#E0D2CD] p-3 sm:p-5">
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           THIGH
                         </p>
@@ -1410,7 +1440,7 @@ const isComplete =
                         </p>
                       </div>
 
-                      <div className="p-5">
+                     <div className="p-3 sm:p-5">
                         <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
                           ARM
                         </p>
@@ -1434,82 +1464,86 @@ const isComplete =
                     </div>
                   )}
 
-                  <div className="mt-7 rounded-[1.5rem] bg-[#EAD8D3] p-6">
-                    <p className="text-[8px] tracking-[0.25em] text-[#8F655E]">
-                      SHOWING UP
-                    </p>
+                  
+{/* DAILY REFLECTION */}
+<div className="mt-7 border-t border-[#E5D8D3] pt-6">
+  <div className="flex items-start gap-3">
+    {selectedIsComplete && (
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#A77B73] text-[#A77B73]">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-4 w-4"
+          aria-label="Day complete"
+          role="img"
+        >
+          <path d="M5 12.5 9.5 17 19 7" />
+        </svg>
+      </div>
+    )}
 
-                    <div className="mt-3 flex items-end justify-between gap-4">
-                      <div>
-                        <p className="font-serif text-4xl">
-                          {selectedCommitmentCount}
-
-                          <span className="text-xl text-[#A77B73]">
-                            {" "}
-                            / 7
-                          </span>
-                        </p>
-
-                        <p className="mt-2 font-serif text-lg italic text-[#A77B73]">
-  {selectedWasManuallyCompleted
-    ? "you marked this day complete. ♡"
-    : selectedIsComplete
-      ? "you did everything you said you would. ♡"
-      : selectedIsCurrent
-        ? "the day isn't over yet. ♡"
-        : "part of the story, too. ♡"}
-</p>
-                      </div>
-
-                      {selectedIsPast &&
-  selectedCommitmentCount < 7 && (
-    <div className="mt-5 rounded-[1.5rem] border border-[#D8C5BF] bg-[#F7F1ED] p-5">
-      <p className="text-[8px] tracking-[0.25em] text-[#8F655E]">
-        MANUAL COMPLETION
+    <div>
+      <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+        A LITTLE REFLECTION
       </p>
 
-      <p className="mt-2 font-serif text-lg italic text-[#806E68]">
+      <p className="mt-2 font-serif text-lg italic leading-relaxed text-[#A77B73]">
         {selectedWasManuallyCompleted
-          ? "Marked complete manually. Your original check-ins are still saved. ♡"
-          : "Did you finish this day but forget to check everything off?"}
+          ? "you marked this day complete. ♡"
+          : selectedIsComplete
+            ? "you did everything you said you would. ♡"
+            : selectedIsCurrent
+              ? "the day isn't over yet. ♡"
+              : "part of the story, too. ♡"}
       </p>
-
-      {manualCompletionError && (
-        <p className="mt-3 text-[8px] leading-5 tracking-[0.10em] text-[#9D6F67]">
-          {manualCompletionError}
-        </p>
-      )}
-
-      <button
-        type="button"
-        onClick={() =>
-          setManualDayCompletion(
-            !selectedWasManuallyCompleted
-          )
-        }
-        disabled={manualCompletionLoading}
-        className={`mt-5 w-full rounded-full px-6 py-3 text-[8px] tracking-[0.20em] transition disabled:cursor-wait disabled:opacity-60 ${
-          selectedWasManuallyCompleted
-            ? "border border-[#CBA9A2] bg-[#FBF8F6] text-[#806E68] hover:bg-[#EAD8D3]"
-            : "bg-[#A77B73] text-[#FBF8F6] hover:bg-[#8F655E]"
-        }`}
-      >
-        {manualCompletionLoading
-          ? "SAVING..."
-          : selectedWasManuallyCompleted
-            ? "UNDO MANUAL COMPLETION"
-            : "MARK DAY COMPLETE ♡"}
-      </button>
     </div>
-  )}
+  </div>
+</div>
 
-                      {selectedIsComplete && (
-                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#A77B73] text-[#FBF8F6]">
-                          ✓
-                        </div>
-                      )}
-                    </div>
-                  </div>
+{/* MANUAL COMPLETION — KEEP THIS FUNCTIONALITY */}
+{selectedIsPast && selectedCommitmentCount < 7 && (
+  <div className="mt-6 rounded-[1rem] border border-[#E5D8D3] bg-[#F7F1ED] px-4 py-5">
+    <p className="text-[9px] tracking-[0.20em] text-[#9D6F67]">
+      MISSED A CHECK-IN?
+    </p>
+
+    <p className="mt-2 text-xs leading-relaxed text-[#806E68]">
+      {selectedWasManuallyCompleted
+        ? "This day was marked complete manually. Your original check-ins are still saved."
+        : "Finished your commitments but forgot to check them off? You can mark this day complete."}
+    </p>
+
+    {manualCompletionError && (
+      <p className="mt-3 text-xs text-[#9D6F67]">
+        {manualCompletionError}
+      </p>
+    )}
+
+    <button
+      type="button"
+      onClick={() =>
+        setManualDayCompletion(!selectedWasManuallyCompleted)
+      }
+      disabled={manualCompletionLoading}
+      className={`mt-4 w-full rounded-full px-5 py-3 text-[9px] tracking-[0.15em] transition disabled:cursor-wait disabled:opacity-60 ${
+        selectedWasManuallyCompleted
+          ? "border border-[#CBA9A2] bg-[#FBF8F6] text-[#806E68] hover:bg-[#EAD8D3]"
+          : "bg-[#A77B73] text-[#FBF8F6] hover:bg-[#8F655E]"
+      }`}
+    >
+      {manualCompletionLoading
+        ? "SAVING..."
+        : selectedWasManuallyCompleted
+          ? "UNDO MANUAL COMPLETION"
+          : "MARK DAY COMPLETE"}
+    </button>
+  </div>
+)}
+
                 </div>
               </div>
             )}
