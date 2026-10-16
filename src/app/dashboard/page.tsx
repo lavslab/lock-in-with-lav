@@ -1329,7 +1329,7 @@ if (workoutBeingRemoved?.source === "guide") {
 
                                 <div className="mt-2 flex items-center justify-between gap-4">
   <Link
-    href={`/dashboard/resources/workouts/${workout.id}`}
+   href={`/dashboard/resources/workouts/workout-preview?workout=${workout.id}`}
     className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
   >
     <span>
