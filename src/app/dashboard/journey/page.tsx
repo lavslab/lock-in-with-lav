@@ -1,17 +1,21 @@
+
 "use client";
 
 import { Capacitor } from "@capacitor/core";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 import { Share } from "@capacitor/share";
-
-import Link from "next/link";
-
 import DashboardSidebar from "@/components/DashboardSidebar";
-
-import { useEffect, useMemo, useRef, useState } from "react";
-
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import { createClient } from "@/lib/supabase/client";
-
+import { getActiveJourney } from "@/lib/active-journey";
+import JourneyProgressSections from "@/components/JourneyProgressSections";
 import {
   type DailyProgressRow,
   getChallengePercentage,
@@ -19,31 +23,58 @@ import {
   parseChallengeDate,
 } from "@/lib/challenge";
 
-type JourneyProgressRow = DailyProgressRow & {
+type Progress = DailyProgressRow & {
   manually_completed?: boolean;
 };
 
-type MeasurementRow = {
-  id?: string;
-  challenge_day: number;
-  weight: number | string | null;
-  waist: number | string | null;
-  hips: number | string | null;
-  chest: number | string | null;
-  thigh: number | string | null;
-  arm: number | string | null;
-  created_at?: string;
-};
+const MEASUREMENT_FIELDS = [
+  "weight",
+  "waist",
+  "hips",
+  "chest",
+  "thigh",
+  "arm",
+] as const;
 
-type ProgressPhotoRow = {
-  id?: string;
+type MeasurementField = (typeof MEASUREMENT_FIELDS)[number];
+
+type Measurement = {
+  id: string;
+  challenge_day: number;
+} & Record<MeasurementField, number | string | null>;
+
+type MeasurementForm = Record<MeasurementField, string>;
+
+type Photo = {
+  id: string;
   challenge_day: number;
   storage_path: string;
-  photo_type?: string;
   created_at?: string;
 };
 
-function formatFullDate(date: Date) {
+type LittleWin = {
+  id: number;
+  challenge_day: number | null;
+  label: string | null;
+  is_completed: boolean;
+};
+
+const EMPTY_MEASUREMENTS: MeasurementForm = {
+  weight: "",
+  waist: "",
+  hips: "",
+  chest: "",
+  thigh: "",
+  arm: "",
+};
+
+const buttonPrimary =
+  "rounded-full bg-[#A77B73] px-5 py-3 text-[10px] font-medium tracking-[0.12em] text-white transition hover:bg-[#8F655E] disabled:cursor-wait disabled:opacity-50";
+
+const buttonOutline =
+  "rounded-full border border-[#D6BFB8] bg-[#FFFCFA] px-5 py-3 text-[10px] font-medium tracking-[0.12em] text-[#805D55] transition hover:bg-[#F4E9E4] disabled:opacity-50";
+
+function fullDate(date: Date) {
   return date.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
@@ -51,7 +82,7 @@ function formatFullDate(date: Date) {
   });
 }
 
-function formatDateForDatabase(date: Date) {
+function databaseDate(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -59,17 +90,16 @@ function formatDateForDatabase(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function getChallengeDate(startDate: Date, challengeDay: number) {
-  const date = new Date(startDate);
-  date.setDate(startDate.getDate() + challengeDay - 1);
-
+function dateForDay(start: Date, day: number) {
+  const date = new Date(start);
+  date.setDate(start.getDate() + day - 1);
   return date;
 }
 
-function getCompletedCommitmentCount(row?: DailyProgressRow) {
+function commitmentCount(row?: DailyProgressRow) {
   if (!row) return 0;
 
-  const commitments = [
+  return [
     row.move,
     row.get_outside,
     row.hydrate,
@@ -77,83 +107,34 @@ function getCompletedCommitmentCount(row?: DailyProgressRow) {
     row.nourish,
     row.document,
     row.no_alcohol,
-  ];
-
-  return commitments.filter(Boolean).length;
+  ].filter(Boolean).length;
 }
 
-function isDayComplete(row?: JourneyProgressRow) {
-  if (!row) return false;
-
-  return (
-    getCompletedCommitmentCount(row) === 7 ||
-    row.manually_completed === true
+function complete(row?: Progress) {
+  return Boolean(
+    row &&
+      (commitmentCount(row) === 7 ||
+        row.manually_completed === true)
   );
 }
 
-
-function formatMeasurement(value: number | string | null | undefined) {
-  if (value === null || value === undefined || value === "") return "—";
-
-  return value;
+function measurementUnit(field: MeasurementField) {
+  return field === "weight" ? "lbs" : "in";
 }
 
-function PhotoHeart({
-  src,
-  complete,
-}: {
-  src: string;
-  complete: boolean;
-}) {
+function displayMeasurement(
+  field: MeasurementField,
+  value: number | string | null
+) {
+  if (value === null || value === "") return "—";
+  return `${value} ${measurementUnit(field)}`;
+}
+
+function SmallLabel({ children }: { children: React.ReactNode }) {
   return (
-    <svg
-      viewBox="0 0 100 92"
-      className="h-[34px] w-[38px] sm:h-[39px] sm:w-[43px]"
-      aria-hidden="true"
-    >
-      <defs>
-        <clipPath id="journey-photo-heart">
-          <path
-            d="
-              M50 88
-              C46 84 7 61 7 29
-              C7 12 18 3 31 3
-              C40 3 47 8 50 17
-              C53 8 60 3 69 3
-              C82 3 93 12 93 29
-              C93 61 54 84 50 88
-              Z
-            "
-          />
-        </clipPath>
-      </defs>
-
-      <image
-        href={src}
-        x="0"
-        y="0"
-        width="100"
-        height="92"
-        preserveAspectRatio="xMidYMid slice"
-        clipPath="url(#journey-photo-heart)"
-      />
-
-      <path
-        d="
-          M50 88
-          C46 84 7 61 7 29
-          C7 12 18 3 31 3
-          C40 3 47 8 50 17
-          C53 8 60 3 69 3
-          C82 3 93 12 93 29
-          C93 61 54 84 50 88
-          Z
-        "
-        fill="none"
-        stroke={complete ? "#F7F1ED" : "#A77B73"}
-        strokeWidth="3"
-      />
-    </svg>
+    <p className="text-[9px] font-medium uppercase tracking-[0.22em] text-[#9D6F67]">
+      {children}
+    </p>
   );
 }
 
@@ -161,473 +142,501 @@ export default function JourneyPage() {
   const supabase = useMemo(() => createClient(), []);
 
   const [firstName, setFirstName] = useState("there");
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
-  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
-
-  const [challengeStartDate, setChallengeStartDate] = useState<string | null>(
-    null
-  );
-
-  const [challengeLength, setChallengeLength] = useState(0);
-const [journeyOverviewOpen, setJourneyOverviewOpen] = useState(false);
-  const [dailyProgress, setDailyProgress] =
-  useState<JourneyProgressRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeJourneyId, setActiveJourneyId] =
+    useState<string | null>(null);
+  const [startString, setStartString] =
+    useState<string | null>(null);
+  const [length, setLength] = useState(0);
+  const [progress, setProgress] = useState<Progress[]>([]);
+  const [photos, setPhotos] = useState<Record<number, Photo>>({});
+  const [photoUrls, setPhotoUrls] =
+    useState<Record<number, string>>({});
+  const [overviewOpen, setOverviewOpen] = useState(false);
 
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [dayDetailsOpen, setDayDetailsOpen] = useState(false);
-  const [dayDetailsLoading, setDayDetailsLoading] = useState(false);
-  const [manualCompletionLoading, setManualCompletionLoading] =
-  useState(false);
-
-const [manualCompletionError, setManualCompletionError] =
-  useState<string | null>(null);
-
-  const [selectedPhotoUrl, setSelectedPhotoUrl] = useState<string | null>(
-    null
-  );
-
-  const [selectedPhotoPath, setSelectedPhotoPath] = useState<string | null>(
-    null
-  );
-
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-
-  const [photoUrls, setPhotoUrls] = useState<Record<number, string>>({});
-
+  const [dayLoading, setDayLoading] = useState(false);
+  const [dayError, setDayError] = useState<string | null>(null);
   const [selectedMeasurement, setSelectedMeasurement] =
-    useState<MeasurementRow | null>(null);
-
-  const photoInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const loadJourney = async () => {
-      setIsLoadingUser(true);
-      setIsLoadingProgress(true);
-
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) {
-        console.error("Could not load user:", userError);
-      }
-
-      if (!user) {
-        setIsLoadingUser(false);
-        setIsLoadingProgress(false);
-        return;
-      }
-
-      const savedName = user.user_metadata?.name;
-
-      if (savedName) {
-        setFirstName(savedName);
-      } else if (user.email) {
-        setFirstName(user.email.split("@")[0]);
-      }
-
-      const [
-        { data: profile, error: profileError },
-        { data: progressRows, error: progressError },
-        { data: photoRows, error: photoRowsError },
-      ] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("challenge_start_date, challenge_length")
-          .eq("id", user.id)
-          .single(),
-
-        supabase
-          .from("daily_progress")
-          .select(
-  "challenge_day, move, get_outside, hydrate, read, nourish, document, no_alcohol, manually_completed"
-)
-          .eq("user_id", user.id)
-          .order("challenge_day", { ascending: true }),
-
-        supabase
-          .from("progress_photos")
-          .select(
-            "id, challenge_day, storage_path, photo_type, created_at"
-          )
-          .eq("user_id", user.id)
-          .eq("photo_type", "progress")
-          .order("challenge_day", { ascending: true }),
-      ]);
-
-      if (profileError) {
-        console.error("Could not load profile:", profileError);
-      } else if (profile) {
-        setChallengeStartDate(profile.challenge_start_date);
-        setChallengeLength(profile.challenge_length ?? 0);
-      }
-
-      if (progressError) {
-        console.error("Could not load daily progress:", progressError);
-      } else {
-        setDailyProgress(progressRows ?? []);
-      }
-
-      if (photoRowsError) {
-        console.error(
-          "Could not load progress photos:",
-          photoRowsError
-        );
-
-        setPhotoUrls({});
-      } else {
-        const nextPhotoUrls: Record<number, string> = {};
-
-        for (const row of (photoRows ?? []) as ProgressPhotoRow[]) {
-          if (!row.storage_path || !row.challenge_day) continue;
-
-          const { data: signedPhoto, error: signedPhotoError } =
-            await supabase.storage
-              .from("progress-photos")
-              .createSignedUrl(row.storage_path, 60 * 60);
-
-          if (signedPhotoError) {
-            console.error(
-              `Could not create photo URL for day ${row.challenge_day}:`,
-              signedPhotoError
-            );
-            continue;
-          }
-
-          if (signedPhoto?.signedUrl) {
-            nextPhotoUrls[row.challenge_day] = signedPhoto.signedUrl;
-          }
-        }
-
-        setPhotoUrls(nextPhotoUrls);
-      }
-
-      setIsLoadingUser(false);
-      setIsLoadingProgress(false);
-    };
-
-    loadJourney();
-  }, [supabase]);
-
-  let currentDay = 1;
-  let startDate: Date | null = null;
-
-  if (challengeStartDate) {
-    startDate = parseChallengeDate(challengeStartDate);
-
-    if (challengeLength > 0) {
-      currentDay = getCurrentChallengeDay(
-        challengeStartDate,
-        challengeLength
-      );
-    }
-  }
-
-  const safeCurrentDay =
-    challengeLength > 0
-      ? Math.min(Math.max(currentDay, 1), challengeLength)
-      : 0;
-
-  const dayNumber = String(safeCurrentDay).padStart(2, "0");
-
-  const completedDayNumbers = dailyProgress
-  .filter(
-    (row) =>
-      row.challenge_day <= challengeLength &&
-      isDayComplete(row)
-  )
-  .map((row) => row.challenge_day);
-
-  const completedDays = completedDayNumbers.length;
-const todayProgress = dailyProgress.find(
-  (row) => row.challenge_day === safeCurrentDay
-);
-
-const todayCommitmentCount =
-  getCompletedCommitmentCount(todayProgress);
-
-const todayIsComplete = isDayComplete(todayProgress);
-
-const todayStatus = todayIsComplete
-  ? "day complete ♡"
-  : todayCommitmentCount > 0
-    ? "day in progress"
-    : "day not started";
-
-const todayDate =
-  startDate && safeCurrentDay > 0
-    ? getChallengeDate(startDate, safeCurrentDay)
-    : null;
-  const challengeProgress =
-    challengeLength > 0
-      ? getChallengePercentage(completedDays, challengeLength)
-      : 0;
-
-  const initial =
-    !isLoadingUser && firstName !== "there"
-      ? firstName.charAt(0).toUpperCase()
-      : "♡";
-
-  const activeSelectedDay =
-    challengeLength > 0
-      ? Math.min(selectedDay ?? safeCurrentDay, challengeLength)
-      : 0;
-
-  const selectedDate =
-    startDate && activeSelectedDay > 0
-      ? getChallengeDate(startDate, activeSelectedDay)
-      : null;
-
-  const selectedProgress = dailyProgress.find(
-    (row) => row.challenge_day === activeSelectedDay
-  );
-
-  const selectedCommitmentCount =
-  getCompletedCommitmentCount(selectedProgress);
-
-const selectedWasManuallyCompleted =
-  selectedProgress?.manually_completed === true;
-
-const selectedIsComplete =
-  isDayComplete(selectedProgress);
-
-const selectedIsCurrent =
-  activeSelectedDay === safeCurrentDay;
-
-const selectedIsPast =
-  activeSelectedDay < safeCurrentDay;
-
-const selectedIsUpcoming =
-  activeSelectedDay > safeCurrentDay;
-
-  const challengeDays = Array.from(
-    { length: challengeLength },
-    (_, index) => index + 1
-  );
-
-  async function openDayDetails(day: number) {
-    if (day > safeCurrentDay || day > challengeLength) return;
-
-    setSelectedDay(day);
-    setDayDetailsOpen(true);
-    setDayDetailsLoading(true);
-
-    setSelectedPhotoUrl(null);
-    setSelectedPhotoPath(null);
-    setPhotoError(null);
-    setSelectedMeasurement(null);
-    setManualCompletionError(null);
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      if (userError) {
-        console.error(
-          "Could not load user for day details:",
-          userError
-        );
-      }
-
-      setDayDetailsLoading(false);
-      return;
-    }
-
-    const { data: photoRows, error: photoError } = await supabase
-      .from("progress_photos")
-      .select(
-        "id, challenge_day, storage_path, created_at, photo_type"
-      )
-      .eq("user_id", user.id)
-      .eq("challenge_day", day)
-      .eq("photo_type", "progress")
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    if (photoError) {
-      console.error(
-        "Could not load progress photo:",
-        photoError
-      );
-    } else {
-      const photo = (photoRows?.[0] ?? null) as ProgressPhotoRow | null;
-
-      if (photo?.storage_path) {
-        setSelectedPhotoPath(photo.storage_path);
-
-        const { data: signedPhoto, error: signedPhotoError } =
-          await supabase.storage
-            .from("progress-photos")
-            .createSignedUrl(photo.storage_path, 60 * 60);
-
-        if (signedPhotoError) {
-          console.error(
-            "Could not create progress photo URL:",
-            signedPhotoError
-          );
-        } else if (signedPhoto?.signedUrl) {
-          setSelectedPhotoUrl(signedPhoto.signedUrl);
-
-          setPhotoUrls((previous) => ({
-            ...previous,
-            [day]: signedPhoto.signedUrl,
-          }));
-        }
-      }
-    }
-
-    const { data: measurementRows, error: measurementError } =
-      await supabase
-        .from("measurements")
-        .select(
-          "id, challenge_day, weight, waist, hips, chest, thigh, arm, created_at"
-        )
-        .eq("user_id", user.id)
-        .eq("challenge_day", day)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-    if (measurementError) {
-      console.error(
-        "Could not load measurements:",
-        measurementError
-      );
-    } else {
-      setSelectedMeasurement(
-        (measurementRows?.[0] as MeasurementRow | undefined) ?? null
-      );
-    }
-
-    setDayDetailsLoading(false);
-  }
-
-async function saveSelectedDayPhoto() {
-  if (!selectedPhotoPath) {
-    setPhotoError("No photo is available to save.");
-    return;
-  }
-
-  setPhotoError(null);
-
-  try {
-    const { data, error } = await supabase.storage
-      .from("progress-photos")
-      .download(selectedPhotoPath);
-
-    if (error || !data) {
-      throw error ?? new Error("Could not download this photo.");
-    }
-
-    const extension =
-      selectedPhotoPath.split(".").pop()?.toLowerCase() || "jpg";
-
-    const fileName = `lock-in-with-lav-day-${String(
-      activeSelectedDay
-    ).padStart(2, "0")}.${extension}`;
-
-    if (Capacitor.isNativePlatform()) {
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => {
-          const result = reader.result;
-
-          if (typeof result !== "string") {
-            reject(new Error("Could not prepare this photo."));
-            return;
-          }
-
-          resolve(result.split(",")[1]);
-        };
-
-        reader.onerror = () => {
-          reject(new Error("Could not read this photo."));
-        };
-
-        reader.readAsDataURL(data);
-      });
-
-      const savedFile = await Filesystem.writeFile({
-        path: fileName,
-        data: base64,
-        directory: Directory.Cache,
-      });
-
-      await Share.share({
-        title: "Save Progress Photo",
-        url: savedFile.uri,
-        dialogTitle: "Save your Lock In With Lav photo",
-      });
-    } else {
-      const url = URL.createObjectURL(data);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = fileName;
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-  } catch (error) {
-    console.error("Could not save progress photo:", error);
-
-    setPhotoError(
-      error instanceof Error
-        ? error.message
-        : "Could not save this photo. Please try again."
-    );
-  }
-}
-
-  function triggerPhotoUpload() {
-    setPhotoError(null);
-    photoInputRef.current?.click();
-  }
-
-  async function handlePhotoUpload(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const file = event.target.files?.[0];
-
-    if (!file) return;
-
-    const day = activeSelectedDay;
-
-    if (!day || day < 1 || day > challengeLength) {
-      setPhotoError(
-        "Please select a valid challenge day first."
-      );
-
-      event.target.value = "";
-      return;
-    }
-
-    setIsUploadingPhoto(true);
-    setPhotoError(null);
-
-    let newFilePath: string | null = null;
+    useState<Measurement | null>(null);
+  const [measurementForm, setMeasurementForm] =
+    useState<MeasurementForm>({ ...EMPTY_MEASUREMENTS });
+  const [editingMeasurements, setEditingMeasurements] =
+    useState(false);
+  const [dayWins, setDayWins] = useState<LittleWin[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [manualError, setManualError] = useState<string | null>(null);
+
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [revision, setRevision] = useState(0);
+
+  const refresh = useCallback(() => {
+    setRevision((value) => value + 1);
+  }, []);
+
+  const loadJourney = useCallback(async () => {
+    setLoading(true);
 
     try {
       const {
         data: { user },
-        error: userError,
+        error: authError,
       } = await supabase.auth.getUser();
 
-      if (userError || !user) {
-        throw new Error(
-          "You need to be signed in to upload a progress photo."
-        );
+      if (authError) throw authError;
+
+      if (!user) {
+        setActiveJourneyId(null);
+        setProgress([]);
+        setPhotos({});
+        setPhotoUrls({});
+        setStartString(null);
+        setLength(0);
+        return;
       }
 
-      if (file.type && !file.type.startsWith("image/")) {
-        throw new Error("Please choose an image file.");
+      const name = user.user_metadata?.name;
+      setFirstName(
+        typeof name === "string" && name.trim()
+          ? name
+          : user.email?.split("@")[0] ?? "there"
+      );
+
+      const journey = await getActiveJourney();
+
+      if (
+        !journey ||
+        journey.user_id !== user.id ||
+        journey.status !== "active" ||
+        !journey.start_date
+      ) {
+        setActiveJourneyId(null);
+        setStartString(null);
+        setLength(0);
+        setProgress([]);
+        setPhotos({});
+        setPhotoUrls({});
+        return;
+      }
+
+      setActiveJourneyId(journey.id);
+      setStartString(journey.start_date);
+      setLength(journey.challenge_length);
+
+      const [p, ph] = await Promise.all([
+        supabase
+          .from("daily_progress")
+          .select(
+            "id,challenge_day,move,get_outside,hydrate,read,nourish,document,no_alcohol,manually_completed"
+          )
+          .eq("user_id", user.id)
+          .eq("journey_id", journey.id)
+          .order("challenge_day"),
+
+        supabase
+          .from("progress_photos")
+          .select("id,challenge_day,storage_path,created_at")
+          .eq("user_id", user.id)
+          .eq("journey_id", journey.id)
+          .eq("photo_type", "progress")
+          .order("created_at", { ascending: false }),
+      ]);
+
+      if (p.error) throw p.error;
+      if (ph.error) throw ph.error;
+
+      setProgress((p.data ?? []) as Progress[]);
+
+      const nextPhotos: Record<number, Photo> = {};
+      const nextUrls: Record<number, string> = {};
+
+      for (const row of (ph.data ?? []) as Photo[]) {
+        if (nextPhotos[row.challenge_day]) continue;
+
+        nextPhotos[row.challenge_day] = row;
+
+        const { data } = await supabase.storage
+          .from("progress-photos")
+          .createSignedUrl(row.storage_path, 3600);
+
+        if (data?.signedUrl) {
+          nextUrls[row.challenge_day] = data.signedUrl;
+        }
+      }
+
+      setPhotos(nextPhotos);
+      setPhotoUrls(nextUrls);
+    } catch (error) {
+      console.error("Could not load Journey:", error);
+      setDayError(
+        error instanceof Error
+          ? error.message
+          : "Could not load your journey."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    void loadJourney();
+  }, [loadJourney, revision]);
+
+  const startDate = startString
+    ? parseChallengeDate(startString)
+    : null;
+
+  const currentDay =
+    startString && length > 0
+      ? getCurrentChallengeDay(startString, length)
+      : 0;
+
+  const safeCurrentDay =
+    length > 0
+      ? Math.min(Math.max(currentDay, 1), length)
+      : 0;
+
+  const todayRow = progress.find(
+    (row) => row.challenge_day === safeCurrentDay
+  );
+
+  const todayCount = commitmentCount(todayRow);
+  const todayComplete = complete(todayRow);
+
+  const todayStatus = todayComplete
+    ? "day complete ♡"
+    : todayCount > 0
+      ? "day in progress"
+      : "day not started";
+
+  const completedDays = progress.filter(
+    (row) => row.challenge_day <= length && complete(row)
+  ).length;
+
+  const percentage =
+    length > 0
+      ? getChallengePercentage(completedDays, length)
+      : 0;
+
+  const selectedRow = progress.find(
+    (row) => row.challenge_day === selectedDay
+  );
+
+  const selectedCount = commitmentCount(selectedRow);
+  const selectedComplete = complete(selectedRow);
+  const selectedPast =
+    selectedDay !== null && selectedDay < safeCurrentDay;
+  const selectedCurrent = selectedDay === safeCurrentDay;
+  const selectedDate =
+    selectedDay !== null && startDate
+      ? dateForDay(startDate, selectedDay)
+      : null;
+
+  const selectedPhoto =
+    selectedDay !== null ? photos[selectedDay] : undefined;
+
+  const selectedPhotoUrl =
+    selectedDay !== null ? photoUrls[selectedDay] : undefined;
+
+  const dayNumbers = Array.from(
+    { length },
+    (_, index) => index + 1
+  );
+
+  async function verifyWrite(day: number) {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError) throw authError;
+    if (!user) throw new Error("Please sign in.");
+
+    const journey = await getActiveJourney();
+
+    
+if (
+  !journey ||
+  journey.user_id !== user.id ||
+  journey.id !== activeJourneyId ||
+  journey.status !== "active" ||
+  !journey.start_date ||
+  journey.start_date !== startString ||
+  journey.challenge_length !== length
+) {
+  throw new Error(
+    "Your active journey has changed. Refresh before editing."
+  );
+}
+
+
+    const start = parseChallengeDate(journey.start_date);
+    const now = new Date();
+
+    const elapsed =
+      Math.floor(
+        (Date.UTC(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate()
+        ) -
+          Date.UTC(
+            start.getFullYear(),
+            start.getMonth(),
+            start.getDate()
+          )) /
+          86400000
+      ) + 1;
+
+    if (
+      !Number.isInteger(day) ||
+      day < 1 ||
+      day > journey.challenge_length ||
+      day > elapsed
+    ) {
+      throw new Error("This journey day cannot be edited yet.");
+    }
+
+    return { userId: user.id, journeyId: journey.id };
+  }
+
+  async function loadDay(day: number) {
+    if (!activeJourneyId) return;
+
+    setDayLoading(true);
+    setDayError(null);
+    setPhotoError(null);
+    setManualError(null);
+    setEditingMeasurements(false);
+
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) throw authError;
+      if (!user) throw new Error("Please sign in.");
+
+      const [m, w] = await Promise.all([
+        supabase
+          .from("measurements")
+          .select(
+            "id,challenge_day,weight,waist,hips,chest,thigh,arm"
+          )
+          .eq("user_id", user.id)
+          .eq("journey_id", activeJourneyId)
+          .eq("challenge_day", day)
+          .order("created_at", { ascending: false })
+          .limit(1),
+
+        supabase
+          .from("little_wins")
+          .select("id,challenge_day,label,is_completed")
+          .eq("user_id", user.id)
+          .eq("journey_id", activeJourneyId)
+          .eq("challenge_day", day)
+          .eq("is_completed", true),
+      ]);
+
+      if (m.error) throw m.error;
+      if (w.error) throw w.error;
+
+      const measurement =
+        (m.data?.[0] as Measurement | undefined) ?? null;
+
+      setSelectedMeasurement(measurement);
+      setDayWins((w.data ?? []) as LittleWin[]);
+
+      setMeasurementForm(
+        Object.fromEntries(
+          MEASUREMENT_FIELDS.map((field) => [
+            field,
+            measurement?.[field] === null ||
+            measurement?.[field] === undefined
+              ? ""
+              : String(measurement[field]),
+          ])
+        ) as MeasurementForm
+      );
+    } catch (error) {
+      setDayError(
+        error instanceof Error
+          ? error.message
+          : "Could not open this day."
+      );
+    } finally {
+      setDayLoading(false);
+    }
+  }
+
+  function openDay(day: number) {
+    if (
+      !activeJourneyId ||
+      day < 1 ||
+      day > safeCurrentDay
+    ) {
+      return;
+    }
+
+    setSelectedDay(day);
+    void loadDay(day);
+  }
+
+  function closeDay() {
+    if (busy || uploading) return;
+    setSelectedDay(null);
+    setEditingMeasurements(false);
+    setDayError(null);
+    setPhotoError(null);
+  }
+
+  async function saveMeasurements() {
+    if (selectedDay === null || busy) return;
+
+    const day = selectedDay;
+    setBusy(true);
+    setDayError(null);
+
+    try {
+      const identity = await verifyWrite(day);
+
+      const values = Object.fromEntries(
+        MEASUREMENT_FIELDS.map((field) => [
+          field,
+          measurementForm[field].trim() === ""
+            ? null
+            : Number(measurementForm[field]),
+        ])
+      ) as Record<MeasurementField, number | null>;
+
+      if (
+        Object.values(values).every((value) => value === null)
+      ) {
+        throw new Error("Enter at least one measurement.");
+      }
+
+      if (
+        Object.values(values).some(
+          (value) =>
+            value !== null &&
+            (!Number.isFinite(value) || value < 0)
+        )
+      ) {
+        throw new Error("Please enter valid measurements.");
+      }
+
+      if (selectedMeasurement?.id) {
+        const { data, error } = await supabase
+          .from("measurements")
+          .update(values)
+          .eq("id", selectedMeasurement.id)
+          .eq("user_id", identity.userId)
+          .eq("journey_id", identity.journeyId)
+          .eq("challenge_day", day)
+          .select("id")
+          .maybeSingle();
+
+        if (error) throw error;
+        if (!data) {
+          throw new Error("Measurements could not be updated.");
+        }
+      } else {
+        const { error } = await supabase
+          .from("measurements")
+          .insert({
+            user_id: identity.userId,
+            journey_id: identity.journeyId,
+            challenge_day: day,
+            ...values,
+          });
+
+        if (error) throw error;
+      }
+
+      setEditingMeasurements(false);
+      await loadDay(day);
+    } catch (error) {
+      setDayError(
+        error instanceof Error
+          ? error.message
+          : "Could not save measurements."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteMeasurements() {
+    if (
+      selectedDay === null ||
+      !selectedMeasurement?.id ||
+      busy
+    ) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Remove the measurements recorded for this day?"
+      )
+    ) {
+      return;
+    }
+
+    const day = selectedDay;
+    setBusy(true);
+    setDayError(null);
+
+    try {
+      const identity = await verifyWrite(day);
+
+      const { data, error } = await supabase
+        .from("measurements")
+        .delete()
+        .eq("id", selectedMeasurement.id)
+        .eq("user_id", identity.userId)
+        .eq("journey_id", identity.journeyId)
+        .eq("challenge_day", day)
+        .select("id")
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error("Could not remove measurements.");
+
+      setSelectedMeasurement(null);
+      setMeasurementForm({ ...EMPTY_MEASUREMENTS });
+      setEditingMeasurements(false);
+    } catch (error) {
+      setDayError(
+        error instanceof Error
+          ? error.message
+          : "Could not remove measurements."
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handlePhotoUpload(
+    event: ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file || selectedDay === null || uploading) return;
+
+    const day = selectedDay;
+    setUploading(true);
+    setPhotoError(null);
+
+    try {
+      const identity = await verifyWrite(day);
+
+      if (!file.type.startsWith("image/")) {
+        throw new Error("Please choose an image.");
       }
 
       const extension =
@@ -637,289 +646,344 @@ async function saveSelectedDayPhoto() {
           ?.toLowerCase()
           .replace(/[^a-z0-9]/g, "") || "jpg";
 
-      const paddedDay = String(day).padStart(2, "0");
-
-      newFilePath =
-        `${user.id}/day-${paddedDay}-${Date.now()}.${extension}`;
-
-      const oldPath = selectedPhotoPath;
+      const path = `${identity.userId}/day-${String(day).padStart(2, "0")}-${Date.now()}.${extension}`;
 
       const { error: uploadError } = await supabase.storage
         .from("progress-photos")
-        .upload(newFilePath, file, {
+        .upload(path, file, {
           cacheControl: "3600",
           upsert: false,
           contentType: file.type || "image/jpeg",
         });
 
-      if (uploadError) {
-        throw uploadError;
-      }
+      if (uploadError) throw uploadError;
 
-      const { data: signedData, error: signedError } =
-        await supabase.storage
-          .from("progress-photos")
-          .createSignedUrl(newFilePath, 60 * 60);
-
-      if (signedError || !signedData?.signedUrl) {
-        throw (
-          signedError ??
-          new Error("Could not create the photo preview.")
-        );
-      }
-
-      const { error: photoRecordError } = await supabase
+      const { error: recordError } = await supabase
         .from("progress_photos")
         .upsert(
           {
-            user_id: user.id,
+            user_id: identity.userId,
+            journey_id: identity.journeyId,
             challenge_day: day,
-            storage_path: newFilePath,
+            storage_path: path,
             photo_type: "progress",
             caption: null,
             updated_at: new Date().toISOString(),
           },
           {
-            onConflict: "user_id,challenge_day,photo_type",
+            onConflict:
+              "journey_id,challenge_day,photo_type",
           }
         );
 
-      if (photoRecordError) {
-        throw photoRecordError;
+      if (recordError) throw recordError;
+
+      const { data: signed, error: signedError } =
+        await supabase.storage
+          .from("progress-photos")
+          .createSignedUrl(path, 3600);
+
+      if (signedError) {
+        console.error("Photo preview:", signedError);
       }
 
-      setSelectedPhotoUrl(signedData.signedUrl);
-      setSelectedPhotoPath(newFilePath);
-
-      setPhotoUrls((previous) => ({
+      setPhotos((previous) => ({
         ...previous,
-        [day]: signedData.signedUrl,
+        [day]: {
+          id: previous[day]?.id ?? "",
+          challenge_day: day,
+          storage_path: path,
+        },
       }));
 
-      const existingProgress = dailyProgress.find(
+      if (signed?.signedUrl) {
+        setPhotoUrls((previous) => ({
+          ...previous,
+          [day]: signed.signedUrl,
+        }));
+      }
+
+      // Preserve existing commitments and manual completion.
+      // Only mark Document if it wasn't already checked.
+      const existing = progress.find(
         (row) => row.challenge_day === day
       );
 
-      const updatedProgress = {
-        user_id: user.id,
+      if (!existing?.document) {
+        const { error: progressError } = await supabase
+          .from("daily_progress")
+          .upsert(
+            {
+              user_id: identity.userId,
+              journey_id: identity.journeyId,
+              challenge_day: day,
+              progress_date: databaseDate(
+                dateForDay(parseChallengeDate(startString!), day)
+              ),
+              move: existing?.move ?? false,
+              get_outside: existing?.get_outside ?? false,
+              hydrate: existing?.hydrate ?? false,
+              read: existing?.read ?? false,
+              nourish: existing?.nourish ?? false,
+              document: true,
+              no_alcohol: existing?.no_alcohol ?? false,
+              manually_completed:
+                existing?.manually_completed ?? false,
+              updated_at: new Date().toISOString(),
+            },
+            { onConflict: "journey_id,challenge_day" }
+          );
+
+        if (progressError) {
+          setPhotoError(
+            "Photo saved, but the Document commitment could not be updated."
+          );
+        } else {
+          setProgress((previous) => {
+            if (
+              previous.some((row) => row.challenge_day === day)
+            ) {
+              return previous.map((row) =>
+                row.challenge_day === day
+                  ? { ...row, document: true }
+                  : row
+              );
+            }
+
+            return [
+              ...previous,
+              {
+                challenge_day: day,
+                move: false,
+                get_outside: false,
+                hydrate: false,
+                read: false,
+                nourish: false,
+                document: true,
+                no_alcohol: false,
+                manually_completed: false,
+              } as Progress,
+            ];
+          });
+        }
+      }
+    } catch (error) {
+      setPhotoError(
+        error instanceof Error
+          ? error.message
+          : "Could not upload photo."
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function removePhoto() {
+    if (
+      selectedDay === null ||
+      !selectedPhoto ||
+      uploading
+    ) {
+      return;
+    }
+
+    if (
+      !window.confirm(
+        "Remove this photo from your daily record?"
+      )
+    ) {
+      return;
+    }
+
+    const day = selectedDay;
+    setUploading(true);
+    setPhotoError(null);
+
+    try {
+      const identity = await verifyWrite(day);
+
+      // Only remove the database reference.
+      // The private Storage file is retained for recovery.
+      const { data, error } = await supabase
+        .from("progress_photos")
+        .delete()
+        .eq("user_id", identity.userId)
+        .eq("journey_id", identity.journeyId)
+        .eq("challenge_day", day)
+        .eq("photo_type", "progress")
+        .eq("storage_path", selectedPhoto.storage_path)
+        .select("id");
+
+      if (error) throw error;
+
+      if (!data?.length) {
+        throw new Error("Photo could not be removed.");
+      }
+
+      setPhotos((previous) => {
+        const next = { ...previous };
+        delete next[day];
+        return next;
+      });
+
+      setPhotoUrls((previous) => {
+        const next = { ...previous };
+        delete next[day];
+        return next;
+      });
+    } catch (error) {
+      setPhotoError(
+        error instanceof Error
+          ? error.message
+          : "Could not remove photo."
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function savePhotoToDevice() {
+    if (!selectedPhoto?.storage_path) return;
+
+    setPhotoError(null);
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("progress-photos")
+        .download(selectedPhoto.storage_path);
+
+      if (error || !data) {
+        throw error ?? new Error("Could not download photo.");
+      }
+
+      const extension =
+        selectedPhoto.storage_path.split(".").pop() ?? "jpg";
+
+      const name = `lock-in-with-lav-day-${String(selectedDay).padStart(2, "0")}.${extension}`;
+
+      if (Capacitor.isNativePlatform()) {
+        const base64 = await new Promise<string>(
+          (resolve, reject) => {
+            const reader = new FileReader();
+
+            reader.onload = () => {
+              if (typeof reader.result !== "string") {
+                reject(new Error("Could not prepare photo."));
+                return;
+              }
+
+              resolve(reader.result.split(",")[1]);
+            };
+
+            reader.onerror = () =>
+              reject(new Error("Could not read photo."));
+
+            reader.readAsDataURL(data);
+          }
+        );
+
+        const saved = await Filesystem.writeFile({
+          path: name,
+          data: base64,
+          directory: Directory.Cache,
+        });
+
+        await Share.share({
+          title: "Save Progress Photo",
+          url: saved.uri,
+          dialogTitle: "Save your Lock In With Lav photo",
+        });
+      } else {
+        const url = URL.createObjectURL(data);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = name;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(
+          () => URL.revokeObjectURL(url),
+          1000
+        );
+      }
+    } catch (error) {
+      setPhotoError(
+        error instanceof Error
+          ? error.message
+          : "Could not save photo."
+      );
+    }
+  }
+
+  async function setManualCompletion(value: boolean) {
+    if (
+      selectedDay === null ||
+      !selectedPast ||
+      selectedCount === 7 ||
+      busy
+    ) {
+      return;
+    }
+
+    const day = selectedDay;
+    setBusy(true);
+    setManualError(null);
+
+    try {
+      const identity = await verifyWrite(day);
+
+      const existing = progress.find(
+        (row) => row.challenge_day === day
+      );
+
+      const payload = {
+        user_id: identity.userId,
+        journey_id: identity.journeyId,
         challenge_day: day,
-        progress_date: selectedDate
-          ? formatDateForDatabase(selectedDate)
-          : new Date().toISOString().slice(0, 10),
-        move: existingProgress?.move ?? false,
-        get_outside: existingProgress?.get_outside ?? false,
-        hydrate: existingProgress?.hydrate ?? false,
-        read: existingProgress?.read ?? false,
-        nourish: existingProgress?.nourish ?? false,
-        document: true,
-        no_alcohol: existingProgress?.no_alcohol ?? false,
+        progress_date: databaseDate(
+          dateForDay(parseChallengeDate(startString!), day)
+        ),
+        move: existing?.move ?? false,
+        get_outside: existing?.get_outside ?? false,
+        hydrate: existing?.hydrate ?? false,
+        read: existing?.read ?? false,
+        nourish: existing?.nourish ?? false,
+        document: existing?.document ?? false,
+        no_alcohol: existing?.no_alcohol ?? false,
+        manually_completed: value,
         updated_at: new Date().toISOString(),
       };
 
-      const { error: progressSaveError } = await supabase
+      const { error } = await supabase
         .from("daily_progress")
-        .upsert(updatedProgress, {
-          onConflict: "user_id,challenge_day",
+        .upsert(payload, {
+          onConflict: "journey_id,challenge_day",
         });
 
-      setDailyProgress((previous) => {
-        const alreadyExists = previous.some(
-          (row) => row.challenge_day === day
-        );
+      if (error) throw error;
 
-        if (alreadyExists) {
+      setProgress((previous) => {
+        if (
+          previous.some((row) => row.challenge_day === day)
+        ) {
           return previous.map((row) =>
             row.challenge_day === day
-              ? { ...row, document: true }
+              ? { ...row, manually_completed: value }
               : row
           );
         }
 
-        return [
-          ...previous,
-          updatedProgress as DailyProgressRow,
-        ].sort(
-          (a, b) => a.challenge_day - b.challenge_day
-        );
+        return [...previous, payload as Progress];
       });
-
-      if (progressSaveError) {
-        console.error(
-          "Photo saved, but the document commitment could not be updated:",
-          progressSaveError
-        );
-
-        setPhotoError(
-          "Photo saved ♡ The photo is there, but the document check could not be updated."
-        );
-      }
-
-      if (oldPath && oldPath !== newFilePath) {
-        const { error: removeOldError } =
-          await supabase.storage
-            .from("progress-photos")
-            .remove([oldPath]);
-
-        if (removeOldError) {
-          console.warn(
-            "New progress photo saved, but the previous photo could not be removed:",
-            removeOldError
-          );
-        }
-      }
     } catch (error) {
-      const errorMessage =
+      setManualError(
         error instanceof Error
           ? error.message
-          : "Could not upload photo. Please try again.";
-
-      const lowerMessage = errorMessage.toLowerCase();
-
-      if (
-        !lowerMessage.includes("cancel") &&
-        !lowerMessage.includes("canceled") &&
-        !lowerMessage.includes("cancelled")
-      ) {
-        console.error(
-          "Could not upload journey progress photo:",
-          error
-        );
-
-        setPhotoError(errorMessage);
-      }
-
-      if (newFilePath) {
-        await supabase.storage
-          .from("progress-photos")
-          .remove([newFilePath])
-          .catch((cleanupError) => {
-            console.warn(
-              "Could not clean up failed journey photo upload:",
-              cleanupError
-            );
-          });
-      }
+          : "Could not update this day."
+      );
     } finally {
-      setIsUploadingPhoto(false);
-      event.target.value = "";
+      setBusy(false);
     }
-  }
-async function setManualDayCompletion(complete: boolean) {
-  const day = activeSelectedDay;
-
-  if (
-    !day ||
-    !selectedIsPast ||
-    selectedCommitmentCount === 7
-  ) {
-    return;
-  }
-
-  setManualCompletionLoading(true);
-  setManualCompletionError(null);
-
-  try {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      throw (
-        userError ??
-        new Error(
-          "You need to be signed in to update this day."
-        )
-      );
-    }
-
-    const existingProgress = dailyProgress.find(
-      (row) => row.challenge_day === day
-    );
-
-    const progressDate = selectedDate
-      ? formatDateForDatabase(selectedDate)
-      : new Date().toISOString().slice(0, 10);
-
-    const updatedProgress = {
-      user_id: user.id,
-      challenge_day: day,
-      progress_date: progressDate,
-
-      move: existingProgress?.move ?? false,
-      get_outside:
-        existingProgress?.get_outside ?? false,
-      hydrate: existingProgress?.hydrate ?? false,
-      read: existingProgress?.read ?? false,
-      nourish: existingProgress?.nourish ?? false,
-      document: existingProgress?.document ?? false,
-      no_alcohol:
-        existingProgress?.no_alcohol ?? false,
-
-      manually_completed: complete,
-
-      updated_at: new Date().toISOString(),
-    };
-
-    const { error: saveError } = await supabase
-      .from("daily_progress")
-      .upsert(updatedProgress, {
-        onConflict: "user_id,challenge_day",
-      });
-
-    if (saveError) {
-      throw saveError;
-    }
-
-    setDailyProgress((previous) => {
-      const alreadyExists = previous.some(
-        (row) => row.challenge_day === day
-      );
-
-      if (alreadyExists) {
-        return previous.map((row) =>
-          row.challenge_day === day
-            ? {
-                ...row,
-                manually_completed: complete,
-              }
-            : row
-        );
-      }
-
-      return [
-        ...previous,
-        updatedProgress as JourneyProgressRow,
-      ].sort(
-        (a, b) =>
-          a.challenge_day - b.challenge_day
-      );
-    });
-  } catch (error) {
-    console.error(
-      "Could not update manual day completion:",
-      error
-    );
-
-    setManualCompletionError(
-      error instanceof Error
-        ? error.message
-        : "Could not update this day. Please try again."
-    );
-  } finally {
-    setManualCompletionLoading(false);
-  }
-}
-  function closeDayDetails() {
-    setDayDetailsOpen(false);
-  }
-
-  function getSelectedStatus() {
-    if (selectedIsComplete) return "complete ♡";
-    if (selectedIsCurrent) return "in progress";
-    if (selectedIsPast) return "incomplete";
-
-    return "upcoming";
   }
 
   return (
@@ -927,623 +991,678 @@ async function setManualDayCompletion(complete: boolean) {
       <div className="flex min-h-screen">
         <DashboardSidebar
           firstName={firstName}
-          initial={initial}
-          isLoadingUser={isLoadingUser}
+          initial={
+            loading
+              ? "♡"
+              : firstName.charAt(0).toUpperCase()
+          }
+          isLoadingUser={loading}
         />
 
-        <section className="flex-1 px-6 py-8 md:px-10 lg:px-14">
-        
-        
-       {/* JOURNEY OVERVIEW */}
-<section className="overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
+        <section className="min-w-0 flex-1 px-4 py-7 sm:px-6 md:px-10 lg:px-14">
+          <div className="mx-auto max-w-6xl">
 
-  <button
-    type="button"
-    onClick={() => setJourneyOverviewOpen((open) => !open)}
-    aria-expanded={journeyOverviewOpen}
-    aria-controls="journey-overview-details"
-    className="w-full px-5 py-6 text-left transition hover:bg-[#F7F1ED] sm:px-7 sm:py-7"
-  >
-    <div className="flex items-center justify-between gap-3">
-      <p className="text-[9px] font-medium tracking-[0.28em] text-[#9D6F67]">
-        YOUR LOCK-IN STATUS
-      </p>
+            {/* LOCK-IN STATUS */}
 
-      <span
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#DED0CB] text-[#9D6F67]"
-        aria-hidden="true"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          className={`h-4 w-4 transition-transform duration-300 ${
-            journeyOverviewOpen ? "rotate-180" : ""
-          }`}
-        >
-          <path
-            d="m6 9 6 6 6-6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
-      </span>
-    </div>
+            <section className="overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
+              <button
+                type="button"
+                onClick={() =>
+                  setOverviewOpen((value) => !value)
+                }
+                aria-expanded={overviewOpen}
+                className="w-full px-5 py-6 text-left sm:px-7"
+              >
+                <div className="flex items-center justify-between">
+                  <SmallLabel>YOUR LOCK-IN STATUS</SmallLabel>
+                  <span className="text-xl text-[#A77B73]">
+                    {overviewOpen ? "⌃" : "⌄"}
+                  </span>
+                </div>
 
-    <h1 className="mt-5 font-serif text-3xl italic leading-tight text-[#211C19] sm:text-4xl">
-      {isLoadingProgress ? "your journey ♡" : todayStatus}
-    </h1>
+                <h1 className="mt-5 min-h-[2.5rem] font-serif text-3xl italic leading-tight sm:text-4xl">
+                  {loading ? "\u00A0" : todayStatus}
+                </h1>
 
-    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-      <p className="font-serif text-base italic text-[#A77B73]">
-        {todayIsComplete
-          ? "you showed up for yourself. ♡"
-          : todayCommitmentCount > 0
-            ? "keep showing up. ♡"
-            : "a fresh start awaits. ♡"}
-      </p>
+                <div className="mt-4 flex items-center justify-between gap-3">
+                  <p className="font-serif italic text-[#A77B73]">
+                    {loading
+                      ? "\u00A0"
+                      : todayComplete
+                        ? "you showed up for yourself. ♡"
+                        : todayCount > 0
+                          ? "keep showing up. ♡"
+                          : "a fresh start awaits. ♡"}
+                  </p>
 
-      <span className="text-[9px] tracking-[0.16em] text-[#9D6F67]">
-        DAY {String(safeCurrentDay).padStart(2, "0")}
-      </span>
-    </div>
-  </button>
+                  <span className="shrink-0 text-[9px] tracking-[0.15em] text-[#9D6F67]">
+                    {loading || !activeJourneyId
+                      ? ""
+                      : `DAY ${String(safeCurrentDay).padStart(2, "0")}`}
+                  </span>
+                </div>
+              </button>
 
-  {journeyOverviewOpen && (
-    <div
-      id="journey-overview-details"
-      className="border-t border-[#E5D8D3]"
-    >
-      <div className="grid grid-cols-1 sm:grid-cols-3">
+              {overviewOpen && (
+                <div className="border-t border-[#E5D8D3] px-5 py-6 sm:px-7">
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div>
+                      <SmallLabel>TODAY</SmallLabel>
+                      <p className="mt-3 font-serif text-sm italic sm:text-lg">
+                        {startDate
+                          ? fullDate(
+                              dateForDay(
+                                startDate,
+                                safeCurrentDay
+                              )
+                            )
+                          : "—"}
+                      </p>
+                    </div>
 
-        <div className="border-b border-[#E5D8D3] px-5 py-5 sm:border-b-0 sm:border-r sm:px-7">
-          <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
-            TODAY
-          </p>
+                    <div>
+                      <SmallLabel>PROGRESS</SmallLabel>
+                      <p className="mt-3 font-serif text-2xl">
+                        {percentage}%
+                      </p>
+                    </div>
 
-          <p className="mt-3 font-serif text-xl italic text-[#211C19]">
-            {todayDate ? formatFullDate(todayDate) : "—"}
-          </p>
-        </div>
+                    <div>
+                      <SmallLabel>COMPLETE</SmallLabel>
+                      <p className="mt-3 font-serif text-2xl">
+                        {completedDays}
+                      </p>
+                    </div>
+                  </div>
 
-        <div className="border-b border-[#E5D8D3] px-5 py-5 sm:border-b-0 sm:border-r sm:px-7">
-          <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
-            PROGRESS
-          </p>
+                  <div className="mt-6 h-1 overflow-hidden rounded-full bg-[#E7DCD7]">
+                    <div
+                      className="h-full rounded-full bg-[#A77B73]"
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
 
-          <p className="mt-3 font-serif text-2xl italic text-[#211C19]">
-            {isLoadingProgress ? "—" : `${challengeProgress}%`}
-          </p>
-        </div>
+                  <p className="mt-4 text-center font-serif text-sm italic text-[#A77B73]">
+                    {todayCount} of 7 commitments checked today ♡
+                  </p>
+                </div>
+              )}
+            </section>
 
-        <div className="px-5 py-5 sm:px-7">
-          <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
-            DAYS COMPLETE
-          </p>
+            {/* DAILY CALENDAR */}
 
-          <p className="mt-3 font-serif text-2xl italic text-[#211C19]">
-            {isLoadingProgress ? "—" : completedDays}
-          </p>
-        </div>
+            <section className="mt-7 rounded-[1.5rem] border border-[#DCC6BF] bg-[#EAD8D3] px-4 py-6 sm:px-7 sm:py-8">
+              <SmallLabel>YOUR DAILY LOG</SmallLabel>
 
-      </div>
+              <h2 className="mt-2 font-serif text-3xl italic leading-tight text-[#805D55]">
+                the days you locked in.
+              </h2>
 
-      <div className="border-t border-[#E5D8D3] px-5 py-6 sm:px-7">
+              
 
-        <div className="h-[4px] overflow-hidden rounded-full bg-[#E7DCD7]">
-          <div
-            className="h-full rounded-full bg-[#A77B73] transition-all duration-500"
-            style={{ width: `${challengeProgress}%` }}
-          />
-        </div>
-
-        <div className="mt-3 flex justify-between text-[9px] tracking-[0.15em] text-[#9A8780]">
-          <span>DAY 01</span>
-          <span>DAY {String(challengeLength).padStart(2, "0")}</span>
-        </div>
-
-        <p className="mt-5 text-center font-serif text-sm italic text-[#A77B73]">
-          {todayCommitmentCount} of 7 commitments checked today ♡
-        </p>
-
-      </div>
-    </div>
-  )}
-
-</section>
- 
-<section className="mt-8">
-  <div className="rounded-[1.5rem] border border-[#DCC6BF] bg-[#EAD8D3] px-4 py-6 sm:px-7 sm:py-8 md:px-10">
-    {/* CALENDAR HEADING */}
-    <div className="flex items-start justify-between gap-3">
-      <div>
-        <p className="text-[9px] font-medium tracking-[0.25em] text-[#8F655E]">
-          YOUR DAILY LOG
-        </p>
-
-        <h2 className="mt-2 font-serif text-2xl italic leading-tight text-[#805D55] sm:text-3xl">
-          the days you locked in
-        </h2>
-      </div>
-
-   
-    </div>
-
-    {/* LEGEND */}
-    <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-[#D4B9B1] pb-5">
-      <div className="flex items-center gap-1.5">
-        <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#A77B73] text-[10px] text-white">
-          ✓
-        </span>
-        <span className="text-[9px] text-[#805D55]">
-          Complete
-        </span>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <span className="h-4 w-4 rounded-[5px] border-2 border-[#805D55] bg-[#FBF8F6]" />
-        <span className="text-[9px] text-[#805D55]">
-          Today
-        </span>
-      </div>
-
-      <div className="flex items-center gap-1.5">
-        <span className="h-4 w-4 rounded-[5px] border border-[#D7C2BC] bg-[#F7F1ED]/40" />
-        <span className="text-[9px] text-[#805D55]">
-          Upcoming
-        </span>
-      </div>
-    </div>
-
-    {/* CALENDAR DAYS */}
-    <div className="mt-5 grid grid-cols-4 gap-2.5 sm:grid-cols-10 sm:gap-3 lg:grid-cols-[repeat(15,minmax(0,1fr))]">
-      {challengeDays.map((day) => {
-        const progressForDay = dailyProgress.find(
-          (row) => row.challenge_day === day
-        );
-
-        const isComplete = isDayComplete(progressForDay);
-        const isCurrent = day === safeCurrentDay;
-        const isUpcoming = day > safeCurrentDay;
-        const isSelected = day === activeSelectedDay;
-
-        const dayPhotoUrl = photoUrls[day];
-        const hasPhoto = Boolean(dayPhotoUrl);
-
-        const dayDate = startDate
-          ? getChallengeDate(startDate, day)
-          : null;
-
-        return (
-          <button
-            key={day}
-            type="button"
-            onClick={() => openDayDetails(day)}
-            disabled={isUpcoming}
-            aria-label={
-              dayDate
-                ? `Day ${day}, ${formatFullDate(dayDate)}${
-                    isComplete ? ", complete" : ""
-                  }${hasPhoto ? ", progress photo saved" : ""}`
-                : `Day ${day}`
-            }
-            className={`group relative flex aspect-square min-h-[64px] flex-col items-center justify-center overflow-hidden rounded-xl border transition duration-200 sm:min-h-[76px] ${
-              isCurrent
-                ? "border-2 border-[#805D55] bg-[#FBF8F6] text-[#805D55]"
-                : isComplete
-  ? "border-[#A77B73] bg-[#B68D85] text-[#FBF8F6]"
-                  : isUpcoming
-                    ? "cursor-default border-[#D7C2BC] bg-[#F7F1ED]/40 text-[#AA9690]"
-                    : "border-[#CBA9A2] bg-[#F7F1ED] text-[#806E68] hover:bg-white"
-            } ${
-              isSelected && !isCurrent
-                ? "ring-2 ring-[#8F655E] ring-offset-2 ring-offset-[#EAD8D3]"
-                : ""
-            }`}
-          >
-            {/* FULL PHOTO */}
-            {hasPhoto && dayPhotoUrl && (
-              <>
-                <img
-                  src={dayPhotoUrl}
-                  alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-transparent to-black/10" />
-              </>
-            )}
-
-            {/* DAY NUMBER */}
-            <span
-              className={`z-10 font-serif text-sm sm:text-base ${
-                hasPhoto
-                  ? "absolute left-2 top-2 text-white drop-shadow-sm"
-                  : ""
-              }`}
-            >
-              {String(day).padStart(2, "0")}
-            </span>
-
-            {/* COMPLETION CHECKMARK */}
-            {isComplete && (
-            
-  <span
-    className="absolute right-1.5 top-1.5 z-20 flex h-5 w-5 items-center justify-center rounded-full border border-white bg-[#805D55] text-white shadow-[0_2px_6px_rgba(0,0,0,0.25)]"
-    aria-hidden="true"
-  >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-3 w-3"
-                >
-                  <path d="M5 12.5 9.5 17 19 7" />
-                </svg>
-              </span>
-            )}
-
-            {/* TODAY LABEL */}
-            {isCurrent && (
-  <span
-    className={`absolute bottom-1.5 left-1/2 z-20 -translate-x-1/2 rounded-full px-2 py-0.5 text-[7px] font-medium tracking-[0.08em] ${
-      hasPhoto
-        ? "bg-[#FBF8F6] text-[#805D55]"
-        : "bg-[#EAD8D3] text-[#805D55]"
-    }`}
-  >
-    TODAY
-  </span>
-)}
-          </button>
-        );
-      })}
-    </div>
-
-    <p className="mt-6 text-center text-[10px] tracking-[0.04em] text-[#8F655E]">
-      tap a day to revisit your progress ♡
-    </p>
+              
+<div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3 border-b border-[#D4B9B1] pb-5 text-[10px] text-[#805D55]">
+  {/* Completed */}
+  <div className="flex items-center gap-2">
+    <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#A77B73] bg-[#B68D85] text-sm text-white">
+      ✓
+    </span>
+    <span>Completed</span>
   </div>
-</section>
+
+  {/* Today */}
+  <div className="flex items-center gap-2">
+    <span className="relative flex h-7 w-8 items-center justify-center rounded-lg border border-[#CBA9A2] bg-[#FBF8F6] ring-1 ring-[#805D55] ring-offset-1 ring-offset-[#EAD8D3]">
+      <span className="text-[6px] font-medium tracking-wide">
+        TODAY
+      </span>
+    </span>
+    <span>Today</span>
+  </div>
+
+  {/* Upcoming */}
+  <div className="flex items-center gap-2">
+    <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#D7C2BC] bg-[#F7F1ED]/40 text-[#AA9690]">
+      18
+    </span>
+    <span>Upcoming</span>
+  </div>
+</div>
 
 
+              {loading ? (
+                <p className="py-12 text-center font-serif italic text-[#8F655E]">
+                  gathering your journey... ♡
+                </p>
+              ) : !activeJourneyId ? (
+                <p className="py-12 text-center font-serif italic text-[#8F655E]">
+                  Your journey will appear here when it begins. ♡
+                </p>
+              ) : (
+                <>
+                  <div className="mt-5 grid grid-cols-4 gap-2 sm:grid-cols-7 sm:gap-3 lg:grid-cols-10 xl:grid-cols-12">
+                    {dayNumbers.map((day) => {
+                      const row = progress.find(
+                        (item) => item.challenge_day === day
+                      );
 
+                      const isComplete = complete(row);
+                      const isToday = day === safeCurrentDay;
+                      const upcoming = day > safeCurrentDay;
+                      const image = photoUrls[day];
 
- 
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          disabled={upcoming}
+                          onClick={() => openDay(day)}
+                          aria-label={`Open Day ${day}${isComplete ? ", complete" : ""}`}
+                          className={`relative flex aspect-square min-h-[62px] items-center justify-center overflow-hidden rounded-xl border transition ${
+                            isComplete
+                              ? "border-[#A77B73] bg-[#B68D85] text-white"
+                              : upcoming
+                                ? "cursor-default border-[#D7C2BC] bg-[#F7F1ED]/40 text-[#AA9690]"
+                                : "border-[#CBA9A2] bg-[#FBF8F6] text-[#805D55] hover:-translate-y-0.5 hover:shadow-md"
+                          } ${
+                            isToday
+                              ? "ring-2 ring-[#805D55] ring-offset-2 ring-offset-[#EAD8D3]"
+                              : ""
+                          }`}
+                        >
+                          {image && (
+                            <>
+                              <img
+                                src={image}
+                                alt=""
+                                className="absolute inset-0 h-full w-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/25" />
+                            </>
+                          )}
+
+                          <span
+                            className={`relative z-10 font-serif text-lg ${
+                              image ? "text-white" : ""
+                            }`}
+                          >
+                            {String(day).padStart(2, "0")}
+                          </span>
+
+                          {isComplete && (
+                            <span className="absolute right-1 top-1 z-20 flex h-5 w-5 items-center justify-center rounded-full bg-[#805D55] text-xs text-white">
+                              ✓
+                            </span>
+                          )}
+
+                          {isToday && (
+                            <span className="absolute bottom-1 z-20 rounded-full bg-[#FBF8F6] px-2 py-0.5 text-[7px] font-medium tracking-wide text-[#805D55]">
+                              TODAY
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="mt-6 text-center font-serif text-sm italic text-[#8F655E]">
+                    tap a day to open your daily record. ♡
+                  </p>
+                </>
+              )}
+            </section>
+
+            {/* ONLY LITTLE WINS + WEEKLY CHECK-INS */}
+
+            <JourneyProgressSections />
+          </div>
         </section>
       </div>
 
-      {dayDetailsOpen && (
+      {/* DAILY RECORD */}
+
+      {selectedDay !== null && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/45 px-4 py-6 backdrop-blur-[2px]"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/50 px-3 py-4 backdrop-blur-[3px] sm:px-6"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
-              closeDayDetails();
+              closeDay();
             }
           }}
         >
-          <div className="relative max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-[2rem] border border-[#D8C5BF] bg-[#FBF8F6] shadow-2xl">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Day ${selectedDay} daily record`}
+            className="relative max-h-[94dvh] w-full max-w-3xl overflow-y-auto rounded-[1.75rem] border border-[#D8C5BF] bg-[#FFFCFA] shadow-2xl"
+          >
             <button
               type="button"
-              onClick={closeDayDetails}
-              aria-label="Close day details"
-              className="absolute right-5 top-5 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-[#D8C5BF] bg-[#FBF8F6] text-lg text-[#806E68] transition hover:bg-[#EAD8D3]"
+              onClick={closeDay}
+              aria-label="Close daily record"
+              className="absolute right-4 top-4 z-20 flex h-9 w-9 items-center justify-center rounded-full border border-[#E5D8D3] bg-[#FFFCFA] text-xl text-[#805D55]"
             >
               ×
             </button>
 
-            <div className="border-b border-[#E5D8D3] px-5 pb-5 pt-6 sm:px-7 md:px-10">
-              <p className="text-[9px] tracking-[0.28em] text-[#9D6F67]">
-  DAILY ENTRY
-</p>
+            {/* DAY HEADER */}
 
-              <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-2 pr-12">
-                <h2 className="font-serif text-4xl leading-none md:text-5xl">
-                  Day{" "}
-                  {String(activeSelectedDay).padStart(2, "0")}
-                </h2>
+            <header className="border-b border-[#EADDD7] px-5 pb-6 pt-7 sm:px-8">
+              <SmallLabel>MY JOURNEY · DAILY RECORD</SmallLabel>
 
-                {selectedDate && (
-                  <p className="font-serif text-lg italic text-[#A77B73]">
-                    {formatFullDate(selectedDate)}
-                  </p>
-                )}
-              </div>
+              <h2 className="mt-3 font-serif text-4xl italic text-[#30231F] sm:text-5xl">
+                Day {String(selectedDay).padStart(2, "0")}
+                <span className="ml-2 text-[#B68D85]">♡</span>
+              </h2>
+
+              <p className="mt-2 font-serif text-lg italic text-[#A77B73]">
+                {selectedDate ? fullDate(selectedDate) : ""}
+              </p>
 
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <span
-                  className={`rounded-full px-4 py-2 text-[8px] tracking-[0.20em] ${
-                    selectedIsComplete
-                      ? "bg-[#A77B73] text-[#FBF8F6]"
-                      : "border border-[#D5BBB5] bg-[#F7F1ED] text-[#8F655E]"
+                  className={`rounded-full px-4 py-2 text-[9px] tracking-[0.12em] ${
+                    selectedComplete
+                      ? "bg-[#A77B73] text-white"
+                      : "bg-[#F2E8E3] text-[#805D55]"
                   }`}
                 >
-                  {selectedIsComplete
-                    ? "DAY COMPLETE"
-                    : "DAY IN PROGRESS"}
+                  {selectedComplete
+                    ? "DAY COMPLETE ♡"
+                    : selectedCurrent
+                      ? "DAY IN PROGRESS"
+                      : "DAY INCOMPLETE"}
                 </span>
 
-                <span className="text-[9px] tracking-[0.18em] text-[#8F655E]">
-                  {selectedCommitmentCount} / 7 COMMITMENTS
+                <span className="text-[10px] text-[#9D6F67]">
+                  {selectedCount} / 7 commitments
                 </span>
               </div>
-            </div>
+            </header>
 
-            {dayDetailsLoading ? (
-              <div className="flex min-h-[360px] items-center justify-center px-7 py-14">
-                <div className="text-center">
-                  <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#D8C5BF] border-t-[#A77B73]" />
-
-                  <p className="mt-5 font-serif text-xl italic text-[#A77B73]">
-                    opening your day... ♡
-                  </p>
-                </div>
+            {dayLoading ? (
+              <div className="px-6 py-16 text-center font-serif text-xl italic text-[#A77B73]">
+                opening your day... ♡
               </div>
             ) : (
-              <div className="grid md:grid-cols-[1.05fr_0.95fr]">
-                <div className="border-b border-[#E5D8D3] px-5 py-6 sm:p-7 md:border-b-0 md:border-r md:p-8">
-                  <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                    PROGRESS PHOTO
+              <div className="space-y-6 px-5 py-6 sm:px-8">
+
+                {dayError && (
+                  <p
+                    role="alert"
+                    className="rounded-xl bg-[#F5E7E2] p-4 text-sm text-[#A45E55]"
+                  >
+                    {dayError}
                   </p>
+                )}
+
+                {/* PROGRESS PHOTO */}
+
+                <section>
+                  <SmallLabel>01 · PROGRESS PHOTO</SmallLabel>
 
                   <h3 className="mt-2 font-serif text-2xl italic">
                     this day, captured.
                   </h3>
 
                   <input
-                    ref={photoInputRef}
+                    ref={fileInput}
                     type="file"
                     accept="image/*"
                     onChange={handlePhotoUpload}
                     className="hidden"
                   />
 
-                  <div className="mt-4">
-                    {selectedPhotoUrl ? (
-                      <div>
-                        <div className="overflow-hidden rounded-[1.6rem] border border-[#D8C5BF] bg-[#F1E7E3]">
-                          <img
-                            src={selectedPhotoUrl}
-                            alt={`Progress photo for day ${activeSelectedDay}`}
-                            className="aspect-[4/5] w-full object-cover"
-                          />
-                        </div>
-
-                        
-<div className="mt-4 flex flex-wrap justify-center gap-3">
-  <button
-    type="button"
-    onClick={triggerPhotoUpload}
-    disabled={isUploadingPhoto}
-    className="rounded-full border border-[#CBA9A2] bg-[#FBF8F6] px-5 py-2.5 text-[8px] tracking-[0.20em] text-[#806E68] transition hover:bg-[#EAD8D3] disabled:cursor-wait disabled:opacity-60"
-  >
-    {isUploadingPhoto
-      ? "UPLOADING..."
-      : "CHANGE PHOTO"}
-  </button>
-
-  <button
-    type="button"
-    onClick={saveSelectedDayPhoto}
-    disabled={isUploadingPhoto || !selectedPhotoPath}
-    className="rounded-full border border-[#CBA9A2] bg-[#FBF8F6] px-5 py-2.5 text-[8px] tracking-[0.20em] text-[#806E68] transition hover:bg-[#EAD8D3] disabled:opacity-60"
-  >
-    SAVE PHOTO ↓
-  </button>
-</div>
-
-                      </div>
-                    ) : (
-                      <div className="flex aspect-[4/5] w-full items-center justify-center rounded-[1.6rem] border border-dashed border-[#CBA9A2] bg-[#F7F1ED] px-8 text-center">
-                        <div>
-                          <p className="font-serif text-3xl italic text-[#A77B73]">
-                            no photo yet. ♡
-                          </p>
-
-                          <p className="mx-auto mt-3 max-w-xs text-[9px] leading-5 tracking-[0.16em] text-[#8F7C76]">
-                            NO PROGRESS PHOTO WAS SAVED FOR THIS DAY.
-                          </p>
-
-                          <button
-                            type="button"
-                            onClick={triggerPhotoUpload}
-                            disabled={isUploadingPhoto}
-                            className="mt-6 rounded-full bg-[#A77B73] px-6 py-3 text-[8px] tracking-[0.20em] text-[#FBF8F6] transition hover:bg-[#8F655E] disabled:cursor-wait disabled:opacity-60"
-                          >
-                            {isUploadingPhoto
-                              ? "UPLOADING..."
-                              : "UPLOAD PHOTO"}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {photoError && (
-                      <p className="mt-4 text-center text-[8px] leading-5 tracking-[0.10em] text-[#9D6F67]">
-                        {photoError}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="px-5 py-6 sm:p-7 md:p-8">
-                  <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                    MEASUREMENTS
-                  </p>
-
-                  <h3 className="mt-2 font-serif text-2xl italic">
-                    a little snapshot of you.
-                  </h3>
-
-                  {selectedMeasurement ? (
-                    <div className="mt-5 grid grid-cols-3 overflow-hidden rounded-[1rem] border border-[#E0D2CD]">
-                      <div className="border-b border-r border-[#E0D2CD] p-3 sm:p-5">
-                        <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
-                          WEIGHT
-                        </p>
-
-                        <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(
-                            selectedMeasurement.weight
-                          )}
-                        </p>
+                  {selectedPhotoUrl ? (
+                    <div className="mt-4">
+                      <div className="mx-auto max-w-sm overflow-hidden rounded-[1.4rem] border border-[#E5D8D3] bg-[#F4E9E4]">
+                        <img
+                          src={selectedPhotoUrl}
+                          alt={`Progress photo for Day ${selectedDay}`}
+                          className="max-h-[420px] w-full object-contain"
+                        />
                       </div>
 
-                     <div className="border-b border-r border-[#E0D2CD] p-3 sm:p-5">
-                        <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
-                          WAIST
-                        </p>
+                      <div className="mt-4 flex flex-wrap justify-center gap-2">
+                        <button
+                          type="button"
+                          disabled={uploading}
+                          onClick={() => fileInput.current?.click()}
+                          className={buttonOutline}
+                        >
+                          {uploading
+                            ? "UPLOADING..."
+                            : "CHANGE PHOTO"}
+                        </button>
 
-                        <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(
-                            selectedMeasurement.waist
-                          )}
-                        </p>
-                      </div>
+                        <button
+                          type="button"
+                          disabled={uploading}
+                          onClick={savePhotoToDevice}
+                          className={buttonOutline}
+                        >
+                          SAVE ↓
+                        </button>
 
-                      <div className="border-b border-[#E0D2CD] p-3 sm:p-5">
-                        <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
-                          HIPS
-                        </p>
-
-                        <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(
-                            selectedMeasurement.hips
-                          )}
-                        </p>
-                      </div>
-
-                     <div className="border-r border-[#E0D2CD] p-3 sm:p-5">
-                        <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
-                          CHEST
-                        </p>
-
-                        <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(
-                            selectedMeasurement.chest
-                          )}
-                        </p>
-                      </div>
-
-                     <div className="border-r border-[#E0D2CD] p-3 sm:p-5">
-                        <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
-                          THIGH
-                        </p>
-
-                        <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(
-                            selectedMeasurement.thigh
-                          )}
-                        </p>
-                      </div>
-
-                     <div className="p-3 sm:p-5">
-                        <p className="text-[8px] tracking-[0.20em] text-[#9D6F67]">
-                          ARM
-                        </p>
-
-                        <p className="mt-2 font-serif text-2xl">
-                          {formatMeasurement(
-                            selectedMeasurement.arm
-                          )}
-                        </p>
+                        <button
+                          type="button"
+                          disabled={uploading}
+                          onClick={removePhoto}
+                          className="rounded-full px-4 py-3 text-[10px] text-[#A45E55] disabled:opacity-50"
+                        >
+                          REMOVE
+                        </button>
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-7 rounded-[1.5rem] border border-dashed border-[#CBA9A2] bg-[#F7F1ED] px-6 py-9 text-center">
-                      <p className="font-serif text-2xl italic text-[#A77B73]">
-                        nothing recorded. ♡
+                    <div className="mt-4 rounded-[1.3rem] border border-dashed border-[#D6BFB8] bg-[#F8F1ED] px-5 py-8 text-center">
+                      <p className="font-serif text-xl italic text-[#A77B73]">
+                        no photo yet. ♡
                       </p>
 
-                      <p className="mt-3 text-[8px] leading-5 tracking-[0.16em] text-[#8F7C76]">
-                        NO MEASUREMENTS WERE SAVED FOR THIS DAY.
+                      <p className="mt-2 text-xs text-[#8C7770]">
+                        A little moment worth remembering.
                       </p>
+
+                      <button
+                        type="button"
+                        disabled={uploading}
+                        onClick={() => fileInput.current?.click()}
+                        className={`${buttonPrimary} mt-5`}
+                      >
+                        {uploading
+                          ? "UPLOADING..."
+                          : "+ ADD PHOTO"}
+                      </button>
                     </div>
                   )}
 
-                  
-{/* DAILY REFLECTION */}
-<div className="mt-7 border-t border-[#E5D8D3] pt-6">
-  <div className="flex items-start gap-3">
-    {selectedIsComplete && (
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#A77B73] text-[#A77B73]">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-4 w-4"
-          aria-label="Day complete"
-          role="img"
-        >
-          <path d="M5 12.5 9.5 17 19 7" />
-        </svg>
-      </div>
-    )}
+                  {photoError && (
+                    <p
+                      role="alert"
+                      className="mt-3 text-center text-xs text-[#A45E55]"
+                    >
+                      {photoError}
+                    </p>
+                  )}
+                </section>
 
+                <div className="border-t border-[#EADDD7]" />
+
+                
+
+{/* MEASUREMENTS */}
+<section>
+  <div className="flex items-start justify-between gap-3">
     <div>
-      <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
-        A LITTLE REFLECTION
-      </p>
-
-      <p className="mt-2 font-serif text-lg italic leading-relaxed text-[#A77B73]">
-        {selectedWasManuallyCompleted
-          ? "you marked this day complete. ♡"
-          : selectedIsComplete
-            ? "you did everything you said you would. ♡"
-            : selectedIsCurrent
-              ? "the day isn't over yet. ♡"
-              : "part of the story, too. ♡"}
+      <SmallLabel>02 · MEASUREMENTS</SmallLabel>
+      <h3 className="mt-1.5 font-serif text-2xl italic text-[#30231F]">
+        a little snapshot of you.
+      </h3>
+      <p className="mt-1.5 text-xs leading-relaxed text-[#8C7770]">
+        Your progress, recorded at your own pace. ♡
       </p>
     </div>
-  </div>
-</div>
 
-{/* MANUAL COMPLETION — KEEP THIS FUNCTIONALITY */}
-{selectedIsPast && selectedCommitmentCount < 7 && (
-  <div className="mt-6 rounded-[1rem] border border-[#E5D8D3] bg-[#F7F1ED] px-4 py-5">
-    <p className="text-[9px] tracking-[0.20em] text-[#9D6F67]">
-      MISSED A CHECK-IN?
-    </p>
-
-    <p className="mt-2 text-xs leading-relaxed text-[#806E68]">
-      {selectedWasManuallyCompleted
-        ? "This day was marked complete manually. Your original check-ins are still saved."
-        : "Finished your commitments but forgot to check them off? You can mark this day complete."}
-    </p>
-
-    {manualCompletionError && (
-      <p className="mt-3 text-xs text-[#9D6F67]">
-        {manualCompletionError}
-      </p>
+    {!editingMeasurements && (
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => setEditingMeasurements(true)}
+        className="shrink-0 rounded-full border border-[#DCC6BF] px-3.5 py-2 text-[10px] font-medium tracking-[0.12em] text-[#805D55] transition hover:bg-[#F4E9E4] disabled:opacity-50"
+      >
+        {selectedMeasurement ? "EDIT" : "+ ADD"}
+      </button>
     )}
+  </div>
 
+  {editingMeasurements ? (
+    <div className="mt-4 rounded-[1.25rem] border border-[#EADDD7] bg-[#F8F1ED] p-4 sm:p-5">
+      <div className="mb-4">
+        <p className="font-serif text-lg italic text-[#805D55]">
+          your measurements ♡
+        </p>
+        <p className="mt-1 text-xs leading-relaxed text-[#8C7770]">
+          Leave any fields blank that you don't want to record.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {MEASUREMENT_FIELDS.map((field) => (
+          <label
+            key={field}
+            className="min-w-0 text-[10px] font-medium uppercase tracking-[0.1em] text-[#806E68]"
+          >
+            {field} ({measurementUnit(field)})
+
+            <input
+              type="number"
+              inputMode="decimal"
+              min="0"
+              step="0.1"
+              disabled={busy}
+              value={measurementForm[field]}
+              placeholder="—"
+              aria-label={`${field} in ${measurementUnit(field)}`}
+              onChange={(event) =>
+                setMeasurementForm((previous) => ({
+                  ...previous,
+                  [field]: event.target.value,
+                }))
+              }
+              className="mt-2 w-full min-w-0 rounded-xl border border-[#DED0CB] bg-[#FFFCFA] px-3 py-3 text-sm font-normal normal-case tracking-normal text-[#30231F] outline-none transition placeholder:text-[#C4AEA7] focus:border-[#A77B73] focus:ring-2 focus:ring-[#A77B73]/15 disabled:opacity-50"
+            />
+          </label>
+        ))}
+      </div>
+
+      <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={saveMeasurements}
+          className={`${buttonPrimary} w-full justify-center sm:w-auto`}
+        >
+          {busy ? "SAVING..." : "SAVE MEASUREMENTS"}
+        </button>
+
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => {
+            setMeasurementForm(
+              Object.fromEntries(
+                MEASUREMENT_FIELDS.map((field) => [
+                  field,
+                  selectedMeasurement?.[field] == null
+                    ? ""
+                    : String(selectedMeasurement[field]),
+                ])
+              ) as MeasurementForm
+            );
+            setEditingMeasurements(false);
+            setDayError(null);
+          }}
+          className={`${buttonOutline} w-full justify-center sm:w-auto`}
+        >
+          CANCEL
+        </button>
+
+        {selectedMeasurement && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={deleteMeasurements}
+            className="w-full rounded-full border border-[#E8D0CA] px-5 py-3 text-[10px] font-medium tracking-[0.12em] text-[#A45E55] transition hover:bg-[#F5E7E2] disabled:opacity-50 sm:ml-auto sm:w-auto"
+          >
+            DELETE RECORD
+          </button>
+        )}
+      </div>
+    </div>
+  ) : selectedMeasurement &&
+    MEASUREMENT_FIELDS.some(
+      (field) =>
+        selectedMeasurement[field] !== null &&
+        selectedMeasurement[field] !== ""
+    ) ? (
+    <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+      {MEASUREMENT_FIELDS.filter(
+        (field) =>
+          selectedMeasurement[field] !== null &&
+          selectedMeasurement[field] !== ""
+      ).map((field) => (
+        <button
+          key={field}
+          type="button"
+          disabled={busy}
+          onClick={() => setEditingMeasurements(true)}
+          aria-label={`Edit ${field} measurement`}
+          className="group min-w-0 rounded-xl border border-[#EADDD7] bg-[#F8F1ED] p-3.5 text-left transition hover:border-[#CBA9A2] hover:bg-[#F3E7E1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A77B73] disabled:opacity-50 sm:p-4"
+        >
+          <div className="flex items-center justify-between gap-1">
+            <SmallLabel>{field.toUpperCase()}</SmallLabel>
+            <span className="text-xs text-[#B68D85] opacity-0 transition group-hover:opacity-100">
+              ↗
+            </span>
+          </div>
+
+          <p className="mt-2 break-words font-serif text-xl text-[#30231F]">
+            {displayMeasurement(
+              field,
+              selectedMeasurement[field]
+            )}
+          </p>
+        </button>
+      ))}
+    </div>
+  ) : (
     <button
       type="button"
-      onClick={() =>
-        setManualDayCompletion(!selectedWasManuallyCompleted)
-      }
-      disabled={manualCompletionLoading}
-      className={`mt-4 w-full rounded-full px-5 py-3 text-[9px] tracking-[0.15em] transition disabled:cursor-wait disabled:opacity-60 ${
-        selectedWasManuallyCompleted
-          ? "border border-[#CBA9A2] bg-[#FBF8F6] text-[#806E68] hover:bg-[#EAD8D3]"
-          : "bg-[#A77B73] text-[#FBF8F6] hover:bg-[#8F655E]"
-      }`}
+      disabled={busy}
+      onClick={() => setEditingMeasurements(true)}
+      className="mt-4 w-full rounded-[1.25rem] border border-dashed border-[#D6BFB8] bg-[#F8F1ED] px-4 py-6 text-center transition hover:border-[#CBA9A2] hover:bg-[#F3E7E1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#A77B73] disabled:opacity-50"
     >
-      {manualCompletionLoading
-        ? "SAVING..."
-        : selectedWasManuallyCompleted
-          ? "UNDO MANUAL COMPLETION"
-          : "MARK DAY COMPLETE"}
-    </button>
-  </div>
-)}
+      <span className="block font-serif text-xl italic text-[#A77B73]">
+        nothing recorded yet. ♡
+      </span>
 
+      <span className="mt-2 block text-xs text-[#8C7770]">
+        Add your measurements whenever you're ready.
+      </span>
+
+      <span className="mt-4 inline-flex items-center justify-center rounded-full border border-[#D6BFB8] bg-[#FFFCFA] px-4 py-2.5 text-[10px] font-medium tracking-[0.12em] text-[#805D55]">
+        + ADD MEASUREMENTS
+      </span>
+    </button>
+  )}
+</section>
+
+
+
+                <div className="border-t border-[#EADDD7]" />
+
+                {/* LITTLE WINS FOR THIS DAY ONLY */}
+
+                <section>
+                  <SmallLabel>03 · LITTLE WINS</SmallLabel>
+
+                  <h3 className="mt-2 font-serif text-2xl italic">
+                    the little things count.
+                  </h3>
+
+                  {dayWins.length > 0 ? (
+                    <div className="mt-4 space-y-2">
+                      {dayWins.map((win) => (
+                        <div
+                          key={win.id}
+                          className="flex items-center gap-3 rounded-xl bg-[#F8F1ED] px-4 py-3"
+                        >
+                          <span className="text-[#A77B73]">♡</span>
+                          <span className="text-sm text-[#6F514B]">
+                            {win.label ?? "A little win"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm italic text-[#8C7770]">
+                      No little wins recorded for this day yet. ♡
+                    </p>
+                  )}
+
+                  <p className="mt-3 text-xs text-[#9D6F67]">
+                    Little Wins are added in the Little Wins section
+                    below your calendar.
+                  </p>
+                </section>
+
+                <div className="border-t border-[#EADDD7]" />
+
+                {/* DAILY REFLECTION / STATUS */}
+
+                <section>
+                  <SmallLabel>04 · A LITTLE REFLECTION</SmallLabel>
+
+                  <p className="mt-3 font-serif text-xl italic leading-relaxed text-[#A77B73]">
+                    {selectedRow?.manually_completed
+                      ? "you marked this day complete. ♡"
+                      : selectedComplete
+                        ? "you did everything you said you would. ♡"
+                        : selectedCurrent
+                          ? "the day isn't over yet. ♡"
+                          : "part of the story, too. ♡"}
+                  </p>
+
+                  {selectedPast && selectedCount < 7 && (
+                    <div className="mt-5 rounded-xl border border-[#EADDD7] bg-[#F8F1ED] p-4">
+                      <SmallLabel>MISSED A CHECK-IN?</SmallLabel>
+
+                      <p className="mt-2 text-xs leading-relaxed text-[#806E68]">
+                        Finished your commitments but forgot to
+                        check them off? You can mark this day
+                        complete without changing the original
+                        checklist.
+                      </p>
+
+                      {manualError && (
+                        <p className="mt-3 text-xs text-[#A45E55]">
+                          {manualError}
+                        </p>
+                      )}
+
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() =>
+                          setManualCompletion(
+                            !selectedRow?.manually_completed
+                          )
+                        }
+                        className={`${buttonPrimary} mt-4`}
+                      >
+                        {busy
+                          ? "SAVING..."
+                          : selectedRow?.manually_completed
+                            ? "UNDO MANUAL COMPLETION"
+                            : "MARK DAY COMPLETE"}
+                      </button>
+                    </div>
+                  )}
+                </section>
+
+                <div className="border-t border-[#EADDD7] pt-2 text-center">
+                  <p className="font-serif text-lg italic text-[#A77B73]">
+                    one day at a time. ♡
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={closeDay}
+                    className={`${buttonOutline} mt-4`}
+                  >
+                    CLOSE DAILY RECORD
+                  </button>
                 </div>
               </div>
             )}
