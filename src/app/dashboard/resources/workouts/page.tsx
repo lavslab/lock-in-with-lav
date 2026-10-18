@@ -474,6 +474,11 @@ export default function WorkoutsPage() {
   const [type, setType] =
     useState("All");
 
+    const [expandedWorkoutId, setExpandedWorkoutId] =
+  useState<string | null>(null);
+
+    const [searchQuery, setSearchQuery] = useState("");
+
   useEffect(() => {
     const getUser = async () => {
       const {
@@ -613,32 +618,32 @@ export default function WorkoutsPage() {
           .toUpperCase()
       : "♡";
 
-  const filteredWorkouts =
-    useMemo(() => {
-      return workouts.filter(
-        (workout) => {
-          const locationMatch =
-            location === "All" ||
-            workout.locations.includes(
-              location,
-            );
+  
+const filteredWorkouts = useMemo(() => {
+  const query = searchQuery.trim().toLowerCase();
 
-          const workoutTypes =
-            workout.types ?? [
-              workout.type,
-            ];
+  return workouts.filter((workout) => {
+    const locationMatch =
+      location === "All" ||
+      workout.locations.includes(location);
 
-          const typeMatch =
-            type === "All" ||
-            workoutTypes.includes(type);
+    const workoutTypes = Array.isArray(workout.types)
+      ? workout.types
+      : [workout.type];
 
-          return (
-            locationMatch &&
-            typeMatch
-          );
-        },
-      );
-    }, [location, type]);
+    const typeMatch =
+      type === "All" ||
+      workoutTypes.includes(type);
+
+    const searchMatch =
+      !query ||
+      workout.title.toLowerCase().includes(query) ||
+      (workout.subtitle ?? "").toLowerCase().includes(query);
+
+    return locationMatch && typeMatch && searchMatch;
+  });
+}, [location, type, searchQuery]);
+
 
   const saveSelectedWorkouts = async (
     workoutIds: string[],
@@ -702,6 +707,17 @@ source:
             
 }));
 
+const preservedCustomWorkouts = existingWorkouts.filter(
+  (existing: { id?: string; source?: string }) =>
+    existing.source === "custom" ||
+    existing.id?.startsWith("custom:")
+);
+
+const mergedWorkouts = [
+  ...preservedCustomWorkouts,
+  ...selectedWorkouts,
+];
+
     const progressDate =
       formatLocalDate(new Date());
 
@@ -714,8 +730,7 @@ source:
             currentChallengeDay,
           progress_date:
             progressDate,
-          selected_workouts:
-            selectedWorkouts,
+          selected_workouts: mergedWorkouts,
           updated_at:
             new Date().toISOString(),
         },
@@ -849,8 +864,8 @@ const existingWorkouts =
   );
 
   return (
-    <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
-      <div className="mx-auto flex min-h-screen max-w-[1600px]">
+    <main className="bg-[#F7F1ED] text-[#211C19]">
+  <div className="mx-auto flex max-w-[1600px]">
         {/* DESKTOP SIDEBAR */}
         <DashboardSidebar
   initial={initial}
@@ -881,430 +896,337 @@ const existingWorkouts =
             </Link>
           </header>
 
-          <section className="px-5 pb-28 pt-8 sm:px-7 md:px-8 md:pb-16 md:pt-10 lg:px-12">
-            {/* INTRO */}
-            <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] px-6 py-8 md:px-9 md:py-10">
-              <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-                <div className="max-w-2xl">
-                  <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
-                    WORKOUT LIBRARY
-                  </p>
+          <section className="px-5 pb-20 pt-8 sm:px-7 md:px-8 md:pb-6 md:pt-10 lg:px-12">
+           
+{/* INTRO — COMPACT */}
 
-                  <h1 className="mt-4 font-serif text-4xl leading-[0.95] sm:text-5xl md:text-6xl">
-                    Pick your
-                    <span className="block italic text-[#A77B73]">
-                      movement.
-                    </span>
-                  </h1>
+<section className="border-b border-[#DED0CB] pb-5">
+  <p className="text-[9px] tracking-[0.3em] text-[#9D6F67]">
+    THE WORKOUT LIBRARY
+  </p>
 
-                  <p className="mt-5 max-w-xl text-sm leading-6 text-[#806E68]">
-                    Choose what works for your
-                    body, your space and your
-                    energy today. One workout is
-                    enough. A few together works
-                    too. ♡
-                  </p>
-                </div>
+  <h1 className="mt-2 font-serif text-3xl leading-tight text-[#211C19] sm:text-4xl">
+    Pick your{" "}
+    <span className="italic text-[#A77B73]">
+      movement.
+    </span>
+  </h1>
 
-                <div className="rounded-[1.5rem] bg-[#EAD8D3] px-5 py-4 lg:max-w-xs">
-                  <p className="text-[8px] tracking-[0.25em] text-[#8F655E]">
-                    LOCK IN REMINDER
-                  </p>
+  <p className="mt-2 max-w-xl text-[11px] leading-5 text-[#806E68]">
+    Find a workout that fits your body, your space, and your day. ♡
+  </p>
+</section>
 
-                  <p className="mt-2 font-serif text-xl italic text-[#6F514B]">
-                    consistency over perfection.
-                  </p>
-                </div>
-              </div>
-            </section>
 
             {/* FILTERS */}
-            <section className="py-8">
-              <div className="grid gap-5 lg:grid-cols-2">
-                <div>
-                  <p className="mb-3 text-[8px] tracking-[0.3em] text-[#9D6F67]">
-                    WHERE ARE YOU TRAINING?
-                  </p>
 
-                  <div className="flex flex-wrap gap-2">
-                    {locations.map(
-                      (item) => (
-                        <FilterButton
-                          key={item}
-                          label={item}
-                          active={
-                            location ===
-                            item
-                          }
-                          onClick={() =>
-                            setLocation(
-                              item,
-                            )
-                          }
-                        />
-                      ),
-                    )}
-                  </div>
-                </div>
+            
+{/* SEARCH WORKOUTS */}
+<div className="relative mt-5">
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.7"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A77B73]"
+    aria-hidden="true"
+  >
+    <circle cx="10.5" cy="10.5" r="6.5" />
+    <path d="m16 16 4.5 4.5" />
+  </svg>
 
-                <div>
-                  <p className="mb-3 text-[8px] tracking-[0.3em] text-[#9D6F67]">
-                    WHAT ARE WE WORKING?
-                  </p>
+  <input
+    type="search"
+    value={searchQuery}
+    onChange={(event) => setSearchQuery(event.target.value)}
+    placeholder="Search workouts..."
+    aria-label="Search workouts"
+    className="w-full rounded-[1rem] border border-[#DED0CB] bg-[#FBF8F6] py-3 pl-11 pr-4 text-[12px] text-[#211C19] outline-none transition placeholder:text-[#A99790] focus:border-[#A77B73]"
+  />
+</div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {types.map((item) => (
-                      <FilterButton
-                        key={item}
-                        label={item}
-                        active={
-                          type === item
-                        }
-                        onClick={() =>
-                          setType(item)
-                        }
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </section>
+          
+{/* COMPACT DROPDOWN FILTERS */}
+<section className="grid grid-cols-2 gap-3 py-5">
+  {/* LOCATION */}
+  <div>
+    <label
+      htmlFor="workout-location"
+      className="mb-2 block text-[9px] tracking-[0.2em] text-[#9D6F67]"
+    >
+      LOCATION
+    </label>
 
-            {/* TODAY'S WORKOUTS */}
-            {selectedWorkoutIds.length >
-              0 && (
-              <section className="mb-10 rounded-[2rem] border border-[#CBA9A2] bg-[#EAD8D3]/45 p-6 md:p-8">
-                <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-                  <div>
-                    <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
-                      TODAY&apos;S MOVEMENT
-                    </p>
+    <div className="relative">
+      <select
+        id="workout-location"
+        value={location}
+        onChange={(event) => setLocation(event.target.value)}
+        className="w-full appearance-none rounded-xl border border-[#DED0CB] bg-[#FBF8F6] py-3 pl-3 pr-9 text-[11px] text-[#211C19] outline-none focus:border-[#A77B73]"
+      >
+        {locations.map((item) => (
+          <option key={item} value={item}>
+            {item === "All" ? "All locations" : item}
+          </option>
+        ))}
+      </select>
 
-                    <h2 className="mt-3 font-serif text-3xl">
-                      You&apos;re locked in.{" "}
-                      <span className="italic text-[#A77B73]">
-                        ♡
-                      </span>
-                    </h2>
+      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[#A77B73]">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          className="h-4 w-4"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </div>
+  </div>
 
-                    <p className="mt-2 text-sm text-[#725F5A]">
-                      {
-                        selectedWorkoutIds.length
-                      }{" "}
-                      {selectedWorkoutIds.length ===
-                      1
-                        ? "workout"
-                        : "workouts"}{" "}
-                      selected. ♡
-                    </p>
+  {/* FOCUS */}
+  <div>
+    <label
+      htmlFor="workout-focus"
+      className="mb-2 block text-[9px] tracking-[0.2em] text-[#9D6F67]"
+    >
+      FOCUS
+    </label>
 
-                    <p className="mt-1 text-xs text-[#725F5A]">
-                      Mix strength, cardio, core
-                      or whatever fits your day.
-                    </p>
+    <div className="relative">
+      <select
+        id="workout-focus"
+        value={type}
+        onChange={(event) => setType(event.target.value)}
+        className="w-full appearance-none rounded-xl border border-[#DED0CB] bg-[#FBF8F6] py-3 pl-3 pr-9 text-[11px] text-[#211C19] outline-none focus:border-[#A77B73]"
+      >
+        {types.map((item) => (
+          <option key={item} value={item}>
+            {item === "All" ? "All muscle groups" : item}
+          </option>
+        ))}
+      </select>
 
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {selectedWorkoutIds.map(
-                        (id) => {
-                          const workout =
-                            workouts.find(
-                              (item) =>
-                                item.id ===
-                                id,
-                            );
+      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[#A77B73]">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.7"
+          className="h-4 w-4"
+          aria-hidden="true"
+        >
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </span>
+    </div>
+  </div>
+</section>
 
-                          if (!workout) {
-                            return null;
-                          }
 
-                          return (
-                            <button
-                              key={id}
-                              type="button"
-                              onClick={() =>
-                                removeWorkoutForToday(
-                                  id,
-                                )
-                              }
-                              className="rounded-full border border-[#B78F87] bg-[#F7F1ED]/60 px-3 py-2 text-[7px] tracking-[0.12em] text-[#6F514B] transition hover:bg-[#F7F1ED]"
-                            >
-                              {workout.title.toUpperCase()}{" "}
-                              ×
-                            </button>
-                          );
-                        },
-                      )}
-                    </div>
-                  </div>
+{(searchQuery.trim() !== "" ||
+  location !== "All" ||
+  type !== "All") && (
+  <div className="-mt-2 mb-5 flex justify-end">
+    <button
+      type="button"
+      onClick={() => {
+        setSearchQuery("");
+        setLocation("All");
+        setType("All");
+      }}
+      className="text-[10px] tracking-[0.12em] text-[#9D6F67] underline underline-offset-4 transition hover:text-[#211C19]"
+    >
+      CLEAR FILTERS ×
+    </button>
+  </div>
+)}
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      removeWorkoutForToday()
-                    }
-                    className="w-fit rounded-full border border-[#B78F87] px-5 py-3 text-[7px] tracking-[0.2em] text-[#6F514B] transition hover:bg-[#F7F1ED]"
-                  >
-                    CLEAR TODAY&apos;S
-                    WORKOUTS
-                  </button>
-                </div>
-              </section>
-            )}
+        
 
-            {/* WORKOUTS */}
-            <section className="pb-12">
-              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-                <div>
-                  <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
-                    BROWSE WORKOUTS
-                  </p>
+           
+{/* WORKOUTS */}
+<section className="pb-4">
 
-                  <h1 className="mt-3 font-serif text-3xl md:text-4xl">
-                    Build your{" "}
-                    <span className="italic text-[#A77B73]">
-                      session.
-                    </span>
-                  </h1>
+  {/* COMPACT SECTION HEADING */}
+  <div className="mb-3 flex items-center justify-between gap-3">
+    <p className="text-[9px] tracking-[0.25em] text-[#9D6F67]">
+      EXPLORE WORKOUTS
+    </p>
 
-                  <p className="mt-3 max-w-xl text-sm leading-6 text-[#806E68]">
-                    Choose one workout or add a
-                    few together. You can mix
-                    strength, cardio, core and
-                    more.
-                  </p>
-                </div>
+    <p className="text-[10px] text-[#A77B73]">
+      {filteredWorkouts.length} workouts ♡
+    </p>
+  </div>
 
-                <p className="font-serif text-lg italic text-[#A77B73]">
-                  {filteredWorkouts.length}{" "}
-                  {filteredWorkouts.length ===
-                  1
-                    ? "workout"
-                    : "workouts"}{" "}
-                  ♡
-                </p>
-              </div>
+  {filteredWorkouts.length > 0 ? (
+    <div className="grid gap-2.5 lg:grid-cols-2 xl:grid-cols-3">
+      {filteredWorkouts.map((workout, index) => {
+        const Icon = getWorkoutIcon(workout);
 
-              {filteredWorkouts.length >
-              0 ? (
-                <div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                  {filteredWorkouts.map(
-                    (
-                      workout,
-                      index,
-                    ) => {
-                     const Icon = getWorkoutIcon(workout);
+        const isSelected = selectedWorkoutIds.includes(
+          workout.id
+        );
 
-                      const isSelected =
-                        selectedWorkoutIds.includes(
-                          workout.id,
-                        );
+        const equipmentItems = Array.isArray(workout.equipment)
+          ? workout.equipment
+          : [workout.equipment];
 
-                      const equipmentItems =
-                        Array.isArray(
-                          workout.equipment,
-                        )
-                          ? workout.equipment
-                          : [
-                              workout.equipment,
-                            ];
-
-                      return (
-                        <article
-                          key={workout.id}
-                          className={`group flex min-h-[300px] flex-col justify-between rounded-[1.75rem] border bg-[#FBF8F6] p-6 transition duration-300 hover:-translate-y-1 hover:shadow-sm ${
-                            isSelected
-                              ? "border-[#A77B73]"
-                              : "border-[#DED0CB] hover:border-[#CBA9A2]"
-                          }`}
-                        >
-                          <div>
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-[1rem] bg-[#EAD8D3] text-[#9D6F67] transition duration-300 group-hover:bg-[#E3CCC6]">
-                                  <Icon className="h-6 w-6" />
-                                </div>
-
-                                <span className="font-serif text-sm text-[#C6A29A]">
-                                  {String(
-                                    index +
-                                      1,
-                                  ).padStart(
-                                    2,
-                                    "0",
-                                  )}
-                                </span>
-                              </div>
-
-                              <span className="rounded-full border border-[#D6C3BD] px-3 py-1.5 text-[7px] tracking-[0.18em] text-[#8F655E]">
-                                {workout.level.toUpperCase()}
-                              </span>
-                            </div>
-
-                            <p className="mt-6 text-[8px] tracking-[0.25em] text-[#806E68]">
-                              {workout.type.toUpperCase()}{" "}
-                              •{" "}
-                              {workout.locations
-                                .filter(
-                                  (
-                                    location,
-                                  ) =>
-                                    location !==
-                                    "No Equipment",
-                                )
-                                .join(
-                                  " + ",
-                                )
-                                .toUpperCase()}
-                              {workout.locations.includes(
-                                "No Equipment",
-                              )
-                                ? " • NO EQUIPMENT"
-                                : ""}
-                            </p>
-
-                            <h2 className="mt-3 font-serif text-3xl leading-tight">
-                              {
-                                workout.title
-                              }
-                            </h2>
-
-                            <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                              {
-                                workout.subtitle
-                              }
-                            </p>
-                          </div>
-
-                          <div className="mt-8">
-                            <div className="grid grid-cols-3 gap-2 border-t border-[#E1D3CE] pt-4">
-                              {/* TIME */}
-                              <div className="flex min-w-0 items-center gap-2">
-                                <ClockIcon className="h-4 w-4 shrink-0 text-[#B48A82]" />
-
-                                <span className="block text-[7px] leading-3 tracking-[0.1em] text-[#806E68]">
-                                  {
-                                    workout.time
-                                  }
-                                </span>
-                              </div>
-
-                              {/* EQUIPMENT */}
-                              <div className="flex min-w-0 items-start gap-2">
-                                <div className="flex min-w-0 flex-col gap-1">
-                                  {equipmentItems.map(
-                                    (
-                                      item,
-                                    ) => {
-                                      const EquipmentIcon =
-                                        getEquipmentIcon(
-                                          item,
-                                        );
-
-                                      return (
-                                        <div
-                                          key={
-                                            item
-                                          }
-                                          className="flex items-center gap-1.5"
-                                        >
-                                          <EquipmentIcon className="h-3.5 w-3.5 shrink-0 text-[#B48A82]" />
-
-                                          <span className="block text-[7px] leading-3 tracking-[0.08em] text-[#806E68]">
-                                            {
-                                              item
-                                            }
-                                          </span>
-                                        </div>
-                                      );
-                                    },
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* EXERCISES */}
-                              <div className="flex min-w-0 items-center justify-end gap-2">
-                                <ExerciseIcon className="h-4 w-4 shrink-0 text-[#B48A82]" />
-
-                                <span className="block text-[7px] leading-3 tracking-[0.08em] text-[#806E68]">
-                                  {
-                                    workout.exercises
-                                  }
-                                </span>
-                              </div>
-                            </div>
-                                                        <div className="mt-5 grid gap-2">
-                              <button
-                                type="button"
-                                disabled={
-                                  !userId ||
-                                  currentChallengeDay ===
-                                    null
-                                }
-                                onClick={() => {
-                                  if (
-                                    isSelected
-                                  ) {
-                                    removeWorkoutForToday(
-                                      workout.id,
-                                    );
-                                  } else {
-                                    chooseWorkoutForToday(
-                                      workout,
-                                    );
-                                  }
-                                }}
-                                className={`flex w-full items-center justify-center rounded-full border px-4 py-3 text-[7px] tracking-[0.22em] transition ${
-                                  isSelected
-                                    ? "border-[#A77B73] bg-[#EAD8D3] text-[#6F514B]"
-                                    : "border-[#CBA9A2] text-[#9D6F67] hover:bg-[#EAD8D3]"
-                                } ${
-                                  !userId ||
-                                  currentChallengeDay ===
-                                    null
-                                    ? "cursor-wait opacity-60"
-                                    : ""
-                                }`}
-                              >
-                                {isSelected
-                                  ? "ADDED TO TODAY ✓"
-                                  : "ADD TO TODAY"}
-                              </button>
-
-                              <Link
-                               href={
-  [
-    "lower-body-foundation",
-    "cardio-lock-in",
-    "core-control",
-    "full-body-reset",
-    "glute-builder",
-    "gym-back-biceps",
-    "gym-chest-triceps",
-    "gym-glute-legs",
-    "gym-machine-cardio",
-    "home-back-biceps",
-    "home-chest-triceps",
-    "home-glute-legs",
-    "upper-body-build",
+        return (
+          <article
+            key={workout.id}
+            className={`group flex flex-col rounded-[1rem] border bg-[#FBF8F6] p-3 transition duration-300 ${
+              isSelected
+                ? "border-[#A77B73]"
+                : "border-[#DED0CB] hover:border-[#CBA9A2]"
+            }`}
+          >
 
 
 
-  ].includes(workout.id)
-    ? `/dashboard/resources/workouts/workout-preview?workout=${workout.id}`
-    : `/dashboard/resources/workouts/${workout.id}`
-}
-                                className="flex items-center justify-between border-t border-[#E1D3CE] pt-3 text-[7px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
-                              >
-                                <span>
-                                  VIEW WORKOUT
-                                </span>
+{/* COMPACT WORKOUT HEADER */}
+<button
+  type="button"
+  onClick={() =>
+    setExpandedWorkoutId((current) =>
+      current === workout.id ? null : workout.id
+    )
+  }
+  aria-expanded={expandedWorkoutId === workout.id}
+  className="flex w-full items-center gap-3 text-left"
+>
+  {/* WORKOUT ICON */}
+  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EAD8D3] text-[#9D6F67]">
+    <Icon className="h-5 w-5" />
+  </div>
 
-                                <span className="flex h-9 w-9 items-center justify-center rounded-full border border-[#CBA9A2] font-serif text-lg text-[#A77B73] transition hover:bg-[#EAD8D3]">
-                                  →
-                                </span>
-                              </Link>
-                            </div>
-                          </div>
+  {/* WORKOUT INFORMATION */}
+  <div className="min-w-0 flex-1">
+    <p className="text-[8px] tracking-[0.15em] text-[#9D6F67]">
+      {workout.type.toUpperCase()}
+    </p>
+
+    <h2 className="mt-1 font-serif text-base leading-tight text-[#211C19]">
+      {workout.title}
+    </h2>
+
+    <p className="mt-1 text-[10px] leading-4 text-[#927D76]">
+      {workout.level} · {workout.time}
+    </p>
+  </div>
+
+
+ {/* EXPAND / COLLAPSE */}
+<span className="shrink-0 text-lg text-[#A77B73]">
+  {expandedWorkoutId === workout.id ? "⌃" : "⌄"}
+</span>
+</button>
+
+
+
+{expandedWorkoutId === workout.id && (
+  <div className="mt-3 border-t border-[#E1D3CE] pt-3">
+
+    {/* WORKOUT DETAILS */}
+    <div className="grid grid-cols-3 gap-2">
+      {/* TIME */}
+      <div className="flex min-w-0 items-center gap-1.5">
+        <ClockIcon className="h-3.5 w-3.5 shrink-0 text-[#B48A82]" />
+        <span className="text-[9px] leading-4 text-[#806E68]">
+          {workout.time}
+        </span>
+      </div>
+
+      {/* EQUIPMENT */}
+      <div className="flex min-w-0 flex-col gap-1">
+        {equipmentItems.map((item) => {
+          const EquipmentIcon = getEquipmentIcon(item);
+
+          return (
+            <div
+              key={item}
+              className="flex items-center gap-1"
+            >
+              <EquipmentIcon className="h-3.5 w-3.5 shrink-0 text-[#B48A82]" />
+              <span className="text-[9px] leading-4 text-[#806E68]">
+                {item}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* EXERCISES */}
+      <div className="flex min-w-0 items-center justify-end gap-1.5">
+        <ExerciseIcon className="h-3.5 w-3.5 shrink-0 text-[#B48A82]" />
+        <span className="text-[9px] leading-4 text-[#806E68]">
+          {workout.exercises}
+        </span>
+      </div>
+    </div>
+
+    {/* WORKOUT ACTIONS */}
+    <div className="mt-4 grid gap-2">
+      <button
+        type="button"
+        disabled={!userId || currentChallengeDay === null}
+        onClick={() => {
+          if (isSelected) {
+            removeWorkoutForToday(workout.id);
+          } else {
+            chooseWorkoutForToday(workout);
+          }
+        }}
+        className={`flex w-full items-center justify-center rounded-full border px-4 py-2.5 text-[9px] tracking-[0.18em] transition ${
+          isSelected
+            ? "border-[#A77B73] bg-[#EAD8D3] text-[#6F514B]"
+            : "border-[#CBA9A2] text-[#9D6F67] hover:bg-[#EAD8D3]"
+        } ${
+          !userId || currentChallengeDay === null
+            ? "cursor-wait opacity-60"
+            : ""
+        }`}
+      >
+        {isSelected ? "ADDED TO TODAY ✓" : "ADD TO TODAY"}
+      </button>
+
+      <Link
+        href={
+          [
+            "lower-body-foundation",
+            "cardio-lock-in",
+            "core-control",
+            "full-body-reset",
+            "glute-builder",
+            "gym-back-biceps",
+            "gym-chest-triceps",
+            "gym-glute-legs",
+            "gym-machine-cardio",
+            "home-back-biceps",
+            "home-chest-triceps",
+            "home-glute-legs",
+            "upper-body-build",
+          ].includes(workout.id)
+            ? `/dashboard/resources/workouts/workout-preview?workout=${workout.id}`
+            : `/dashboard/resources/workouts/${workout.id}`
+        }
+        className="flex items-center justify-between border-t border-[#E1D3CE] pt-3 text-[9px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
+      >
+        <span>VIEW WORKOUT</span>
+
+        <span className="text-lg text-[#A77B73]">
+          ↗
+        </span>
+      </Link>
+    </div>
+  </div>
+)}
+
+
                         </article>
                       );
                     },
@@ -1336,40 +1258,7 @@ const existingWorkouts =
               )}
             </section>
 
-            {/* BEGINNER HELP */}
-            <section className="rounded-[2rem] bg-[#EAD8D3] px-7 py-8 md:px-9">
-              <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-                <div>
-                  <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
-                    YOUR BODY. YOUR PACE.
-                  </p>
-
-                  <h2 className="mt-3 font-serif text-3xl">
-                    Modify when you need to.{" "}
-                    <span className="italic text-[#9D6F67]">
-                      keep moving. ♡
-                    </span>
-                  </h2>
-                </div>
-
-                <Link
-                  href="/dashboard/resources/beginners"
-                  className="inline-flex shrink-0 items-center justify-center rounded-full bg-[#211C19] px-7 py-3.5 text-[8px] tracking-[0.22em] text-[#F7F1ED] transition hover:-translate-y-0.5"
-                >
-                  EXERCISE HELP →
-                </Link>
-              </div>
-            </section>
-
-            {/* BACK TO RESOURCES */}
-            <section className="py-14 text-center">
-              <Link
-                href="/dashboard/resources"
-                className="text-[8px] tracking-[0.25em] text-[#9D6F67] transition hover:text-[#211C19]"
-              >
-                ← BACK TO ALL RESOURCES
-              </Link>
-            </section>
+           
           </section>
         </section>
       </div>
