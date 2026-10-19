@@ -409,7 +409,9 @@ export default function RecipesPage() {
         .upsert(
           {
             user_id: userId,
-            day: selectedPlanDate,
+            day: parseStorageDate(selectedPlanDate)
+  .toLocaleDateString("en-US", { weekday: "long" })
+  .toUpperCase(),
             plan_date: selectedPlanDate,
             meal_slot: selectedMealSlot,
             recipe_id: plannerRecipe.id,
@@ -601,202 +603,120 @@ export default function RecipesPage() {
                 </p>
               </div>
 
-              {/* COMPACT EXPANDABLE RECIPES */}
-              {filteredRecipes.length > 0 ? (
-                <div className="mt-6 overflow-hidden rounded-[1.25rem] border border-[#DED0CB] bg-[#FBF8F6]">
-                  {filteredRecipes.map((recipe, index) => {
-                    const isOpen =
-                      expandedRecipeId === recipe.id;
+             
+             
+{/* EDITORIAL RECIPE GRID */}
+{filteredRecipes.length > 0 ? (
+  <div className="mt-5 grid grid-cols-2 items-stretch gap-2.5 sm:gap-3 lg:grid-cols-3">
+    {filteredRecipes.map((recipe) => {
+      const isFavorite = favoriteRecipeIds.includes(recipe.id);
 
-                    const isFavorite =
-                      favoriteRecipeIds.includes(recipe.id);
+      return (
+        <article
+          key={recipe.id}
+          className="flex min-w-0 flex-col overflow-hidden rounded-[1.1rem] border border-[#E3D5CF] bg-[#FFFCFA] p-3 transition-colors hover:border-[#CBA9A2] sm:p-4"
+        >
+          <div className="flex items-start justify-between gap-1">
+            <span className="min-w-0 text-[7px] uppercase tracking-[0.12em] text-[#9D6F67] sm:text-[8px]">
+              {recipe.meal}
+            </span>
 
-                    const originalIndex =
-                      sharedRecipes.findIndex(
-                        (item) => item.id === recipe.id
-                      );
+            <button
+              type="button"
+              onClick={() => toggleFavorite(recipe.id)}
+              disabled={!userId || savingFavoriteId !== null}
+              aria-label={
+                isFavorite
+                  ? `Remove ${recipe.title} from favorites`
+                  : `Add ${recipe.title} to favorites`
+              }
+              aria-pressed={isFavorite}
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#E8DCD7] text-sm text-[#A77B73] transition hover:bg-[#F1E4DF] disabled:opacity-50"
+            >
+              {isFavorite ? "♥" : "♡"}
+            </button>
+          </div>
 
-                    const panelId = `recipe-details-${recipe.id}`;
+          <Link
+            href={`/dashboard/resources/recipes/${recipe.id}`}
+            className="mt-2.5 block min-w-0"
+          >
+            <h3 className="font-serif text-[16px] leading-[1.18] text-[#211C19] transition-colors hover:text-[#9D6F67] sm:text-[20px]">
+              {recipe.title}
+            </h3>
+          </Link>
 
-                    return (
-                      <article
-                        key={recipe.id}
-                        className={
-                          index > 0
-                            ? "border-t border-[#E5DAD5]"
-                            : ""
-                        }
-                      >
-                        {/* COLLAPSED ROW */}
-                        <div className="flex items-center gap-3 px-4 py-4 sm:gap-4 sm:px-6">
-                          <span className="w-6 shrink-0 font-serif text-sm italic text-[#C39A92]">
-                            {String(originalIndex + 1).padStart(
-                              2,
-                              "0"
-                            )}
-                          </span>
+          <p className="mt-1.5 line-clamp-2 text-[9px] leading-[1.45] text-[#947D75] sm:text-[10px]">
+            {recipe.subtitle}
+          </p>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setExpandedRecipeId(
-                                isOpen ? null : recipe.id
-                              )
-                            }
-                            aria-expanded={isOpen}
-                            aria-controls={panelId}
-                            className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
-                          >
-                            <div className="min-w-0">
-                              <h3 className="font-serif text-base leading-snug text-[#211C19] sm:text-lg">
-                                {recipe.title}
-                              </h3>
+          <div className="mt-auto pt-3">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-[#E9DED9] pt-2.5">
+              <span className="text-[10px] text-[#806E68]">
+                <span className="font-serif text-sm text-[#A77B73]">
+                  {recipe.calories}
+                </span>{" "}
+                cal
+              </span>
 
-                              <p className="mt-1 text-[10px] leading-4 text-[#927D76]">
-                                {recipe.meal}{" "}
-                                <span className="mx-1 text-[#CBA9A2]">
-                                  ·
-                                </span>
-                                {recipe.time}
-                              </p>
-                            </div>
+              <span className="text-[10px] text-[#806E68]">
+                <span className="font-serif text-sm text-[#A77B73]">
+                  {recipe.protein}g
+                </span>{" "}
+                protein
+              </span>
+            </div>
 
-                            <span className="shrink-0 text-[#A77B73]">
-                              <ChevronIcon open={isOpen} />
-                            </span>
-                          </button>
+            <p className="mt-2 text-[9px] text-[#806E68]">
+              ◷ {recipe.time}
+            </p>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              toggleFavorite(recipe.id)
-                            }
-                            disabled={
-                              !userId ||
-                              savingFavoriteId !== null
-                            }
-                            aria-label={
-                              isFavorite
-                                ? `Remove ${recipe.title} from favorites`
-                                : `Add ${recipe.title} to favorites`
-                            }
-                            aria-pressed={isFavorite}
-                            title={
-                              isFavorite
-                                ? "Remove from favorites"
-                                : "Save to favorites"
-                            }
-                            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#E1D3CE] text-lg text-[#A77B73] transition hover:bg-[#EAD8D3] disabled:opacity-50"
-                          >
-                            {isFavorite ? "♥" : "♡"}
-                          </button>
-                        </div>
+            <div className="mt-3 flex flex-col gap-1.5">
+              <Link
+                href={`/dashboard/resources/recipes/${recipe.id}`}
+                className="flex min-h-9 items-center justify-center rounded-full bg-[#211C19] px-2 py-2 text-center text-[8px] uppercase tracking-[0.07em] text-[#FFFCFA] transition hover:bg-[#453630]"
+              >
+                View recipe →
+              </Link>
 
-                        {/* EXPANDED RECIPE */}
-                        {isOpen && (
-                          <div
-                            id={panelId}
-                            className="border-t border-[#E5DAD5] bg-[#F7F1ED]/75 px-5 pb-6 pt-5 sm:px-10"
-                          >
-                            <p className="font-serif text-base italic text-[#A77B73]">
-                              {recipe.subtitle}
-                            </p>
+              <button
+                type="button"
+                disabled={!userId}
+                onClick={() => openMealPlanner(recipe)}
+                className="flex min-h-9 items-center justify-center rounded-full border border-[#D6BDB5] px-2 py-2 text-center text-[8px] uppercase tracking-[0.05em] text-[#8F655E] transition hover:bg-[#F3E7E2] disabled:opacity-50"
+              >
+                {lastAddedRecipeId === recipe.id
+                  ? "Added ✓"
+                  : "+ Use this meal"}
+              </button>
+            </div>
+          </div>
+        </article>
+      );
+    })}
+  </div>
+) : (
+  <div className="mt-6 rounded-[1.5rem] border border-[#DED0CB] bg-[#FFFCFA] px-6 py-12 text-center">
+    <p className="font-serif text-2xl italic text-[#A77B73]">
+      no recipes found. ♡
+    </p>
 
-                            {/* SIMPLE TEXT TAGS */}
-                            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
-                              {recipe.goals.map((tag, tagIndex) => (
-                                <span
-                                  key={tag}
-                                  className="text-[9px] tracking-[0.08em] text-[#927D76]"
-                                >
-                                  {tagIndex > 0 && (
-                                    <span className="mr-3 text-[#CBA9A2]">
-                                      ·
-                                    </span>
-                                  )}
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
+    <p className="mt-3 text-xs leading-6 text-[#806E68]">
+      Try another search or clear your filters.
+    </p>
 
-                            {/* NUTRITION */}
-                            <div className="mt-5 grid grid-cols-3 divide-x divide-[#E1D3CE] border-y border-[#E1D3CE] py-4">
-                              <div className="pr-3">
-                                <p className="font-serif text-xl text-[#211C19]">
-                                  {recipe.calories}
-                                </p>
-                                <p className="mt-1 text-[8px] tracking-[0.14em] text-[#927D76]">
-                                  CALORIES
-                                </p>
-                              </div>
+    <button
+      type="button"
+      onClick={clearFilters}
+      className="mt-5 text-[9px] uppercase tracking-[0.15em] text-[#9D6F67] underline underline-offset-4"
+    >
+      Clear filters
+    </button>
+  </div>
+)}
 
-                              <div className="px-4">
-                                <p className="font-serif text-xl text-[#211C19]">
-                                  {recipe.protein}g
-                                </p>
-                                <p className="mt-1 text-[8px] tracking-[0.14em] text-[#927D76]">
-                                  PROTEIN
-                                </p>
-                              </div>
 
-                              <div className="pl-4">
-                                <p className="font-serif text-xl text-[#211C19]">
-                                  {recipe.carbs}g
-                                </p>
-                                <p className="mt-1 text-[8px] tracking-[0.14em] text-[#927D76]">
-                                  CARBS
-                                </p>
-                              </div>
-                            </div>
 
-                            {/* ACTIONS */}
-                            <div className="mt-5 flex flex-wrap items-center gap-3">
-                              <Link
-                                href={`/dashboard/resources/recipes/${recipe.id}`}
-                                className="inline-flex items-center gap-2 rounded-full bg-[#211C19] px-5 py-3 text-[9px] tracking-[0.12em] text-[#F7F1ED] transition hover:bg-[#3A312D]"
-                              >
-                                VIEW RECIPE
-                                <span>→</span>
-                              </Link>
-
-                              <button
-                                type="button"
-                                disabled={!userId}
-                                onClick={() =>
-                                  openMealPlanner(recipe)
-                                }
-                                className="rounded-full border border-[#CBA9A2] px-5 py-3 text-[9px] tracking-[0.12em] text-[#8F655E] transition hover:bg-[#EAD8D3] disabled:opacity-50"
-                              >
-                                {lastAddedRecipeId === recipe.id
-                                  ? "ADDED TO YOUR WEEK ✓"
-                                  : "USE THIS MEAL"}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </article>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="mt-6 rounded-[1.25rem] border border-[#DED0CB] bg-[#FBF8F6] px-6 py-12 text-center">
-                  <p className="font-serif text-2xl italic text-[#A77B73]">
-                    no recipes found. ♡
-                  </p>
-
-                  <p className="mt-3 text-xs leading-6 text-[#806E68]">
-                    Try another search or clear your filters.
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="mt-5 text-[9px] tracking-[0.15em] text-[#9D6F67] underline underline-offset-4"
-                  >
-                    CLEAR FILTERS
-                  </button>
-                </div>
-              )}
 
               {/* MEAL PLAN LINK */}
               <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-[#DED0CB] pt-6">

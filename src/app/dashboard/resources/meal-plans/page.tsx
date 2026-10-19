@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import { recipes as recipeLibrary } from "@/lib/recipes";
 
 type MealSlot = "BREAKFAST" | "LUNCH" | "DINNER" | "SNACK";
 type Sex = "female" | "male";
@@ -43,26 +44,18 @@ const mealSlots: MealSlot[] = [
   "SNACK",
 ];
 
-const recipes: Recipe[] = [
-  { id: "protein-pancakes", title: "Protein Pancakes", category: "BREAKFAST" },
-  { id: "breakfast-wrap", title: "High-Protein Breakfast Wrap", category: "BREAKFAST" },
-  { id: "greek-yogurt-crunch-bowl", title: "Greek Yogurt Crunch Bowl", category: "BREAKFAST" },
-  { id: "strawberry-protein-smoothie", title: "Strawberry Protein Smoothie", category: "SNACK" },
-  { id: "protein-snack-box", title: "Protein Snack Box", category: "SNACK" },
-  { id: "chicken-taco-bowl", title: "Chicken Taco Bowl", category: "LUNCH" },
-  { id: "ground-turkey-sweet-potato-bowl", title: "Ground Turkey Sweet Potato Bowl", category: "LUNCH" },
-  { id: "turkey-burger-bowl", title: "Turkey Burger Bowl", category: "LUNCH" },
-  { id: "turkey-quesadillas", title: "Ground Turkey Quesadillas", category: "LUNCH" },
-  { id: "black-bean-corn-tacos", title: "Black Bean + Corn Tacos", category: "LUNCH" },
-  { id: "black-bean-taquitos", title: "Crispy Black Bean Taquitos", category: "LUNCH" },
-  { id: "creamy-chicken-protein-pasta", title: "Creamy Chicken Protein Pasta", category: "DINNER" },
-  { id: "salmon-roasted-veggies", title: "Salmon + Roasted Veggies", category: "DINNER" },
-  { id: "lemon-garlic-shrimp", title: "Lemon Garlic Shrimp + Zucchini", category: "DINNER" },
-  { id: "loaded-chicken-potato", title: "Loaded Chicken Potato", category: "DINNER" },
-  { id: "honey-soy-chicken-bowl", title: "Honey Soy Chicken Veggie Bowl", category: "DINNER" },
-  { id: "salmon-power-bowl", title: "Salmon Power Bowl", category: "DINNER" },
-  { id: "turkey-stuffed-peppers", title: "Turkey Stuffed Bell Peppers", category: "DINNER" },
-];
+const recipes: Recipe[] = recipeLibrary.map((recipe) => ({
+  id: recipe.id,
+  title: recipe.title,
+  category:
+    recipe.meal === "Breakfast"
+      ? "BREAKFAST"
+      : recipe.meal === "Lunch"
+        ? "LUNCH"
+        : recipe.meal === "Dinner"
+          ? "DINNER"
+          : "SNACK",
+}));
 
 const plans = [
   {

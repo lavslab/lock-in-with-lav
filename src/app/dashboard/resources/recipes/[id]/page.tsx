@@ -131,14 +131,20 @@ export default function DynamicRecipePage() {
                 ))}
               </div>
 
-              {/* TITLE */}
-              <h1 className="mt-6 font-serif text-4xl leading-[0.95] md:text-5xl lg:text-6xl">
-                {recipe.title}
-              </h1>
+             
+{/* TITLE */}
+<h1 className="mt-5 max-w-2xl font-serif text-[29px] font-normal leading-[1.12] tracking-[-0.025em] text-[#211C19] sm:text-4xl">
+  {recipe.title}
+</h1>
 
-              <p className="mt-4 font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-                {recipe.subtitle} ♡
-              </p>
+<p className="mt-2 font-serif text-base italic text-[#A77B73] sm:text-lg">
+  {recipe.subtitle} ♡
+</p>
+
+<p className="mt-4 max-w-xl text-[9px] leading-5 tracking-[0.04em] text-[#806E68]">
+  {recipe.description}
+</p>
+
 
               <p className="mt-5 max-w-xl text-[9px] uppercase leading-5 tracking-[0.13em] text-[#806E68]">
                 {recipe.description}
@@ -146,115 +152,142 @@ export default function DynamicRecipePage() {
             </div>
           </section>
 
-          {/* MACROS */}
-          <section className="pb-8">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-              {macroCards.map(([value, label]) => (
-                <div
-                  key={label}
-                  className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] px-4 py-5 text-center"
-                >
-                  <p className="font-serif text-2xl text-[#A77B73]">
-                    {value}
-                  </p>
+         
+{/* MACROS */}
+<section className="pb-6">
+  <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 sm:gap-3">
+    {macroCards.map(([value, label]) => (
+      <div
+        key={label}
+        className="flex min-w-0 flex-col items-center justify-center rounded-xl border border-[#DED0CB] bg-[#FBF8F6] px-1.5 py-3 text-center sm:px-3 sm:py-4"
+      >
+        <p className="font-serif text-lg leading-tight text-[#A77B73] sm:text-xl">
+          {value}
+        </p>
 
-                  <p className="mt-2 text-[7px] tracking-[0.18em] text-[#806E68]">
-                    {label}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
+        <p className="mt-1.5 text-[7px] leading-tight tracking-[0.08em] text-[#806E68] sm:tracking-[0.14em]">
+          {label}
+        </p>
+      </div>
+    ))}
+  </div>
+</section>
 
-          {/* INGREDIENTS + METHOD */}
-          <section className="grid gap-6 pb-10 xl:grid-cols-[0.9fr_1.1fr]">
-            {/* INGREDIENTS */}
-            <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-8">
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                INGREDIENTS
-              </p>
 
-              <h2 className="mt-3 font-serif text-3xl">
-                What you&apos;ll{" "}
-                <span className="italic text-[#A77B73]">need.</span>
-              </h2>
+         
+{/* INGREDIENTS + METHOD */}
+<section className="grid gap-3 pb-5 xl:grid-cols-2">
+  {/* INGREDIENTS */}
+  <details className="group h-fit overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden md:p-6">
+      <div>
+        <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
+          INGREDIENTS
+        </p>
+        <h2 className="mt-2 font-serif text-xl text-[#211C19]">
+          What you&apos;ll{" "}
+          <span className="italic text-[#A77B73]">need.</span>
+        </h2>
+      </div>
+      <span className="text-xl text-[#A77B73] transition-transform group-open:rotate-45">
+        +
+      </span>
+    </summary>
 
-              <div className="mt-7 space-y-3">
-                {recipe.ingredients.map((ingredient, index) => (
-                  <div
-                    key={`${recipe.id}-ingredient-${index}`}
-                    className="flex gap-3 border-b border-[#E8DDD9] pb-3 text-sm leading-6 text-[#5F504B]"
-                  >
-                    <span className="font-serif text-[#A77B73]">♡</span>
+    <div className="border-t border-[#E8DDD9] px-5 pb-5 pt-4 md:px-6">
+      <div className="space-y-2">
+        {recipe.ingredients.map((ingredient, index) => (
+          <div
+            key={`${recipe.id}-ingredient-${index}`}
+            className="flex gap-3 border-b border-[#E8DDD9] pb-2 text-[12px] leading-5 text-[#5F504B] last:border-b-0"
+          >
+            <span className="font-serif text-[#A77B73]">♡</span>
+            <span>{ingredient}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </details>
 
-                    <span>{ingredient}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+  {/* METHOD */}
+  <details className="group h-fit overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6]">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden md:p-6">
+      <div>
+        <p className="text-[8px] tracking-[0.3em] text-[#9D6F67]">
+          METHOD
+        </p>
+        <h2 className="mt-2 font-serif text-xl text-[#211C19]">
+          Let&apos;s make{" "}
+          <span className="italic text-[#A77B73]">your meal.</span>
+        </h2>
+      </div>
+      <span className="text-xl text-[#A77B73] transition-transform group-open:rotate-45">
+        +
+      </span>
+    </summary>
 
-            {/* METHOD */}
-            <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-8">
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                METHOD
-              </p>
+    <div className="border-t border-[#E8DDD9] px-5 pb-5 pt-4 md:px-6">
+      <div className="space-y-4">
+        {recipe.instructions.map((instruction, index) => (
+          <div
+            key={`${recipe.id}-step-${index}`}
+            className="flex gap-3"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#EAD8D3] font-serif text-[11px] text-[#8F655E]">
+              {String(index + 1).padStart(2, "0")}
+            </span>
+            <p className="pt-1 text-[12px] leading-5 text-[#5F504B]">
+              {instruction}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </details>
+</section>
 
-              <h2 className="mt-3 font-serif text-3xl">
-                Let&apos;s make{" "}
-                <span className="italic text-[#A77B73]">your meal.</span>
-              </h2>
 
-              <div className="mt-7 space-y-5">
-                {recipe.instructions.map((instruction, index) => (
-                  <div
-                    key={`${recipe.id}-step-${index}`}
-                    className="flex gap-4"
-                  >
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#EAD8D3] font-serif text-[#8F655E]">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
+         
+{/* SWAPS */}
+<section className="pb-5">
+  <details className="group overflow-hidden rounded-[1.5rem] bg-[#EAD8D3]">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 [&::-webkit-details-marker]:hidden md:p-6">
+      <div>
+        <p className="text-[8px] tracking-[0.3em] text-[#8F655E]">
+          MAKE IT WORK FOR YOU
+        </p>
+        <h2 className="mt-2 font-serif text-xl text-[#211C19]">
+          Same meal.{" "}
+          <span className="italic text-[#9D6F67]">
+            make it yours.
+          </span>
+        </h2>
+      </div>
+      <span className="text-xl text-[#8F655E] transition-transform group-open:rotate-45">
+        +
+      </span>
+    </summary>
 
-                    <p className="pt-1 text-sm leading-6 text-[#5F504B]">
-                      {instruction}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
+    <div className="border-t border-[#D0B5AF] px-5 pb-5 pt-4 md:px-6">
+      <div className="grid gap-3 lg:grid-cols-3">
+        {recipe.swaps.map((swap) => (
+          <div
+            key={swap.label}
+            className="rounded-xl border border-[#D0B5AF] bg-[#F7F1ED]/55 p-4"
+          >
+            <p className="text-[8px] tracking-[0.18em] text-[#8F655E]">
+              {swap.label}
+            </p>
+            <p className="mt-2 text-[12px] leading-5 text-[#6F5F59]">
+              {swap.text}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </details>
+</section>
 
-          {/* SWAPS */}
-          <section className="rounded-[2rem] bg-[#EAD8D3] p-7 md:p-9">
-            <div>
-              <p className="text-[8px] tracking-[0.35em] text-[#8F655E]">
-                MAKE IT WORK FOR YOU
-              </p>
-
-              <h2 className="mt-3 font-serif text-3xl">
-                Same meal.{" "}
-                <span className="italic text-[#9D6F67]">
-                  make it yours.
-                </span>
-              </h2>
-            </div>
-
-            <div className="mt-7 grid gap-3 lg:grid-cols-3">
-              {recipe.swaps.map((swap) => (
-                <div
-                  key={swap.label}
-                  className="rounded-2xl border border-[#D0B5AF] bg-[#F7F1ED]/55 p-5"
-                >
-                  <p className="text-[8px] tracking-[0.22em] text-[#8F655E]">
-                    {swap.label}
-                  </p>
-
-                  <p className="mt-3 text-sm leading-6 text-[#6F5F59]">
-                    {swap.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
 
           {/* NUTRITION NOTE */}
           <section className="py-10">
