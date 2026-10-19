@@ -817,7 +817,7 @@ export default function JourneyProgressSections() {
                       }
                       className={smallButtonClass}
                     >
-                      {currentCheckin ? "EDIT ↗" : "CHECK IN ↗"}
+                      {currentCheckin ? "EDIT →" : "CHECK IN →"}
                     </button>
                   </div>
 
@@ -896,7 +896,7 @@ export default function JourneyProgressSections() {
                               }
                               className="text-[10px] text-[#9D6F67] disabled:opacity-40"
                             >
-                              EDIT ↗
+                              EDIT →
                             </button>
                           </div>
 

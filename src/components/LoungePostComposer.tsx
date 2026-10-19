@@ -385,7 +385,7 @@ export default function LoungePostComposer({
               }}
               className="rounded-full bg-[#211C19] px-5 py-2.5 text-[9px] tracking-[0.12em] text-white transition hover:bg-[#4A3933]"
             >
-              CREATE POST ↗
+              CREATE POST →
             </button>
           </div>
         )}
@@ -476,7 +476,7 @@ export default function LoungePostComposer({
                       disabled={posting}
                       className="w-full bg-[#FBF8F6] px-2 py-3 text-center text-[9px] tracking-[0.12em] text-[#A77B73] transition hover:bg-[#F1E6E1] disabled:opacity-50"
                     >
-                      ADJUST PHOTO ↗
+                      ADJUST PHOTO →
                     </button>
                   </div>
                 ))}
@@ -546,7 +546,7 @@ export default function LoungePostComposer({
                   }
                   className="rounded-full bg-[#211C19] px-5 py-3 text-[9px] tracking-[0.13em] text-white transition hover:bg-[#4A3933] disabled:opacity-50"
                 >
-                  {posting ? "SHARING..." : "SHARE POST ↗"}
+                  {posting ? "SHARING..." : "SHARE POST →"}
                 </button>
               </div>
             </div>

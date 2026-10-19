@@ -882,7 +882,7 @@ export default function GroceryListPage() {
                     href="/dashboard/resources/meal-plans"
                     className="shrink-0 text-[9px] tracking-[0.1em] text-[#9D6F67] underline underline-offset-4"
                   >
-                    EDIT PLAN ↗
+                    EDIT PLAN →
                   </Link>
                 </div>
 
@@ -905,7 +905,7 @@ export default function GroceryListPage() {
                       href="/dashboard/resources/meal-plans"
                       className="mt-6 inline-block rounded-full bg-[#211C19] px-6 py-3 text-[9px] tracking-[0.15em] text-white"
                     >
-                      PLAN MY WEEK ↗
+                      PLAN MY WEEK →
                     </Link>
                   </div>
                 ) : (

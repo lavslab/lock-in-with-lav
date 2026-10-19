@@ -295,7 +295,7 @@ export default function BeginnersPage() {
                   href="/dashboard/resources/workouts"
                   className="text-[9px] tracking-[0.15em] text-[#8F655E] transition hover:text-[#211C19]"
                 >
-                  EXPLORE WORKOUTS ↗
+                  EXPLORE WORKOUTS →
                 </Link>
               </div>
             </footer>

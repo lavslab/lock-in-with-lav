@@ -277,7 +277,7 @@ export default async function LoungePage() {
               href="/dashboard/lounge/profile"
               className="text-[9px] tracking-[0.12em] text-[#9D6F67] transition hover:text-[#211C19]"
             >
-              MY PROFILE ↗
+              MY PROFILE →
             </Link>
           </div>
 

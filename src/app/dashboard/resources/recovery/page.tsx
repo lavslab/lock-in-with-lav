@@ -224,7 +224,7 @@ export default function RecoveryPage() {
                         </div>
 
                         <span className="shrink-0 text-lg text-[#A77B73] transition group-hover:translate-x-1">
-                          ↗
+                          →
                         </span>
                       </Link>
                     ))}

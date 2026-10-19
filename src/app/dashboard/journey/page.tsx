@@ -912,7 +912,7 @@ useEffect(() => {
     aria-expanded={showFullCalendar}
     className="shrink-0 text-[9px] tracking-[0.1em] text-[#A77B73]"
   >
-    {showFullCalendar ? "WEEK VIEW ↑" : "VIEW FULL CALENDAR↗"}
+    {showFullCalendar ? "WEEK VIEW ↑" : "VIEW FULL CALENDAR→"}
   </button>
 </div>
               )}
@@ -969,7 +969,7 @@ useEffect(() => {
     </div>
 
     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[#D6BFB8] text-[#A77B73] transition group-hover:bg-[#F1E2DD]">
-      ↗
+      →
     </span>
   </button>
 )}
@@ -1142,7 +1142,7 @@ useEffect(() => {
                           onClick={() => setEditingMeasurements(true)}
                           className="shrink-0 rounded-full border border-[#DCC6BF] px-3.5 py-2 text-[10px] tracking-[0.12em] text-[#805D55] transition hover:bg-[#F4E9E4] disabled:opacity-50"
                         >
-                          {selectedMeasurement ? "EDIT ↗" : "+ ADD"}
+                          {selectedMeasurement ? "EDIT →" : "+ ADD"}
                         </button>
                       )}
                     </div>

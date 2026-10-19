@@ -756,7 +756,7 @@ export default function RecipesPage() {
                                 className="inline-flex items-center gap-2 rounded-full bg-[#211C19] px-5 py-3 text-[9px] tracking-[0.12em] text-[#F7F1ED] transition hover:bg-[#3A312D]"
                               >
                                 VIEW RECIPE
-                                <span>↗</span>
+                                <span>→</span>
                               </Link>
 
                               <button
@@ -814,7 +814,7 @@ export default function RecipesPage() {
                   className="inline-flex items-center gap-2 text-[9px] tracking-[0.12em] text-[#8F655E] transition hover:text-[#211C19]"
                 >
                   MAKE A MEAL PLAN
-                  <span>↗</span>
+                  <span>→</span>
                 </Link>
               </div>
             </section>

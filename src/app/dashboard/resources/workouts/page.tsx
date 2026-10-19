@@ -1219,7 +1219,7 @@ const existingWorkouts =
         <span>VIEW WORKOUT</span>
 
         <span className="text-lg text-[#A77B73]">
-          ↗
+          →
         </span>
       </Link>
     </div>

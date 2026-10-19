@@ -232,7 +232,7 @@ export default function ResourcesPage() {
             className="mt-4 inline-flex items-center gap-2 text-[9px] font-medium tracking-[0.14em] text-[#8F655E] transition hover:text-[#211C19]"
           >
             {item.action}
-            <span aria-hidden="true">↗</span>
+            <span aria-hidden="true">→</span>
           </Link>
         </>
       )}

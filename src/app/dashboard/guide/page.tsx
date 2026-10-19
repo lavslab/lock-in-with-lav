@@ -1548,7 +1548,7 @@ export default function GuidePage() {
                             : "CHOOSE WORKOUT"}
 
                         <span className="font-serif text-sm">
-                          {isEditingWorkouts ? "✓" : "↗"}
+                          {isEditingWorkouts ? "✓" : "→"}
                         </span>
                       </button>
                     )}
@@ -1576,7 +1576,7 @@ export default function GuidePage() {
                         </div>
 
                         <span className="text-lg text-[#A77B73] transition group-hover:translate-x-1">
-                          ↗
+                          →
                         </span>
                       </Link>
                     ) : activeSelectedWorkouts.length > 0 ? (
@@ -1598,7 +1598,7 @@ export default function GuidePage() {
                             </div>
 
                             <span className="text-lg text-[#A77B73] transition group-hover:translate-x-1">
-                              ↗
+                              →
                             </span>
                           </Link>
                         ))}
@@ -1649,7 +1649,7 @@ export default function GuidePage() {
                           href="/dashboard/resources/workouts"
                           className="shrink-0 text-[9px] tracking-[0.15em] text-[#9D6F67] transition hover:text-[#211C19]"
                         >
-                          VIEW LIBRARY ↗
+                          VIEW LIBRARY →
                         </Link>
                       </div>
 
@@ -1840,7 +1840,7 @@ export default function GuidePage() {
                       <span className="font-serif text-lg text-[#A77B73]">
                         {tool.number === "03" && showMovementLogger
                           ? "−"
-                          : "↗"}
+                          : "→"}
                       </span>
                     </div>
 
@@ -1976,7 +1976,7 @@ export default function GuidePage() {
                 </div>
 
                 <span className="shrink-0 text-lg text-[#A77B73] transition group-hover:translate-x-1">
-                  ↗
+                  →
                 </span>
               </Link>
 
@@ -1995,7 +1995,7 @@ export default function GuidePage() {
                 </div>
 
                 <span className="shrink-0 text-lg text-[#A77B73] transition group-hover:translate-x-1">
-                  ↗
+                  →
                 </span>
               </Link>
             </div>
@@ -2153,7 +2153,7 @@ export default function GuidePage() {
               >
                 {isApplyingMethod
                   ? "SETTING YOUR METHOD..."
-                  : "SET THIS METHOD ↗"}
+                  : "SET THIS METHOD →"}
               </button>
 
               <p className="mt-3 text-center text-[10px] italic text-[#927D76]">
