@@ -2083,7 +2083,7 @@ export default function GuidePage() {
 
             {/* METHOD OPTIONS */}
 
-            <div className="space-y-3 overflow-y-auto px-5 py-5 sm:px-6">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-5 py-5 sm:px-6">
               {trainingMethods.map((method, index) => {
                 const isSelected =
                   previewMethod === method.id;
@@ -2129,9 +2129,78 @@ export default function GuidePage() {
                       </span>
                     </div>
                   </button>
-                );
+                              );
               })}
+
+            {/* WEEKLY METHOD PREVIEW */}
+
+{selectedMethod && (
+  <div className="border-t border-[#E1D3CE] px-5 pb-5 pt-5 sm:px-6">
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <div>
+        <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+          A LOOK AT YOUR WEEK
+        </p>
+
+        <h3 className="mt-2 font-serif text-xl text-[#211C19]">
+          {selectedMethod.title}
+        </h3>
+      </div>
+
+      <span className="text-[9px] tracking-[0.12em] text-[#A77B73]">
+        PREVIEW
+      </span>
+    </div>
+
+    {selectedMethod.id === "custom" ? (
+      <div className="rounded-[1rem] border border-[#E1D3CE] bg-[#F7F1ED] p-5">
+        <p className="font-serif text-lg text-[#211C19]">
+          Your calendar. Your rules.
+        </p>
+
+        <p className="mt-2 text-[11px] leading-5 text-[#806E68]">
+          Start with seven open training days. Choose your own
+          workouts and create a weekly routine that fits your life.
+        </p>
+      </div>
+    ) : (
+      <div className="overflow-hidden rounded-[1rem] border border-[#E1D3CE] bg-[#F7F1ED]">
+        {selectedMethod.days.map((day, index) => (
+          <div
+            key={day.day}
+            className={`flex items-center gap-3 px-4 py-3 ${
+              index > 0 ? "border-t border-[#E1D3CE]" : ""
+            }`}
+          >
+            <span className="w-12 shrink-0 text-[9px] tracking-[0.08em] text-[#9D6F67]">
+              DAY {day.day}
+            </span>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-medium tracking-[0.04em] text-[#211C19]">
+                {day.title}
+              </p>
+
+              <p className="mt-1 text-[10px] leading-4 text-[#927D76]">
+                {day.focus}
+              </p>
             </div>
+
+            <span className="text-sm text-[#A77B73]">
+              {day.title === "RECOVER" ? "♡" : "→"}
+            </span>
+          </div>
+        ))}
+      </div>
+    )}
+
+    <p className="mt-3 text-center text-[10px] italic text-[#927D76]">
+      Just a preview. Your calendar won't change until you
+      confirm. ♡
+    </p>
+  </div>
+)}
+ </div>
 
             {/* ACTION */}
 
