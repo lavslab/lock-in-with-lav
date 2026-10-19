@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import LoungeWelcome from "@/components/LoungeWelcome";
 import LoungePostComposer from "@/components/LoungePostComposer";
 import LoungeFeed from "@/components/LoungeFeed";
+import LoungeSpaces from "@/components/LoungeSpaces";
 
 type LoungePost = {
   id: string;
@@ -58,8 +59,8 @@ export default async function LoungePage() {
 
     return (
       <main className="min-h-screen bg-[#F7F1ED] p-8 text-center text-[#806D65]">
-        We couldn&apos;t load the Lounge right now. Please try
-        again.
+        We couldn&apos;t load the Lounge right now.
+        Please try again.
       </main>
     );
   }
@@ -79,15 +80,19 @@ export default async function LoungePage() {
   const avatarUrl = loungeProfile.avatar_path
     ? supabase.storage
         .from("lounge-avatars")
-        .getPublicUrl(loungeProfile.avatar_path).data.publicUrl
+        .getPublicUrl(loungeProfile.avatar_path).data
+        .publicUrl
     : null;
 
   // Load newest posts.
-  const { data: postsData, error: postsError } = await supabase
-    .from("lounge_posts")
-    .select("id, user_id, content, category, created_at")
-    .order("created_at", { ascending: false })
-    .limit(30);
+  const { data: postsData, error: postsError } =
+    await supabase
+      .from("lounge_posts")
+      .select(
+        "id, user_id, content, category, created_at"
+      )
+      .order("created_at", { ascending: false })
+      .limit(30);
 
   if (postsError) {
     console.error("LOUNGE POSTS ERROR:", postsError);
@@ -107,34 +112,44 @@ export default async function LoungePage() {
   if (authorIds.length > 0) {
     const { data, error: authorsError } = await supabase
       .from("lounge_profiles")
-      .select("user_id, display_name, username, avatar_path")
+      .select(
+        "user_id, display_name, username, avatar_path"
+      )
       .in("user_id", authorIds);
 
     if (authorsError) {
-      console.error("LOUNGE AUTHORS ERROR:", authorsError);
+      console.error(
+        "LOUNGE AUTHORS ERROR:",
+        authorsError
+      );
     }
 
     authors = data ?? [];
   }
 
-  // Load post photo records.
+  // Load post photos.
   let photos: LoungePhoto[] = [];
 
   if (postIds.length > 0) {
     const { data, error: photosError } = await supabase
       .from("lounge_post_photos")
-      .select("id, post_id, storage_path, position")
+      .select(
+        "id, post_id, storage_path, position"
+      )
       .in("post_id", postIds)
       .order("position", { ascending: true });
 
     if (photosError) {
-      console.error("LOUNGE PHOTOS ERROR:", photosError);
+      console.error(
+        "LOUNGE PHOTOS ERROR:",
+        photosError
+      );
     }
 
     photos = data ?? [];
   }
 
-  // NEW: Load likes for the posts in our feed.
+  // Load likes.
   let likes: LoungeLike[] = [];
 
   if (postIds.length > 0) {
@@ -144,13 +159,15 @@ export default async function LoungePage() {
       .in("post_id", postIds);
 
     if (likesError) {
-      console.error("LOUNGE LIKES ERROR:", likesError);
+      console.error(
+        "LOUNGE LIKES ERROR:",
+        likesError
+      );
     }
 
     likes = data ?? [];
   }
 
-  // Build like counts and track the current member's likes.
   const likeCounts = new Map<string, number>();
   const likedPostIds = new Set<string>();
 
@@ -165,7 +182,7 @@ export default async function LoungePage() {
     }
   }
 
-  // Generate temporary links for private post photos.
+  // Generate signed URLs for private photos.
   const photoPaths = photos.map(
     (photo) => photo.storage_path
   );
@@ -202,7 +219,7 @@ export default async function LoungePage() {
     ])
   );
 
-  // Prepare posts for our interactive feed.
+  // Prepare posts for the interactive feed.
   const feedPosts = posts.map((post) => {
     const author = authorMap.get(post.user_id);
 
@@ -212,15 +229,19 @@ export default async function LoungePage() {
     const authorAvatar = author?.avatar_path
       ? supabase.storage
           .from("lounge-avatars")
-          .getPublicUrl(author.avatar_path).data.publicUrl
+          .getPublicUrl(author.avatar_path).data
+          .publicUrl
       : null;
 
     const postPhotos = photos
-      .filter((photo) => photo.post_id === post.id)
+      .filter(
+        (photo) => photo.post_id === post.id
+      )
       .map((photo) => ({
         id: photo.id,
         storagePath: photo.storage_path,
-        url: photoUrls.get(photo.storage_path) || "",
+        url:
+          photoUrls.get(photo.storage_path) || "",
       }))
       .filter((photo) => photo.url !== "");
 
@@ -231,73 +252,69 @@ export default async function LoungePage() {
       category: post.category,
       createdAt: post.created_at,
       authorName,
-      authorUsername: author?.username || null,
+      authorUsername:
+        author?.username || null,
       authorAvatar,
       photos: postPhotos,
-
-      // NEW: Likes data.
-      likeCount: likeCounts.get(post.id) ?? 0,
-      likedByMe: likedPostIds.has(post.id),
+      likeCount:
+        likeCounts.get(post.id) ?? 0,
+      likedByMe:
+        likedPostIds.has(post.id),
     };
   });
 
   return (
-    <main className="min-h-screen bg-[#F7F1ED] px-5 pb-28 pt-8 text-[#302521]">
+    <main className="min-h-screen bg-[#F7F1ED] px-5 pb-28 pt-7 text-[#211C19] sm:px-8">
       <div className="mx-auto max-w-2xl">
-        <header className="mb-9">
-          <p className="mb-3 text-[10px] tracking-[0.3em] text-[#A77B73]">
-            YOUR COMMUNITY SPACE
-          </p>
+        {/* PAGE HEADER */}
+       <header className="mb-5 border-b border-[#DED0CB] pb-4">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="text-[9px] tracking-[0.25em] text-[#9D6F67]">
+              YOUR COMMUNITY
+            </p>
 
-          <h1 className="font-serif text-4xl tracking-tight">
-            The Lock In Lounge
-            <span className="ml-2 text-[#A77B73]">
-              ♡
+            <Link
+              href="/dashboard/lounge/profile"
+              className="text-[9px] tracking-[0.12em] text-[#9D6F67] transition hover:text-[#211C19]"
+            >
+              MY PROFILE ↗
+            </Link>
+          </div>
+
+         <h1 className="font-serif text-[25px] leading-tight tracking-tight text-[#211C19] sm:text-[29px]">
+            The Lock In{" "}
+            <span className="italic text-[#A77B73]">
+              Lounge.
             </span>
           </h1>
 
-          <p className="mt-4 text-sm leading-7 text-[#806D65]">
-            A little space to show up, share your wins,
-            and keep each other going.
+          <p className="mt-2 text-[11px] leading-5 text-[#806D65]">
+            A space to connect, share & grow together. ♡
           </p>
         </header>
 
-        <LoungePostComposer
-          displayName={displayName}
-          username={loungeProfile.username}
-          avatarUrl={avatarUrl}
-        />
-
-        {postsError ? (
-          <section className="rounded-3xl border border-[#E9DAD3] bg-white px-6 py-10 text-center">
-            <p className="text-sm text-[#806D65]">
-              We couldn&apos;t load the community feed right
-              now. Please try again.
-            </p>
-          </section>
-        ) : (
-          <LoungeFeed
-            posts={feedPosts}
-            currentUserId={user.id}
+        {/* PUBLIC FEED + PRIVATE CIRCLE TABS */}
+        <LoungeSpaces>
+          <LoungePostComposer
+            displayName={displayName}
+            username={loungeProfile.username}
+            avatarUrl={avatarUrl}
           />
-        )}
 
-        <footer className="mt-10 text-center">
-          <p className="text-[10px] tracking-[0.12em] text-[#A18A82]">
-            YOUR JOURNEY IS PERSONAL.
-          </p>
-
-          <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
-            Your community doesn&apos;t have to be.
-          </p>
-
-          <Link
-            href="/dashboard/lounge/profile"
-            className="mt-5 inline-block text-xs text-[#A77B73] underline underline-offset-4"
-          >
-            Edit your Lounge profile
-          </Link>
-        </footer>
+          {postsError ? (
+            <section className="rounded-[1.4rem] border border-[#DED0CB] bg-[#FBF8F6] px-6 py-10 text-center">
+              <p className="text-[12px] leading-6 text-[#806D65]">
+                We couldn&apos;t load the community feed
+                right now. Please try again.
+              </p>
+            </section>
+          ) : (
+            <LoungeFeed
+              posts={feedPosts}
+              currentUserId={user.id}
+            />
+          )}
+        </LoungeSpaces>
       </div>
     </main>
   );

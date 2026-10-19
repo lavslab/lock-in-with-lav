@@ -1,5 +1,16 @@
 export type ChallengeLength = 21 | 30 | 60 | 75;
 
+
+export type ChallengeJourney = {
+  id: string;
+  user_id: string;
+  status: string;
+  start_date: string;
+  challenge_length: ChallengeLength;
+};
+
+
+
 export const DEFAULT_CHALLENGE_LENGTH: ChallengeLength = 75;
 
 export const CHALLENGE_LENGTHS: ChallengeLength[] = [21, 30, 60, 75];
@@ -136,4 +147,25 @@ export function getChallengePercentage(
     100,
     Math.round((completedDays / challengeLength) * 100)
   );
+}
+
+// Returns the actual journey day without capping it
+// at the challenge length.
+export function getJourneyDay(
+  startDate: string,
+  today = new Date()
+) {
+  const [year, month, day] = startDate.split("-").map(Number);
+
+  const startUtc = Date.UTC(year, month - 1, day);
+
+  const todayUtc = Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  return Math.floor(
+    (todayUtc - startUtc) / (1000 * 60 * 60 * 24)
+  ) + 1;
 }

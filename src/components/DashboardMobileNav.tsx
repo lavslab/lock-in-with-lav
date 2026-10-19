@@ -1,7 +1,14 @@
+
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import {
+  DEFAULT_CHALLENGE_LENGTH,
+  getCurrentChallengeDay,
+} from "@/lib/challenge";
 
 type DashboardMobileNavProps = {
   initial: string;
@@ -11,102 +18,7 @@ type IconProps = {
   className?: string;
 };
 
-function TodayIcon({ className = "" }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" />
-    </svg>
-  );
-}
-
 function JourneyIcon({ className = "" }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M12 7.5v5l3.25 2" />
-    </svg>
-  );
-}
-
-function GuideIcon({ className = "" }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M5.5 4.5h9a2 2 0 0 1 2 2v13h-9a2 2 0 0 1-2-2v-13Z" />
-      <path d="M16.5 6.5h2a1.5 1.5 0 0 1 1.5 1.5v11.5h-3.5" />
-      <path d="M8.5 8.5h5" />
-      <path d="M8.5 12h5" />
-    </svg>
-  );
-}
-
-function ResourcesIcon({ className = "" }: IconProps) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
-    >
-      <path d="M5 7.5h14" />
-      <path d="M5 12h14" />
-      <path d="M5 16.5h14" />
-      <circle
-        cx="7"
-        cy="7.5"
-        r="1.5"
-        fill="currentColor"
-        stroke="none"
-      />
-      <circle
-        cx="12"
-        cy="12"
-        r="1.5"
-        fill="currentColor"
-        stroke="none"
-      />
-      <circle
-        cx="17"
-        cy="16.5"
-        r="1.5"
-        fill="currentColor"
-        stroke="none"
-      />
-    </svg>
-  );
-}
-
-function ProgressIcon({ className = "" }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -126,72 +38,198 @@ function ProgressIcon({ className = "" }: IconProps) {
   );
 }
 
+
+
+function TrainIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <g transform="rotate(-45 12 12)">
+        {/* Handle */}
+        <path d="M12 7.5v9" />
+
+        {/* Top weight plate */}
+        <rect x="8.5" y="4" width="7" height="3.5" rx="0.8" />
+
+        {/* Bottom weight plate */}
+        <rect x="8.5" y="16.5" width="7" height="3.5" rx="0.8" />
+
+        {/* Outer ends */}
+        <path d="M10 2.5h4" />
+        <path d="M10 21.5h4" />
+      </g>
+    </svg>
+  );
+}
+
+
+
+function NourishIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M4 3v7a3 3 0 0 0 6 0V3" />
+      <path d="M7 3v18" />
+      <path d="M17 21V3c3 2 4 5 4 9h-4" />
+    </svg>
+  );
+}
+
+function LoungeIcon({ className = "" }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5 8 8 0 0 1-3-.6L4 20l1.6-4.5A7.5 7.5 0 1 1 20 11.5Z" />
+      <path d="M8 10.5h8M8 13.5h5" />
+    </svg>
+  );
+}
+
 const navigation = [
   {
     label: "TODAY",
     href: "/dashboard",
-    icon: TodayIcon,
+    icon: "today",
   },
   {
     label: "JOURNEY",
     href: "/dashboard/journey",
-    icon: JourneyIcon,
+    icon: "journey",
   },
   {
-    label: "GUIDE",
+    label: "TRAIN",
     href: "/dashboard/guide",
-    icon: GuideIcon,
+    icon: "train",
   },
   {
-    label: "RESOURCES",
+    label: "NOURISH",
     href: "/dashboard/resources",
-    icon: ResourcesIcon,
+    icon: "nourish",
   },
   {
-    label: "PROGRESS",
-    href: "/dashboard/progress",
-    icon: ProgressIcon,
+    label: "LOUNGE",
+    href: "/dashboard/lounge",
+    icon: "lounge",
   },
-];
+] as const;
 
 export default function DashboardMobileNav({
   initial,
 }: DashboardMobileNavProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
 
-  /*
-   * Individual workout pages already use WorkoutBackNav.
-   * Hide this global mobile BACK button there so we don't
-   * show two back buttons.
-   */
+  const [currentDay, setCurrentDay] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadCurrentDay = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError) {
+        console.error("Could not load mobile nav user:", userError);
+        return;
+      }
+
+      if (!user) return;
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("challenge_start_date, challenge_length")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) {
+        console.error("Could not load mobile nav profile:", profileError);
+        return;
+      }
+
+      if (!profile?.challenge_start_date) return;
+
+      const challengeLength =
+        profile.challenge_length ?? DEFAULT_CHALLENGE_LENGTH;
+
+      const day = getCurrentChallengeDay(
+        profile.challenge_start_date,
+        challengeLength
+      );
+
+      setCurrentDay(
+        Math.min(Math.max(day, 1), challengeLength)
+      );
+    };
+
+    loadCurrentDay();
+  }, [supabase]);
+
   const isWorkoutDetailPage =
     pathname.startsWith("/dashboard/resources/workouts/") &&
     pathname !== "/dashboard/resources/workouts";
 
-  /*
-   * TODAY is the dashboard home, so it doesn't need BACK.
-   * Workout detail pages use WorkoutBackNav instead.
-   */
   const showBackButton =
     pathname !== "/dashboard" && !isWorkoutDetailPage;
 
   const handleBack = () => {
-    /*
-     * Go back to the page the user actually came from
-     * instead of calculating a parent folder.
-     */
     if (window.history.length > 1) {
       router.back();
       return;
     }
 
-    /*
-     * Fallback for a page opened directly without
-     * useful navigation history.
-     */
     router.push("/dashboard");
   };
+
+  function renderNavigationIcon(
+    icon: (typeof navigation)[number]["icon"]
+  ) {
+    if (icon === "today") {
+      return (
+        <span className="flex h-[25px] w-[25px] items-center justify-center rounded-[6px] border border-current font-serif text-[12px] font-semibold leading-none">
+          {currentDay ? String(currentDay).padStart(2, "0") : "—"}
+        </span>
+      );
+    }
+
+    if (icon === "journey") {
+      return <JourneyIcon className="h-[21px] w-[21px]" />;
+    }
+
+    if (icon === "train") {
+      return <TrainIcon className="h-[21px] w-[21px]" />;
+    }
+
+    if (icon === "nourish") {
+      return <NourishIcon className="h-[21px] w-[21px]" />;
+    }
+
+    return <LoungeIcon className="h-[21px] w-[21px]" />;
+  }
 
   return (
     <>
@@ -255,8 +293,6 @@ export default function DashboardMobileNav({
                 : pathname === item.href ||
                   pathname.startsWith(`${item.href}/`);
 
-            const Icon = item.icon;
-
             return (
               <Link
                 key={item.href}
@@ -268,7 +304,9 @@ export default function DashboardMobileNav({
                     : "text-[#8C7770] hover:bg-[#F1E6E2]"
                 }`}
               >
-                <Icon className="h-[21px] w-[21px]" />
+                <span className="flex h-[25px] w-[25px] items-center justify-center">
+                  {renderNavigationIcon(item.icon)}
+                </span>
 
                 <span className="mt-1.5 max-w-full truncate text-[8px] tracking-[0.06em]">
                   {item.label}

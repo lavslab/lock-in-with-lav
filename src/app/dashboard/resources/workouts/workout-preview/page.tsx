@@ -323,12 +323,12 @@ const isTimedExercise = (exercise: WorkoutExercise) =>
                 {workout.eyebrow}
               </p>
 
-              <h1 className="mt-3 font-serif text-[30px] leading-[1.15] sm:text-4xl">
-                {workout.title}{" "}
-                <span className="italic text-[#A77B73]">
-                  {workout.accentTitle}
-                </span>
-              </h1>
+              <h1 className="mt-2 font-serif text-[27px] leading-tight tracking-tight text-[#211C19] sm:text-[32px]">
+  {workout.title}{" "}
+  <span className="italic text-[#A77B73]">
+    {workout.accentTitle}
+  </span>
+</h1>
 
               <div className="mt-5 flex items-center justify-between">
                 <p className="text-[11px] text-[#806E68]">
@@ -452,12 +452,9 @@ const isTimedExercise = (exercise: WorkoutExercise) =>
                   <p className="text-[9px] tracking-widest text-[#8F655E]">
                     01 · WARM UP
                   </p>
-                  <h2 className="mt-1 font-serif text-xl">
-                    Get ready{" "}
-                    <span className="italic text-[#9D6F67]">
-                      to move. ♡
-                    </span>
-                  </h2>
+                  <h2 className="mt-1 font-serif text-lg text-[#211C19]">
+  Warm up
+</h2>
                 </div>
                 <span className="text-xl text-[#9D6F67]">
                   {showWarmup ? "−" : "+"}
@@ -493,12 +490,9 @@ const isTimedExercise = (exercise: WorkoutExercise) =>
                 02 · THE WORKOUT
               </p>
 
-              <h2 className="mt-2 font-serif text-3xl">
-                Your{" "}
-                <span className="italic text-[#A77B73]">
-                  movements.
-                </span>
-              </h2>
+              <h2 className="mt-2 font-serif text-[25px] leading-tight text-[#211C19]">
+  Exercises
+</h2>
 
               <p className="mt-2 text-xs leading-5 text-[#806E68]">
                 {isCardioWorkout
@@ -555,7 +549,7 @@ const isTimedExercise = (exercise: WorkoutExercise) =>
                           <span
                             className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border font-serif text-sm ${
                               isComplete
-                                ? "border-[#A77B73] bg-[#EAD8D3] text-[#6F514B]"
+                                ? "border-[#A77B73] border border-[#DED0CB] bg-[#FBF8F6]"
                                 : "border-[#CBA9A2] text-[#A77B73]"
                             }`}
                           >
@@ -954,12 +948,9 @@ const isTimedExercise = (exercise: WorkoutExercise) =>
                   <p className="text-[9px] tracking-widest text-[#9D6F67]">
                     03 · COOL DOWN
                   </p>
-                  <h2 className="mt-1 font-serif text-xl">
-                    Finish{" "}
-                    <span className="italic text-[#A77B73]">
-                      slowly. ♡
-                    </span>
-                  </h2>
+                  <h2 className="mt-1 font-serif text-lg text-[#211C19]">
+  Cool down
+</h2>
                 </div>
                 <span className="text-xl text-[#A77B73]">
                   {showCooldown ? "−" : "+"}
@@ -993,8 +984,7 @@ const isTimedExercise = (exercise: WorkoutExercise) =>
 
               <h2 className="mt-3 font-serif text-2xl italic text-[#A77B73]">
                 {sessionFinished
-                  ? "you showed up for yourself. ♡"
-                  : "finish strong. stay locked in. ♡"}
+                  ? "Workout completed" : "Ready to finish?" }
               </h2>
 
               <p className="mt-3 text-xs leading-5 text-[#806E68]">

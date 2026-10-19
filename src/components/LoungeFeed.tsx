@@ -32,7 +32,7 @@ type Props = {
 };
 
 const categories = [
-  { value: "all", label: "All Posts" },
+  { value: "all", label: "All posts" },
   { value: "meals", label: "Meals" },
   { value: "movement", label: "Movement" },
   { value: "little_wins", label: "Little Wins" },
@@ -40,19 +40,14 @@ const categories = [
   { value: "general", label: "General" },
 ];
 
-const categoryLabels: Record<string, string> = {
-  general: "General",
-  meals: "Meals",
-  movement: "Movement",
-  little_wins: "Little Wins",
-  motivation: "Motivation",
-};
-
 function formatPostDate(value: string) {
-  return new Date(value).toLocaleDateString("en-CA", {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString("en-CA", {
     month: "short",
     day: "numeric",
-    year: "numeric",
   });
 }
 
@@ -60,7 +55,8 @@ export default function LoungeFeed({
   posts,
   currentUserId,
 }: Props) {
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeCategory, setActiveCategory] =
+    useState("all");
 
   const filteredPosts =
     activeCategory === "all"
@@ -71,78 +67,90 @@ export default function LoungeFeed({
 
   return (
     <section>
-      {/* FEED HEADING */}
-      <div className="mb-5">
-        <p className="text-[10px] tracking-[0.2em] text-[#A77B73]">
-          THE COMMUNITY FEED
-        </p>
-
-        <h2 className="mt-2 font-serif text-2xl text-[#302521]">
-          The latest from the Lounge ♡
-        </h2>
-      </div>
-
-      {/* CATEGORY FILTERS */}
-      <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
-        {categories.map((category) => {
-          const selected =
-            activeCategory === category.value;
-
-          return (
-            <button
-              key={category.value}
-              type="button"
-              onClick={() =>
-                setActiveCategory(category.value)
-              }
-              aria-pressed={selected}
-              className={`shrink-0 rounded-full border px-4 py-2.5 text-[11px] transition ${
-                selected
-                  ? "border-[#B98F87] bg-[#DDB5AE] text-[#302521]"
-                  : "border-[#E9DAD3] bg-white text-[#806D65] hover:border-[#B98F87]"
-              }`}
-            >
-              {category.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* EMPTY FEED */}
-      {filteredPosts.length === 0 ? (
-        <div className="rounded-3xl border border-[#E9DAD3] bg-white px-6 py-10 text-center shadow-sm">
-          <div className="mb-5 text-3xl text-[#A77B73]">
-            ♡
-          </div>
-
-          <h3 className="font-serif text-2xl text-[#302521]">
-            {activeCategory === "all"
-              ? "Something good is growing here."
-              : "Nothing here just yet ♡"}
-          </h3>
-
-          <p className="mx-auto mt-4 max-w-sm text-sm leading-7 text-[#806D65]">
-            {activeCategory === "all"
-              ? "A place for little wins, honest conversations, encouragement, and showing up together."
-              : "Be the first to share something in this category."}
+      {/* FEED HEADER */}
+      <div className="mb-5 flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[9px] tracking-[0.23em] text-[#9D6F67]">
+            THE COMMUNITY FEED
           </p>
 
-          <p className="mt-7 text-[10px] tracking-[0.2em] text-[#A77B73]">
-            {activeCategory === "all"
-              ? "BE THE FIRST TO SHARE ♡"
-              : "YOUR NEXT POST COULD GO HERE"}
+          <h2 className="mt-2 font-serif text-xl text-[#302521]">
+            From the{" "}
+            <span className="italic text-[#A77B73]">
+              Lounge.
+            </span>
+          </h2>
+        </div>
+
+        {/* CATEGORY DROPDOWN */}
+        <div className="relative shrink-0">
+          <label
+            htmlFor="lounge-category-filter"
+            className="sr-only"
+          >
+            Filter posts
+          </label>
+
+          <select
+            id="lounge-category-filter"
+            value={activeCategory}
+            onChange={(event) =>
+              setActiveCategory(event.target.value)
+            }
+            className="max-w-[140px] appearance-none rounded-full border border-[#DED0CB] bg-[#FBF8F6] py-2 pl-3 pr-8 text-[10px] text-[#806D65] outline-none focus:border-[#A77B73]"
+          >
+            {categories.map((category) => (
+              <option
+                key={category.value}
+                value={category.value}
+              >
+                {category.label}
+              </option>
+            ))}
+          </select>
+
+          <svg
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2"
+            width="11"
+            height="11"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#9D6F67"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </div>
+      </div>
+
+      {/* EMPTY STATE */}
+      {filteredPosts.length === 0 ? (
+        <div className="border-y border-[#DED0CB] px-5 py-12 text-center">
+          <span className="font-serif text-3xl text-[#A77B73]">
+            ♡
+          </span>
+
+          <h3 className="mt-3 font-serif text-xl text-[#302521]">
+            Nothing here just yet.
+          </h3>
+
+          <p className="mt-3 text-[11px] leading-6 text-[#806D65]">
+            Be the first to share something. ♡
           </p>
         </div>
       ) : (
-        <div className="space-y-5">
+        <div className="space-y-7">
           {filteredPosts.map((post) => (
             <article
-              key={post.id}
-              className="rounded-3xl border border-[#E9DAD3] bg-white p-5 shadow-sm"
-            >
-              {/* POST HEADER */}
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EAD8D3] font-serif text-lg text-[#77574E]">
+  key={post.id}
+  className="overflow-hidden rounded-[16px] border border-[#E8DCD6] bg-[#FFFCFA] px-3.5 py-4 shadow-[0_2px_12px_rgba(48,37,33,0.025)] sm:px-5"
+>
+              {/* AUTHOR HEADER */}
+              <div className="mb-3 flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EAD8D3] font-serif text-base text-[#77574E]">
                   {post.authorAvatar ? (
                     <img
                       src={post.authorAvatar}
@@ -157,11 +165,11 @@ export default function LoungeFeed({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[#302521]">
+                  <p className="truncate text-[12px] font-semibold text-[#302521]">
                     {post.authorName}
                   </p>
 
-                  <p className="truncate text-xs text-[#A18A82]">
+                  <p className="truncate text-[10px] text-[#A18A82]">
                     {post.authorUsername
                       ? `@${post.authorUsername}`
                       : "Lounge Member"}
@@ -170,36 +178,24 @@ export default function LoungeFeed({
                   </p>
                 </div>
 
-                <div className="flex shrink-0 items-center gap-2">
-                  <span className="rounded-full bg-[#F7F1ED] px-3 py-2 text-[10px] text-[#A77B73]">
-                    {categoryLabels[post.category] ||
-                      "General"}
-                  </span>
-
-                  <LoungePostMenu
-                    postId={post.id}
-                    authorId={post.userId}
-                    isOwner={
-                      post.userId === currentUserId
-                    }
-                    photoPaths={post.photos.map(
-                      (photo) => photo.storagePath
-                    )}
-                    content={post.content}
-                    category={post.category}
-                  />
-                </div>
+                <LoungePostMenu
+                  postId={post.id}
+                  authorId={post.userId}
+                  isOwner={
+                    post.userId === currentUserId
+                  }
+                  photoPaths={post.photos.map(
+                    (photo) => photo.storagePath
+                  )}
+                  content={post.content}
+                  category={post.category}
+                />
               </div>
-
-              {/* POST CAPTION */}
-              <p className="mt-5 whitespace-pre-wrap break-words text-sm leading-7 text-[#302521]">
-                {post.content}
-              </p>
 
               {/* POST PHOTOS */}
               {post.photos.length > 0 && (
                 <div
-                  className={`mt-4 grid gap-2 ${
+                  className={`grid gap-1.5 ${
                     post.photos.length === 1
                       ? "grid-cols-1"
                       : "grid-cols-2"
@@ -208,7 +204,7 @@ export default function LoungeFeed({
                   {post.photos.map((photo) => (
                     <div
                       key={photo.id}
-                      className="overflow-hidden rounded-2xl bg-[#F7F1ED]"
+                      className="overflow-hidden rounded-lg bg-[#F1E8E4]"
                     >
                       <img
                         src={photo.url}
@@ -220,33 +216,55 @@ export default function LoungeFeed({
                 </div>
               )}
 
-              {/* LIKES + COMMENTS */}
-              <div className="mt-4 border-t border-[#F0E6E1] pt-2">
-                <div className="flex flex-wrap items-start gap-x-3">
-                  <LoungeLikeButton
-                    postId={post.id}
-                    currentUserId={currentUserId}
-                    initialCount={post.likeCount}
-                    initiallyLiked={post.likedByMe}
-                  />
+              {/* ACTION ROW */}
+              <div className="mt-3 flex items-start gap-3">
+                <LoungeLikeButton
+                  postId={post.id}
+                  currentUserId={currentUserId}
+                  initialCount={post.likeCount}
+                  initiallyLiked={post.likedByMe}
+                />
 
-                  <div className="min-w-0 flex-1 basis-full sm:basis-auto">
-                    <LoungeComments
-                      postId={post.id}
-                      currentUserId={currentUserId}
-                    />
-                  </div>
+                <div className="pt-1.5">
+                  <svg
+                    width="23"
+                    height="23"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#302521"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 21l1.9-5.5a9 9 0 0 1-.9-4A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z" />
+                  </svg>
                 </div>
+
+                <span className="ml-auto pt-2 text-[9px] tracking-[0.14em] text-[#A77B73]">
+                  {post.category
+                    .replaceAll("_", " ")
+                    .toUpperCase()}
+                </span>
               </div>
 
-              {/* LITTLE WINS MESSAGE ONLY */}
-              {post.category === "little_wins" && (
-                <div className="mt-3">
-                  <p className="text-xs italic text-[#A77B73]">
-                    A little progress is still progress. ♡
-                  </p>
-                </div>
+              {/* CAPTION */}
+              {post.content && (
+                <p className="mt-3 whitespace-pre-wrap break-words text-[12px] leading-6 text-[#302521]">
+                  <span className="mr-1.5 font-semibold">
+                    {post.authorName}
+                  </span>
+                  {post.content}
+                </p>
               )}
+
+              {/* COMMENTS */}
+              <div className="mt-3">
+                <LoungeComments
+                  postId={post.id}
+                  currentUserId={currentUserId}
+                />
+              </div>
             </article>
           ))}
         </div>

@@ -33,7 +33,11 @@ type Props = {
 };
 
 function formatDate(value: string) {
-  return new Date(value).toLocaleDateString("en-CA", {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString("en-CA", {
     month: "short",
     day: "numeric",
   });
@@ -45,20 +49,18 @@ export default function LoungeComments({
 }: Props) {
   const [supabase] = useState(() => createClient());
 
-  const [open, setOpen] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [authors, setAuthors] = useState<Author[]>([]);
+  const [showAll, setShowAll] = useState(false);
   const [content, setContent] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
-  const [reportCommentId, setReportCommentId] = useState<
-    string | null
-  >(null);
+  const [reportCommentId, setReportCommentId] =
+    useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(
-    null
-  );
+  const [deletingId, setDeletingId] =
+    useState<string | null>(null);
   const [error, setError] = useState("");
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -85,7 +87,9 @@ export default function LoungeComments({
     setComments(loadedComments);
 
     const userIds = [
-      ...new Set(loadedComments.map((item) => item.user_id)),
+      ...new Set(
+        loadedComments.map((comment) => comment.user_id)
+      ),
     ];
 
     if (userIds.length > 0) {
@@ -117,10 +121,10 @@ export default function LoungeComments({
   }, [loadComments]);
 
   useEffect(() => {
-    if (open && replyTo) {
+    if (replyTo) {
       textareaRef.current?.focus();
     }
-  }, [open, replyTo]);
+  }, [replyTo]);
 
   const authorMap = new Map(
     authors.map((author) => [author.user_id, author])
@@ -129,6 +133,10 @@ export default function LoungeComments({
   const topLevelComments = comments.filter(
     (comment) => comment.parent_id === null
   );
+
+  const visibleTopLevelComments = showAll
+    ? topLevelComments
+    : topLevelComments.slice(-2);
 
   const replyTarget = comments.find(
     (comment) => comment.id === replyTo
@@ -140,7 +148,7 @@ export default function LoungeComments({
     : null;
 
   function startReply(commentId: string) {
-    setOpen(true);
+    setShowAll(true);
     setReplyTo(commentId);
     setContent("");
     setError("");
@@ -174,7 +182,11 @@ export default function LoungeComments({
         error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError || !user || user.id !== currentUserId) {
+      if (
+        authError ||
+        !user ||
+        user.id !== currentUserId
+      ) {
         throw new Error("Please sign in again.");
       }
 
@@ -192,12 +204,18 @@ export default function LoungeComments({
       setContent("");
       setReplyTo(null);
 
-      await loadComments();
+         await loadComments();
     } catch (err) {
       console.error("LOUNGE COMMENT ERROR:", err);
-      setError(
-        "Couldn't share your comment. Please try again."
-      );
+
+      const message =
+        err instanceof Error
+          ? err.message
+          : err && typeof err === "object" && "message" in err
+            ? String(err.message)
+            : "Couldn't share your comment. Please try again.";
+
+      setError(message);
     } finally {
       setSaving(false);
     }
@@ -221,7 +239,11 @@ export default function LoungeComments({
         error: authError,
       } = await supabase.auth.getUser();
 
-      if (authError || !user || user.id !== currentUserId) {
+      if (
+        authError ||
+        !user ||
+        user.id !== currentUserId
+      ) {
         throw new Error("Please sign in again.");
       }
 
@@ -262,16 +284,17 @@ export default function LoungeComments({
           .getPublicUrl(author.avatar_path).data.publicUrl
       : null;
 
-    const isMyComment = comment.user_id === currentUserId;
+    const isMyComment =
+      comment.user_id === currentUserId;
 
     return (
       <div
         key={comment.id}
-        className={`flex min-w-0 items-start gap-2 ${
-          isReply ? "ml-5 mt-3 sm:ml-9" : "mt-4"
+        className={`flex min-w-0 items-start gap-2.5 ${
+          isReply ? "ml-7 mt-3" : "mt-3"
         }`}
       >
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EAD8D3] font-serif text-sm text-[#77574E]">
+        <div className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#EAD8D3] font-serif text-xs text-[#77574E]">
           {avatarUrl ? (
             <img
               src={avatarUrl}
@@ -283,27 +306,24 @@ export default function LoungeComments({
           )}
         </div>
 
-        <div className="min-w-0 flex-1 rounded-2xl bg-[#F7F1ED] px-3 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <p className="min-w-0 truncate text-xs font-medium text-[#302521]">
+        <div className="min-w-0 flex-1">
+          <p className="whitespace-pre-wrap break-words text-[11px] leading-[1.7] text-[#4D413D]">
+            <span className="mr-1.5 font-semibold text-[#302521]">
               {name}
-            </p>
-
-            <span className="shrink-0 text-[10px] text-[#A18A82]">
-              {formatDate(comment.created_at)}
             </span>
-          </div>
-
-          <p className="mt-2 whitespace-pre-wrap break-words text-xs leading-5 text-[#302521]">
             {comment.content}
           </p>
 
-          <div className="mt-3 flex flex-wrap items-center gap-4">
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <span className="text-[9px] text-[#A18A82]">
+              {formatDate(comment.created_at)}
+            </span>
+
             {!isReply && (
               <button
                 type="button"
                 onClick={() => startReply(comment.id)}
-                className="text-[11px] text-[#A77B73]"
+                className="text-[9px] font-medium text-[#9D6F67]"
               >
                 Reply
               </button>
@@ -312,9 +332,11 @@ export default function LoungeComments({
             {isMyComment ? (
               <button
                 type="button"
-                onClick={() => deleteComment(comment.id)}
+                onClick={() =>
+                  void deleteComment(comment.id)
+                }
                 disabled={deletingId !== null}
-                className="text-[11px] text-[#A18A82] disabled:opacity-50"
+                className="text-[9px] text-[#A18A82] disabled:opacity-50"
               >
                 {deletingId === comment.id
                   ? "Deleting..."
@@ -323,11 +345,13 @@ export default function LoungeComments({
             ) : (
               <button
                 type="button"
-                onClick={() => startReporting(comment.id)}
-                className="text-[11px] text-[#A77B73] transition hover:text-[#77574E]"
+                onClick={() =>
+                  startReporting(comment.id)
+                }
+                className="text-[9px] text-[#A18A82]"
                 aria-label={`Report comment by ${name}`}
               >
-                ⚑ Report
+                Report
               </button>
             )}
           </div>
@@ -338,20 +362,11 @@ export default function LoungeComments({
 
   return (
     <div className="w-full min-w-0">
-      {/* COMMENT BUTTON */}
-      <button
-        type="button"
-        onClick={() => {
-          setOpen((previous) => !previous);
-          setError("");
-        }}
-        aria-expanded={open}
-        aria-label={open ? "Hide comments" : "Show comments"}
-        className="inline-flex min-h-10 items-center gap-2 rounded-full px-2 py-2 text-[#A77B73] transition hover:bg-[#F7F1ED]"
-      >
+      {/* COMMENT COUNT */}
+      <div className="flex items-center gap-2">
         <svg
-          width="21"
-          height="21"
+          width="19"
+          height="19"
           viewBox="0 0 24 24"
           fill="none"
           stroke="#B98F87"
@@ -363,134 +378,154 @@ export default function LoungeComments({
           <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 21l1.9-5.5a9 9 0 0 1-.9-4A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z" />
         </svg>
 
-        <span className="text-xs">
+        <span className="text-[11px] text-[#806D65]">
           {loading ? "…" : comments.length}
         </span>
-      </button>
+      </div>
 
-      {/* FULL-WIDTH CONVERSATION */}
-      {open && (
-        <div className="mt-3 w-full min-w-0 border-t border-[#F0E6E1] pt-4">
-          <p className="text-[10px] tracking-[0.18em] text-[#A77B73]">
-            THE CONVERSATION ♡
-          </p>
-
-          {loading ? (
-            <p className="mt-4 text-xs text-[#806D65]">
-              Loading comments...
-            </p>
-          ) : topLevelComments.length === 0 ? (
-            <p className="mt-4 text-xs text-[#806D65]">
-              No comments yet. Leave a little love ♡
-            </p>
-          ) : (
-            <div className="w-full min-w-0">
-              {topLevelComments.map((comment) => (
-                <div key={comment.id}>
-                  {renderComment(comment)}
-
-                  {comments
-                    .filter(
-                      (reply) =>
-                        reply.parent_id === comment.id
-                    )
-                    .map((reply) =>
-                      renderComment(reply, true)
-                    )}
-                </div>
-              ))}
-            </div>
+      {/* COMMENTS PREVIEW */}
+      {!loading && comments.length > 0 && (
+        <div className="mt-3">
+          {topLevelComments.length > 2 && (
+            <button
+              type="button"
+              onClick={() =>
+                setShowAll((previous) => !previous)
+              }
+              aria-expanded={showAll}
+              className="text-[10px] text-[#9D6F67] transition hover:text-[#302521]"
+            >
+              {showAll
+                ? "Show fewer comments"
+                : `View all ${comments.length} comments`}
+            </button>
           )}
 
-          {replyTo && (
-            <div className="mt-5 flex items-center justify-between gap-3 rounded-xl bg-[#F7F1ED] px-3 py-3">
-              <p className="min-w-0 truncate text-xs text-[#806D65]">
-                Replying to {replyTargetName} ♡
-              </p>
+          {visibleTopLevelComments.map((comment) => {
+            const replies = comments.filter(
+              (reply) =>
+                reply.parent_id === comment.id
+            );
 
+            return (
+              <div key={comment.id}>
+                {renderComment(comment)}
+
+                {showAll &&
+                  replies.map((reply) =>
+                    renderComment(reply, true)
+                  )}
+              </div>
+            );
+          })}
+
+          {!showAll &&
+            topLevelComments.length <= 2 &&
+            comments.some(
+              (comment) => comment.parent_id !== null
+            ) && (
               <button
                 type="button"
-                onClick={() => {
-                  setReplyTo(null);
-                  setContent("");
-                }}
-                className="shrink-0 text-xs text-[#A77B73]"
+                onClick={() => setShowAll(true)}
+                className="ml-9 mt-2 text-[10px] text-[#9D6F67]"
               >
-                Cancel
+                View replies
               </button>
-            </div>
-          )}
-
-          <form
-            onSubmit={submitComment}
-            className="mt-5 flex w-full min-w-0 flex-col gap-3"
-          >
-            <label
-              htmlFor={`lounge-comment-${postId}`}
-              className="sr-only"
-            >
-              {replyTo ? "Write your reply" : "Write a comment"}
-            </label>
-
-            <textarea
-              ref={textareaRef}
-              id={`lounge-comment-${postId}`}
-              value={content}
-              onChange={(event) =>
-                setContent(event.target.value)
-              }
-              maxLength={1000}
-              rows={3}
-              placeholder={
-                replyTo
-                  ? "Write your reply... ♡"
-                  : "Leave a little love... ♡"
-              }
-              disabled={saving}
-              className="block w-full min-w-0 resize-y rounded-2xl border border-[#E9DAD3] bg-[#F7F1ED] px-4 py-3 text-sm text-[#302521] outline-none placeholder:text-[#A18A82] focus:ring-1 focus:ring-[#B98F87] disabled:opacity-50"
-            />
-
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-[10px] text-[#A18A82]">
-                {content.length}/1000
-              </span>
-
-              <button
-                type="submit"
-                disabled={saving || !content.trim()}
-                className="shrink-0 rounded-full bg-[#DDB5AE] px-6 py-3 text-[11px] tracking-[0.1em] text-[#302521] transition hover:bg-[#D3A49C] disabled:opacity-50"
-              >
-                {saving
-                  ? "POSTING..."
-                  : replyTo
-                    ? "SEND REPLY ♡"
-                    : "POST ♡"}
-              </button>
-            </div>
-          </form>
-
-          {error && (
-            <p
-              role="alert"
-              className="mt-3 text-xs text-red-600"
-            >
-              {error}
-            </p>
-          )}
+            )}
         </div>
       )}
 
-      {!open && error && (
-        <p role="alert" className="mt-2 text-xs text-red-600">
+      {loading && (
+        <p className="mt-3 text-[10px] text-[#A18A82]">
+          Loading comments...
+        </p>
+      )}
+
+      {/* REPLY INDICATOR */}
+      {replyTo && (
+        <div className="mt-4 flex items-center justify-between gap-2 rounded-lg bg-[#F1E5E0] px-3 py-2">
+          <p className="min-w-0 truncate text-[10px] text-[#806D65]">
+            Replying to {replyTargetName}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              setReplyTo(null);
+              setContent("");
+            }}
+            className="shrink-0 text-[10px] text-[#9D6F67]"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
+      {/* COMMENT INPUT */}
+      <form
+        onSubmit={submitComment}
+        className="mt-4"
+      >
+        <label
+          htmlFor={`lounge-comment-${postId}`}
+          className="sr-only"
+        >
+          {replyTo
+            ? "Write your reply"
+            : "Write a comment"}
+        </label>
+
+        <div className="flex min-w-0 items-end gap-2 rounded-2xl border border-[#E7DAD4] bg-[#F7F1ED] px-3 py-2">
+          <textarea
+            ref={textareaRef}
+            id={`lounge-comment-${postId}`}
+            value={content}
+            onChange={(event) =>
+              setContent(event.target.value)
+            }
+            maxLength={1000}
+            rows={1}
+            placeholder={
+              replyTo
+                ? "Write a reply..."
+                : "Add a comment..."
+            }
+            disabled={saving}
+            className="max-h-28 min-h-7 min-w-0 flex-1 resize-none bg-transparent py-1 text-[11px] leading-5 text-[#302521] outline-none placeholder:text-[#A18A82] disabled:opacity-50"
+          />
+
+          <button
+            type="submit"
+            disabled={saving || !content.trim()}
+            className="shrink-0 px-1 py-1.5 text-[10px] font-semibold text-[#A77B73] transition hover:text-[#302521] disabled:opacity-40"
+          >
+            {saving ? "..." : "Post"}
+          </button>
+        </div>
+
+        {content.length > 800 && (
+          <p className="mt-1 text-right text-[9px] text-[#A18A82]">
+            {content.length}/1000
+          </p>
+        )}
+      </form>
+
+      {error && (
+        <p
+          role="alert"
+          className="mt-2 text-[10px] text-red-600"
+        >
           {error}
         </p>
       )}
 
-      {/* REPORT COMMENT MODAL */}
+      {/* REPORT MODAL */}
       {reportCommentId && (
         <LoungeReportModal
           commentId={reportCommentId}
-          onClose={() => setReportCommentId(null)}
+          onClose={() =>
+            setReportCommentId(null)
+          }
         />
       )}
     </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getCurrentChallengeDay } from "@/lib/challenge";
+import { getActiveJourney } from "@/lib/active-journey";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import { workouts } from "@/lib/workouts";
 
@@ -64,6 +65,14 @@ type DailyProgress = {
   no_alcohol: boolean;
 };
 
+type CustomExercise = {
+  id: string;
+  name: string;
+  sets: string;
+  reps: string;
+  weight: string;
+};
+
 type SelectedWorkout = {
   id: string;
   title: string;
@@ -71,8 +80,8 @@ type SelectedWorkout = {
   type: string;
   time: string;
   equipment: string;
-  exercises: string;
-  source?: "guide" | "manual";
+  exercises: string | CustomExercise[];
+  source?: "guide" | "manual" | "custom";
 };
 
 const emptyProgress: DailyProgress = {
@@ -138,6 +147,15 @@ export default function DashboardPage() {
 
   const [selectedWorkouts, setSelectedWorkouts] =
     useState<SelectedWorkout[]>([]);
+
+    const [manualActivities, setManualActivities] = useState<
+  {
+    id: string;
+    activity_name: string;
+    duration_minutes: number;
+    calories_burned: number | null;
+  }[]
+>([]);
 
   const [challengeStartDate, setChallengeStartDate] =
     useState<string | null>(null);
@@ -205,6 +223,8 @@ export default function DashboardPage() {
       }
 
       setUserId(user.id);
+
+      const activeJourney = await getActiveJourney();
 
       const savedName = user.user_metadata?.name;
 
@@ -364,6 +384,39 @@ const {
 let completedMoveMinutes = 0;
 let moveGoalReached = false;
 
+let manualMoveMinutes = 0;
+
+if (
+  activeJourney &&
+  activeJourney.user_id === user.id &&
+  activeJourney.status === "active" &&
+  activeJourney.start_date === profile.challenge_start_date &&
+  activeJourney.challenge_length === profileChallengeLength
+) {
+  const { data: manualActivities, error: manualError } =
+    await supabase
+      .from("movement_activities")
+      .select("id, activity_name, duration_minutes, calories_burned")
+      .eq("user_id", user.id)
+      .eq("journey_id", activeJourney.id)
+      .eq("challenge_day", calculatedDay);
+
+ if (manualError) {
+  console.error("Could not load manual movement:", manualError);
+  setManualActivities([]);
+} else {
+  const savedActivities = manualActivities ?? [];
+
+  setManualActivities(savedActivities);
+
+  manualMoveMinutes = savedActivities.reduce(
+    (total, activity) =>
+      total + Math.max(0, activity.duration_minutes ?? 0),
+    0
+  );
+}
+}
+
 const { data: completedWorkouts, error: workoutMinutesError } =
   await supabase
     .from("workout_sessions")
@@ -388,9 +441,11 @@ if (workoutMinutesError) {
     0
   );
 
-  setMoveMinutes(completedMoveMinutes);
+const totalMoveMinutes = completedMoveMinutes + manualMoveMinutes;
 
-  moveGoalReached = completedMoveMinutes >= 45;
+setMoveMinutes(totalMoveMinutes);
+
+moveGoalReached = totalMoveMinutes >= 45;
 
   if (moveGoalReached && !savedProgress?.move) {
     const { error: moveUpdateError } = await supabase
@@ -1305,106 +1360,127 @@ if (workoutBeingRemoved?.source === "guide") {
   </span>
 </button>
 
-                      {showMoveWorkouts && (selectedWorkouts.length > 0 ? (
-                        <div className="ml-[46px] mt-3 border-t border-[#E1D3CE] pt-3">
-                          {selectedWorkouts.map(
-                            (workout, index) => (
-                              <div
-                                key={workout.id}
-                                className={
-                                  index > 0
-                                    ? "mt-3 border-t border-[#E1D3CE] pt-3"
-                                    : ""
-                                }
-                              >
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[7px] tracking-[0.15em] text-[#9D6F67]">
-                                  <span>
-                                    {workout.type.toUpperCase()}
-                                  </span>
+                      {showMoveWorkouts && (
+  <div className="ml-[46px] mt-3 border-t border-[#E1D3CE] pt-3">
 
-                                  <span>•</span>
+    {/* SELECTED WORKOUTS */}
+    {selectedWorkouts.map((workout, index) => (
+      <div
+        key={workout.id}
+        className={
+          index > 0
+            ? "mt-3 border-t border-[#E1D3CE] pt-3"
+            : ""
+        }
+      >
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[8px] tracking-[0.15em] text-[#211C19]">
+          <span>{workout.type.toUpperCase()}</span>
+          <span>•</span>
+          <span>{workout.time}</span>
+          <span>•</span>
+          <span>
+  {Array.isArray(workout.exercises)
+    ? `${workout.exercises.length} exercises`
+    : workout.exercises}
+</span>
+        </div>
 
-                                  <span>
-                                    {workout.time}
-                                  </span>
+        <div className="mt-2 flex items-center justify-between gap-4">
+          <Link
+           href={
+  workout.source === "custom"
+    ? `/dashboard/guide/custom-workout-preview?workout=${workout.id.replace(/^custom:/, "")}`
+    : `/dashboard/resources/workouts/workout-preview?workout=${workout.id}`
 
-                                  <span>•</span>
+}
+            className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
+          >
+            <span>OPEN {workout.title.toUpperCase()}</span>
+            <span className="font-serif text-sm">→</span>
+          </Link>
 
-                                  <span>
-                                    {
-                                      workout.exercises
-                                    }
-                                  </span>
-                                </div>
+          <button
+            type="button"
+            onClick={() => removeWorkoutFromToday(workout.id)}
+            className="shrink-0 text-[7px] tracking-[0.16em] text-[#B08A82] transition hover:text-[#211C19]"
+          >
+            REMOVE
+          </button>
+        </div>
+      </div>
+    ))}
 
-                                <div className="mt-2 flex items-center justify-between gap-4">
-  <Link
-   href={`/dashboard/resources/workouts/workout-preview?workout=${workout.id}`}
-    className="flex items-center gap-2 text-[7px] tracking-[0.18em] text-[#8F655E] transition hover:text-[#211C19]"
-  >
-    <span>
-      OPEN{" "}
-      {workout.title.toUpperCase()}
-    </span>
+    {/* MANUALLY LOGGED MOVEMENT */}
+    {manualActivities.length > 0 && (
+      <div
+        className={
+          selectedWorkouts.length > 0
+            ? "mt-4 border-t border-[#E1D3CE] pt-3"
+            : ""
+        }
+      >
+        <p className="mb-3 text-[9px] tracking-[0.14em] text-[#9D6F67]">
+          LOGGED MOVEMENT
+        </p>
 
-    <span className="font-serif text-sm">
-      →
-    </span>
-  </Link>
+        {manualActivities.map((activity, index) => (
+          <div
+            key={activity.id}
+            className={
+              index > 0
+                ? "mt-3 border-t border-[#E1D3CE] pt-3"
+                : ""
+            }
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[9px] tracking-[0.15em] text-[#211C19]">
+  {activity.activity_name.toUpperCase()}
+</p>
+                <p className="mt-1 text-[9px] text-[#9D6F67]">
+                  {activity.duration_minutes} min · Manually logged
+                </p>
+              </div>
 
-  <button
-    type="button"
-    onClick={() =>
-      removeWorkoutFromToday(workout.id)
-    }
-    className="shrink-0 text-[7px] tracking-[0.16em] text-[#B08A82] transition hover:text-[#211C19]"
-  >
-    REMOVE
-  </button>
+              <span className="text-sm text-[#A77B73]">✓</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+
+    {/* WORKOUT ACTIONS */}
+    {selectedWorkouts.length > 0 ? (
+      <div className="mt-4 flex items-center justify-between gap-4 border-t border-[#E1D3CE] pt-3">
+        <span className="font-serif text-xs italic text-[#A77B73]">
+          {selectedWorkouts.length}{" "}
+          {selectedWorkouts.length === 1 ? "workout" : "workouts"}{" "}
+          selected ♡
+        </span>
+
+        <Link
+          href="/dashboard/resources/workouts?mode=change"
+          className="shrink-0 text-[7px] tracking-[0.16em] text-[#9D6F67] transition hover:text-[#211C19]"
+        >
+          CHANGE
+        </Link>
+      </div>
+    ) : (
+      <Link
+        href="/dashboard/resources/workouts"
+        className="mt-4 flex items-center justify-between border-t border-[#E1D3CE] pt-3 text-[7px] tracking-[0.18em] text-[#9D6F67]"
+      >
+        <span>FIND A WORKOUT</span>
+        <span className="font-serif text-sm">→</span>
+            </Link>
+    )}
+  </div>
+)}
 </div>
-                              </div>
-                            )
-                          )}
+);
+}
 
-                          <div className="mt-3 flex items-center justify-between gap-4">
-                            <span className="font-serif text-xs italic text-[#A77B73]">
-                              {
-                                selectedWorkouts.length
-                              }{" "}
-                              {selectedWorkouts.length ===
-                              1
-                                ? "workout"
-                                : "workouts"}{" "}
-                              selected ♡
-                            </span>
-
-                            <Link
-                              href="/dashboard/resources/workouts?mode=change"
-                              className="shrink-0 text-[7px] tracking-[0.16em] text-[#9D6F67] transition hover:text-[#211C19]"
-                            >
-                              CHANGE
-                            </Link>
-                          </div>
-                        </div>
-                      ) : (
-                        <Link
-                          href="/dashboard/resources/workouts"
-                          className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
-                        >
-                          <span>
-                            FIND A WORKOUT
-                          </span>
-
-                          <span className="font-serif text-sm">
-                            →
-                          </span>
-                        </Link>
-              ))}
-                    </div>
-                  );
-                }
-
-                if (item.column === "nourish") {
+if (item.column === "nourish") {
                   return (
                     <div
                       key={item.number}
@@ -1554,19 +1630,19 @@ if (workoutBeingRemoved?.source === "guide") {
                       </div>
 
                       <Link
-                        href="/dashboard/progress"
-                        className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
-                      >
-                        <span>
-                          {isComplete
-                            ? "UPDATE PROGRESS PHOTO"
-                            : "UPLOAD PROGRESS PHOTO"}
-                        </span>
+  href="/dashboard/journey?open=today"
+  className="ml-[46px] mt-3 flex items-center justify-between border-t border-[#E1D3CE] pt-2.5 text-[7px] tracking-[0.18em] text-[#9D6F67] transition hover:text-[#211C19]"
+>
+  <span>
+    {isComplete
+      ? "UPDATE PROGRESS PHOTO"
+      : "UPLOAD PROGRESS PHOTO"}
+  </span>
 
-                        <span className="font-serif text-sm">
-                          →
-                        </span>
-                      </Link>
+  <span className="font-serif text-sm">
+    →
+  </span>
+</Link>
                     </div>
                   );
                 }

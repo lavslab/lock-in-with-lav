@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -8,12 +9,7 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 type GrocerySection = {
   number: string;
   title: string;
-  subtitle: string;
   items: string[];
-};
-
-type SavedMeal = {
-  recipe_id: string;
 };
 
 type RecipeGroceryData = {
@@ -21,15 +17,12 @@ type RecipeGroceryData = {
   items: string[];
 };
 
-/* ---------------------------------
-   FULL LOCK IN GROCERY LIST
---------------------------------- */
+type GroceryView = "planned" | "essentials";
 
 const grocerySections: GrocerySection[] = [
   {
     number: "01",
     title: "PROTEIN",
-    subtitle: "build the week around this.",
     items: [
       "Chicken breast",
       "Extra-lean ground turkey",
@@ -44,7 +37,6 @@ const grocerySections: GrocerySection[] = [
   {
     number: "02",
     title: "PRODUCE",
-    subtitle: "colour + volume. ♡",
     items: [
       "Sweet potatoes",
       "Russet potatoes",
@@ -68,7 +60,6 @@ const grocerySections: GrocerySection[] = [
   {
     number: "03",
     title: "CARBS + FUEL",
-    subtitle: "use them where they fit.",
     items: [
       "Rice",
       "High-protein pasta",
@@ -82,7 +73,6 @@ const grocerySections: GrocerySection[] = [
   {
     number: "04",
     title: "DAIRY + FRIDGE",
-    subtitle: "easy protein boosters.",
     items: [
       "Plain Greek yogurt",
       "Low-fat cottage cheese",
@@ -94,7 +84,6 @@ const grocerySections: GrocerySection[] = [
   {
     number: "05",
     title: "PANTRY + FLAVOUR",
-    subtitle: "the little things matter.",
     items: [
       "Olive oil",
       "Low-sodium soy sauce",
@@ -110,7 +99,6 @@ const grocerySections: GrocerySection[] = [
   {
     number: "06",
     title: "SEASONINGS",
-    subtitle: "keep the basics stocked.",
     items: [
       "Salt + black pepper",
       "Garlic powder",
@@ -125,13 +113,6 @@ const grocerySections: GrocerySection[] = [
   },
 ];
 
-/* ---------------------------------
-   RECIPE → GROCERY ITEMS
-
-   These IDs match the recipe IDs saved
-   by the weekly meal planner.
---------------------------------- */
-
 const recipeGroceries: Record<string, RecipeGroceryData> = {
   "protein-pancakes": {
     title: "Protein Pancakes",
@@ -144,7 +125,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Plain Greek yogurt",
     ],
   },
-
   "breakfast-wrap": {
     title: "High-Protein Breakfast Wrap",
     items: [
@@ -156,7 +136,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Salsa or pico de gallo",
     ],
   },
-
   "greek-yogurt-crunch-bowl": {
     title: "Greek Yogurt Crunch Bowl",
     items: [
@@ -168,7 +147,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Chia seeds",
     ],
   },
-
   "chicken-taco-bowl": {
     title: "Chicken Taco Bowl",
     items: [
@@ -187,7 +165,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Garlic powder",
     ],
   },
-
   "turkey-burger-bowl": {
     title: "Turkey Burger Bowl",
     items: [
@@ -205,7 +182,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Salt + black pepper",
     ],
   },
-
   "creamy-chicken-protein-pasta": {
     title: "Creamy Chicken Protein Pasta",
     items: [
@@ -222,7 +198,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Chili flakes",
     ],
   },
-
   "salmon-power-bowl": {
     title: "Salmon Power Bowl",
     items: [
@@ -243,7 +218,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Onion + green onion",
     ],
   },
-
   "loaded-chicken-potato": {
     title: "Loaded Chicken Potato",
     items: [
@@ -258,7 +232,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Salt + black pepper",
     ],
   },
-
   "protein-snack-box": {
     title: "Protein Snack Box",
     items: [
@@ -270,7 +243,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Strawberries",
     ],
   },
-
   "strawberry-protein-smoothie": {
     title: "Strawberry Protein Smoothie",
     items: [
@@ -282,7 +254,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Chia seeds",
     ],
   },
-
   "ground-turkey-sweet-potato-bowl": {
     title: "Ground Turkey Sweet Potato Bowl",
     items: [
@@ -301,7 +272,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Fresh herbs",
     ],
   },
-
   "turkey-stuffed-peppers": {
     title: "Turkey Stuffed Bell Peppers",
     items: [
@@ -319,7 +289,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Chili flakes",
     ],
   },
-
   "turkey-quesadillas": {
     title: "Ground Turkey Quesadillas",
     items: [
@@ -336,7 +305,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Salt + black pepper",
     ],
   },
-
   "lemon-garlic-shrimp": {
     title: "Lemon Garlic Shrimp + Zucchini",
     items: [
@@ -352,7 +320,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Chili flakes",
     ],
   },
-
   "salmon-roasted-veggies": {
     title: "Salmon + Roasted Veggies",
     items: [
@@ -368,7 +335,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Lemons + limes",
     ],
   },
-
   "honey-soy-chicken-bowl": {
     title: "Honey Soy Chicken Veggie Bowl",
     items: [
@@ -388,7 +354,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Sesame seeds — optional",
     ],
   },
-
   "black-bean-corn-tacos": {
     title: "Black Bean + Corn Tacos",
     items: [
@@ -407,7 +372,6 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
       "Fresh herbs",
     ],
   },
-
   "black-bean-taquitos": {
     title: "Crispy Black Bean Taquitos",
     items: [
@@ -427,51 +391,80 @@ const recipeGroceries: Record<string, RecipeGroceryData> = {
   },
 };
 
-/* ---------------------------------
-   ICON
---------------------------------- */
+const essentials = grocerySections.flatMap((section) =>
+  section.items.map((item) => ({
+    name: item,
+    section: section.title,
+    key: `${section.title}-${item}`,
+  }))
+);
 
-function CartIcon({ className = "" }: { className?: string }) {
+function CheckIcon({ checked }: { checked: boolean }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      aria-hidden="true"
+    <span
+      className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border transition ${
+        checked
+          ? "border-[#A77B73] bg-[#A77B73] text-white"
+          : "border-[#CDB8B1] bg-transparent text-transparent"
+      }`}
     >
-      <path d="M3 4h2l2.1 10.2a2 2 0 0 0 2 1.6h7.8a2 2 0 0 0 2-1.6L20 8H7" />
-      <circle cx="10" cy="19" r="1" />
-      <circle cx="17" cy="19" r="1" />
-    </svg>
+      <svg
+        viewBox="0 0 20 20"
+        fill="none"
+        className="h-3 w-3"
+        aria-hidden="true"
+      >
+        <path
+          d="m4.5 10 3.5 3.5 7.5-7.5"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
   );
 }
-
-/* ---------------------------------
-   PAGE
---------------------------------- */
 
 export default function GroceryListPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [isLoadingMeals, setIsLoadingMeals] = useState(true);
+  const [isLoadingChecks, setIsLoadingChecks] = useState(true);
 
-  const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
-  const [savedMeals, setSavedMeals] = useState<SavedMeal[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [savedRecipeIds, setSavedRecipeIds] = useState<string[]>([]);
+  const [checkedItems, setCheckedItems] = useState<
+    Record<string, boolean>
+  >({});
+
+  const [activeView, setActiveView] =
+    useState<GroceryView>("essentials");
+
+  const [search, setSearch] = useState("");
+  const [hideChecked, setHideChecked] = useState(false);
+  const [openCategories, setOpenCategories] = useState<string[]>([
+    "PROTEIN",
+  ]);
+
+  const [saveStatus, setSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
 
   useEffect(() => {
-    const getUserAndMeals = async () => {
+    let cancelled = false;
+
+    async function loadData() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
+      if (cancelled) return;
+
       if (!user) {
         setIsLoadingUser(false);
         setIsLoadingMeals(false);
+        setIsLoadingChecks(false);
         return;
       }
 
@@ -479,44 +472,70 @@ export default function GroceryListPage() {
 
       const savedName = user.user_metadata?.name;
 
-      if (savedName) {
-        setFirstName(savedName);
-      } else if (user.email) {
-        setFirstName(user.email.split("@")[0]);
-      }
+      setFirstName(
+        typeof savedName === "string" && savedName.trim()
+          ? savedName
+          : user.email?.split("@")[0] || "there"
+      );
 
       setIsLoadingUser(false);
 
-      const { data: checklistData, error: checklistError } = await supabase
-        .from("grocery_checklist_state")
-        .select("checked_items")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const [checklistResult, mealsResult] = await Promise.all([
+        supabase
+          .from("grocery_checklist_state")
+          .select("checked_items")
+          .eq("user_id", user.id)
+          .maybeSingle(),
 
-      if (checklistError) {
-        console.error("Error loading grocery checklist:", checklistError);
-      } else if (checklistData?.checked_items) {
+        supabase
+          .from("meal_plan_selections")
+          .select("recipe_id")
+          .eq("user_id", user.id),
+      ]);
+
+      if (cancelled) return;
+
+      if (checklistResult.error) {
+        console.error(
+          "Error loading grocery checklist:",
+          checklistResult.error
+        );
+      } else {
         setCheckedItems(
-          checklistData.checked_items as Record<string, boolean>
+          (checklistResult.data?.checked_items as Record<
+            string,
+            boolean
+          >) || {}
         );
       }
 
-      const { data, error } = await supabase
-        .from("meal_plan_selections")
-        .select("recipe_id")
-        .eq("user_id", user.id);
+      setIsLoadingChecks(false);
 
-      if (error) {
-        console.error("Error loading grocery meal plan:", error);
-        setSavedMeals([]);
+      if (mealsResult.error) {
+        console.error(
+          "Error loading meal plan:",
+          mealsResult.error
+        );
       } else {
-        setSavedMeals(data ?? []);
+        setSavedRecipeIds(
+          Array.from(
+            new Set(
+              (mealsResult.data || []).map(
+                (meal) => meal.recipe_id as string
+              )
+            )
+          )
+        );
       }
 
       setIsLoadingMeals(false);
-    };
+    }
 
-    getUserAndMeals();
+    void loadData();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const initial =
@@ -524,98 +543,165 @@ export default function GroceryListPage() {
       ? firstName.charAt(0).toUpperCase()
       : "♡";
 
-  /* ---------------------------------
-     BUILD SMART LIST
-  --------------------------------- */
-
   const selectedRecipes = useMemo(() => {
-    const uniqueRecipeIds = Array.from(
-      new Set(savedMeals.map((meal) => meal.recipe_id))
-    );
-
-    return uniqueRecipeIds
-      .map((recipeId) => {
-        const recipe = recipeGroceries[recipeId];
-
-        if (!recipe) return null;
-
-        return {
-          id: recipeId,
-          ...recipe,
-        };
-      })
-      .filter(
-        (
-          recipe
-        ): recipe is {
-          id: string;
-          title: string;
-          items: string[];
-        } => recipe !== null
-      );
-  }, [savedMeals]);
+    return savedRecipeIds.flatMap((id) => {
+      const recipe = recipeGroceries[id];
+      return recipe ? [{ id, ...recipe }] : [];
+    });
+  }, [savedRecipeIds]);
 
   const plannedItems = useMemo(() => {
-    const items = selectedRecipes.flatMap((recipe) => recipe.items);
+    const names = new Set(
+      selectedRecipes.flatMap((recipe) => recipe.items)
+    );
 
-    return Array.from(new Set(items)).sort((a, b) => a.localeCompare(b));
+    return Array.from(names)
+      .sort((a, b) => a.localeCompare(b))
+      .map((name) => ({
+        name,
+        key: `planned-${name}`,
+      }));
   }, [selectedRecipes]);
 
   const hasPlannedMeals = selectedRecipes.length > 0;
 
-  /* ---------------------------------
-     CHECKLIST
-  --------------------------------- */
+  const currentItems =
+    activeView === "planned" ? plannedItems : essentials;
 
-  const saveCheckedItems = async (nextItems: Record<string, boolean>) => {
-    if (!userId) return;
+  const completedCount = currentItems.filter(
+    (item) => checkedItems[item.key]
+  ).length;
 
-    const { error } = await supabase.from("grocery_checklist_state").upsert(
-      {
-        user_id: userId,
-        checked_items: nextItems,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "user_id",
-      }
-    );
+  const totalCount = currentItems.length;
 
-    if (error) {
-      console.error("Error saving grocery checklist:", error);
-    }
-  };
+  const progress =
+    totalCount > 0
+      ? Math.round((completedCount / totalCount) * 100)
+      : 0;
+
+  const visibleItems = currentItems.filter((item) => {
+    const matchesSearch = item.name
+      .toLowerCase()
+      .includes(search.trim().toLowerCase());
+
+    const matchesChecked =
+      !hideChecked || !checkedItems[item.key];
+
+    return matchesSearch && matchesChecked;
+  });
+
+  const filteredCategories = grocerySections
+    .map((section) => ({
+      ...section,
+      items: visibleItems.filter(
+        (item) =>
+          "section" in item &&
+          item.section === section.title
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
 
   const toggleItem = (key: string) => {
+    setCheckedItems((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+    setSaveStatus("saving");
+  };
+
+  // Save checklist changes after a short pause.
+  useEffect(() => {
+    if (!userId || isLoadingChecks || saveStatus !== "saving") {
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      const { error } = await supabase
+        .from("grocery_checklist_state")
+        .upsert(
+          {
+            user_id: userId,
+            checked_items: checkedItems,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id" }
+        );
+
+      if (error) {
+        console.error("Error saving grocery checklist:", error);
+        setSaveStatus("error");
+      } else {
+        setSaveStatus("saved");
+      }
+    }, 450);
+
+    return () => window.clearTimeout(timer);
+  }, [checkedItems, userId, isLoadingChecks, saveStatus]);
+
+  const clearCurrentChecks = () => {
     setCheckedItems((current) => {
-      const nextItems = {
-        ...current,
-        [key]: !current[key],
-      };
+      const next = { ...current };
 
-      void saveCheckedItems(nextItems);
+      currentItems.forEach((item) => {
+        delete next[item.key];
+      });
 
-      return nextItems;
+      return next;
     });
+
+    setSaveStatus("saving");
   };
 
-  const clearList = () => {
-    const nextItems: Record<string, boolean> = {};
-
-    setCheckedItems(nextItems);
-    void saveCheckedItems(nextItems);
+  const toggleCategory = (title: string) => {
+    setOpenCategories((current) =>
+      current.includes(title)
+        ? current.filter((item) => item !== title)
+        : [...current, title]
+    );
   };
 
-  const masterTotalItems = grocerySections.reduce(
-    (total, section) => total + section.items.length,
-    0
-  );
+  const showPlannedView = () => {
+    setActiveView("planned");
+    setSearch("");
+  };
 
-  const totalItems = hasPlannedMeals
-    ? plannedItems.length + masterTotalItems
-    : masterTotalItems;
+  const showEssentialsView = () => {
+    setActiveView("essentials");
+    setSearch("");
+  };
 
-  const checkedCount = Object.values(checkedItems).filter(Boolean).length;
+  const itemButton = (
+    name: string,
+    key: string
+  ) => {
+    const checked = !!checkedItems[key];
+
+    return (
+      <button
+        key={key}
+        type="button"
+        onClick={() => toggleItem(key)}
+        aria-pressed={checked}
+        className={`flex min-h-[43px] w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+          checked
+            ? "bg-[#EAD8D3]/45"
+            : "bg-[#F7F1ED]/75 hover:bg-[#EAD8D3]/30"
+        }`}
+      >
+        <CheckIcon checked={checked} />
+
+        <span
+          className={`text-[11px] leading-5 ${
+            checked
+              ? "text-[#A08B83] line-through"
+              : "text-[#4D413D]"
+          }`}
+        >
+          {name}
+        </span>
+      </button>
+    );
+  };
 
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
@@ -626,323 +712,347 @@ export default function GroceryListPage() {
           isLoadingUser={isLoadingUser}
         />
 
-        <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
-          {/* HEADER */}
+        <section className="min-w-0 flex-1 px-5 pb-28 pt-8 md:px-10 lg:px-14">
+          <div className="mx-auto max-w-4xl">
 
-          <header className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                LOCK IN WITH LAV
-              </p>
-
-              <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                shop smart. make the week easier. ♡
-              </p>
-            </div>
-
-            <Link
-              href="/dashboard/resources/meal-plans"
-              className="shrink-0 rounded-full border border-[#CBA9A2] px-5 py-3 text-[8px] tracking-[0.22em] transition hover:bg-[#EAD8D3]"
-            >
-              ← MEAL PLANS
-            </Link>
-          </header>
-
-          {/* LIGHT INTRO — NO BLACK HERO */}
-
-          <section className="pb-8 pt-12 md:pt-14">
-            <div className="flex flex-col justify-between gap-7 md:flex-row md:items-end">
-              <div>
-                <p className="text-[8px] tracking-[0.4em] text-[#9D6F67]">
-                  GROCERY LIST
+            {/* HEADER */}
+            <header className="border-b border-[#DED0CB] pb-5">
+              <div className="mb-5 flex items-center justify-between gap-3">
+                <p className="text-[9px] tracking-[0.27em] text-[#9D6F67]">
+                  NOURISH / GROCERY LIST
                 </p>
 
-                <h1 className="mt-4 font-serif text-4xl leading-none md:text-5xl">
-                  Shop your{" "}
-                  <span className="italic text-[#A77B73]">week. ♡</span>
-                </h1>
-
-                <p className="mt-4 max-w-xl text-[11px] leading-6 text-[#7C6963]">
-                  Start with the meals you planned, check what you already have,
-                  then use the full list for anything else you need.
-                </p>
+                <Link
+                  href="/dashboard/resources/meal-plans"
+                  className="text-[9px] tracking-[0.12em] text-[#9D6F67] transition hover:text-[#211C19]"
+                >
+                  ← MEAL PLANS
+                </Link>
               </div>
 
-              <div className="w-fit rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] px-5 py-4">
-                <p className="text-[7px] tracking-[0.22em] text-[#9D6F67]">
-                  SHOPPING PROGRESS
-                </p>
+              <h1 className="font-serif text-3xl leading-tight md:text-4xl">
+                The Grocery{" "}
+                <span className="italic text-[#A77B73]">
+                  Edit.
+                </span>
+              </h1>
 
-                <p className="mt-2 font-serif text-2xl text-[#211C19]">
-                  {checkedCount} / {totalItems}
-                </p>
-              </div>
+              <p className="mt-2 text-[11px] text-[#8C7770]">
+                Everything you need, nothing you don't. ♡
+              </p>
+            </header>
+
+            {/* VIEW SELECTOR */}
+            <div className="mt-7 grid grid-cols-2 gap-2 rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-1.5">
+              <button
+                type="button"
+                onClick={showPlannedView}
+                className={`rounded-xl px-3 py-3 text-[9px] tracking-[0.14em] transition ${
+                  activeView === "planned"
+                    ? "bg-[#EAD8D3] text-[#694D47]"
+                    : "text-[#8C7770] hover:bg-[#F7F1ED]"
+                }`}
+              >
+                MY MEAL PLAN
+              </button>
+
+              <button
+                type="button"
+                onClick={showEssentialsView}
+                className={`rounded-xl px-3 py-3 text-[9px] tracking-[0.14em] transition ${
+                  activeView === "essentials"
+                    ? "bg-[#EAD8D3] text-[#694D47]"
+                    : "text-[#8C7770] hover:bg-[#F7F1ED]"
+                }`}
+              >
+                THE ESSENTIALS
+              </button>
             </div>
-          </section>
 
-          {/* MEAL PLAN LIST */}
+            {/* PROGRESS */}
+            <section className="mt-5 rounded-[1.4rem] border border-[#DED0CB] bg-[#FBF8F6] p-5 md:p-6">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-[8px] tracking-[0.24em] text-[#9D6F67]">
+                    YOUR SHOPPING LIST
+                  </p>
 
-          {!isLoadingMeals && hasPlannedMeals && (
-            <section className="pb-10">
-              <div className="overflow-hidden rounded-[2rem] border border-[#D7C2BC] bg-[#EAD8D3]/55">
-                <div className="border-b border-[#D7C2BC] p-6 md:p-8">
-                  <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-                    <div className="flex items-start gap-4">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#FBF8F6] text-[#9D6F67]">
-                        <CartIcon className="h-5 w-5" />
-                      </div>
-
-                      <div>
-                        <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
-                          FROM YOUR MEAL PLAN
-                        </p>
-
-                        <h2 className="mt-2 font-serif text-2xl md:text-3xl">
-                          Your week,{" "}
-                          <span className="italic text-[#A77B73]">
-                            ready to shop. ♡
-                          </span>
-                        </h2>
-
-                        <p className="mt-3 max-w-2xl text-[10px] leading-5 text-[#78635D]">
-                          We pulled these from the recipes you added to your
-                          weekly meal plan.
-                        </p>
-                      </div>
-                    </div>
-
-                    <Link
-                      href="/dashboard/resources/meal-plans"
-                      className="shrink-0 rounded-full bg-[#211C19] px-5 py-3 text-[7px] tracking-[0.22em] text-[#F7F1ED] transition hover:-translate-y-0.5"
-                    >
-                      EDIT MEALS →
-                    </Link>
-                  </div>
-
-                  <div className="mt-6 flex flex-wrap gap-2">
-                    {selectedRecipes.map((recipe) => (
-                      <span
-                        key={recipe.id}
-                        className="rounded-full border border-[#CBA9A2] bg-[#FBF8F6] px-4 py-2 text-[7px] tracking-[0.16em] text-[#7B5A54]"
-                      >
-                        {recipe.title.toUpperCase()}
-                      </span>
-                    ))}
-                  </div>
+                  <p className="mt-2 font-serif text-2xl">
+                    {completedCount}
+                    <span className="text-[#B7A39B]">
+                      {" "}/ {totalCount}
+                    </span>
+                    <span className="ml-2 font-sans text-[10px] text-[#8C7770]">
+                      checked
+                    </span>
+                  </p>
                 </div>
 
-                <div className="p-6 md:p-8">
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                    {plannedItems.map((item) => {
-                      const key = `planned-${item}`;
-                      const checked = !!checkedItems[key];
+                <span className="font-serif text-2xl italic text-[#A77B73]">
+                  {progress}%
+                </span>
+              </div>
 
-                      return (
-                        <button
-                          type="button"
-                          key={key}
-                          onClick={() => toggleItem(key)}
-                          className={`flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
-                            checked
-                              ? "border-[#CBA9A2] bg-[#DDB5AE]/45"
-                              : "border-[#DDCBC6] bg-[#FBF8F6] hover:border-[#CBA9A2]"
-                          }`}
-                        >
-                          <span
-                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] ${
-                              checked
-                                ? "border-[#A77B73] bg-[#A77B73] text-white"
-                                : "border-[#CBA9A2] text-transparent"
-                            }`}
-                          >
-                            ✓
-                          </span>
-
-                          <span
-                            className={`text-xs leading-5 ${
-                              checked
-                                ? "text-[#8C7770] line-through"
-                                : "text-[#5E504B]"
-                            }`}
-                          >
-                            {item}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+              <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[#E9DFDA]">
+                <div
+                  className="h-full rounded-full bg-[#B98F87] transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
               </div>
             </section>
-          )}
 
-          {/* NO MEALS PLANNED */}
+            {/* TOOLBAR */}
+            <section className="mt-7">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative min-w-0 flex-1">
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A77B73]"
+                    aria-hidden="true"
+                  >
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m16 16 5 5" />
+                  </svg>
 
-          {!isLoadingMeals && !hasPlannedMeals && (
-            <section className="pb-10">
-              <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-                <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(event) =>
+                      setSearch(event.target.value)
+                    }
+                    placeholder="Search groceries..."
+                    aria-label="Search groceries"
+                    className="w-full rounded-full border border-[#DED0CB] bg-[#FBF8F6] py-3 pl-11 pr-4 text-[11px] text-[#211C19] outline-none placeholder:text-[#A9948B] focus:border-[#A77B73]"
+                  />
+                </div>
+
+                <label className="flex cursor-pointer items-center gap-2.5 self-start px-1 py-2 sm:self-auto">
+                  <input
+                    type="checkbox"
+                    checked={hideChecked}
+                    onChange={(event) =>
+                      setHideChecked(event.target.checked)
+                    }
+                    className="h-4 w-4 accent-[#A77B73]"
+                  />
+
+                  <span className="whitespace-nowrap text-[10px] text-[#7C6963]">
+                    Hide checked
+                  </span>
+                </label>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-[10px] text-[#8C7770]">
+                  {visibleItems.length} items showing
+                </p>
+
+                <button
+                  type="button"
+                  onClick={clearCurrentChecks}
+                  disabled={completedCount === 0}
+                  className="text-[9px] tracking-[0.12em] text-[#9D6F67] underline underline-offset-4 transition hover:text-[#211C19] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  RESET CHECKS
+                </button>
+              </div>
+            </section>
+
+            {/* MY MEAL PLAN */}
+            {activeView === "planned" && (
+              <section className="mt-7">
+                <div className="mb-4 flex items-end justify-between gap-3">
                   <div>
-                    <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
-                      NO MEALS PLANNED YET
+                    <p className="text-[8px] tracking-[0.25em] text-[#9D6F67]">
+                      FROM YOUR WEEK
                     </p>
 
-                    <p className="mt-3 font-serif text-xl italic text-[#A77B73] md:text-2xl">
-                      no plan? no problem. ♡
-                    </p>
-
-                    <p className="mt-2 max-w-xl text-[10px] leading-5 text-[#7C6963]">
-                      Your full Lock In grocery list is still below, or build
-                      your week and we&apos;ll pull your recipe ingredients
-                      together for you.
-                    </p>
+                    <h2 className="mt-2 font-serif text-2xl">
+                      Planned{" "}
+                      <span className="italic text-[#A77B73]">
+                        ingredients.
+                      </span>
+                    </h2>
                   </div>
 
                   <Link
                     href="/dashboard/resources/meal-plans"
-                    className="shrink-0 rounded-full bg-[#211C19] px-6 py-3 text-[7px] tracking-[0.22em] text-[#F7F1ED] transition hover:-translate-y-0.5"
+                    className="shrink-0 text-[9px] tracking-[0.1em] text-[#9D6F67] underline underline-offset-4"
                   >
-                    PLAN MY WEEK →
+                    EDIT PLAN ↗
                   </Link>
                 </div>
-              </div>
-            </section>
-          )}
 
-          {/* BEFORE YOU SHOP */}
+                {isLoadingMeals ? (
+                  <div className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-8 text-center text-[11px] text-[#8C7770]">
+                    Loading your meal plan...
+                  </div>
+                ) : !hasPlannedMeals ? (
+                  <div className="rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] px-6 py-10 text-center">
+                    <p className="font-serif text-2xl italic text-[#A77B73]">
+                      Nothing planned yet. ♡
+                    </p>
 
-          <section className="pb-10">
-            <div className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-8">
-              <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
-                <div>
-                  <p className="text-[8px] tracking-[0.32em] text-[#9D6F67]">
-                    BEFORE YOU SHOP
+                    <p className="mx-auto mt-3 max-w-sm text-[11px] leading-6 text-[#8C7770]">
+                      Add recipes to your weekly meal plan and
+                      their ingredients will appear here.
+                    </p>
+
+                    <Link
+                      href="/dashboard/resources/meal-plans"
+                      className="mt-6 inline-block rounded-full bg-[#211C19] px-6 py-3 text-[9px] tracking-[0.15em] text-white"
+                    >
+                      PLAN MY WEEK ↗
+                    </Link>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-4 flex flex-wrap gap-2">
+                      {selectedRecipes.map((recipe) => (
+                        <span
+                          key={recipe.id}
+                          className="rounded-full border border-[#DECBC5] bg-[#F1E4DF] px-3 py-1.5 text-[9px] text-[#795A53]"
+                        >
+                          {recipe.title}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] p-3 sm:p-5">
+                      {visibleItems.length === 0 ? (
+                        <p className="py-10 text-center text-[11px] text-[#8C7770]">
+                          No ingredients to show. ♡
+                        </p>
+                      ) : (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {visibleItems.map((item) =>
+                            itemButton(item.name, item.key)
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+              </section>
+            )}
+
+            {/* ESSENTIALS */}
+            {activeView === "essentials" && (
+              <section className="mt-7">
+                <div className="mb-5">
+                  <p className="text-[8px] tracking-[0.25em] text-[#9D6F67]">
+                    THE LOCK IN STAPLES
                   </p>
 
-                  <p className="mt-3 max-w-3xl font-serif text-xl italic text-[#A77B73] md:text-2xl">
-                    Check what you already have, then check off what you need. ♡
-                  </p>
+                  <h2 className="mt-2 font-serif text-2xl">
+                    Stock your{" "}
+                    <span className="italic text-[#A77B73]">
+                      kitchen. ♡
+                    </span>
+                  </h2>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={clearList}
-                  className="shrink-0 rounded-full border border-[#CBA9A2] px-5 py-3 text-[7px] tracking-[0.22em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
-                >
-                  CLEAR CHECKS
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {/* FULL MASTER LIST */}
-
-          <section className="pb-12">
-            <div className="mb-7">
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                THE FULL LIST
-              </p>
-
-              <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                Stock the{" "}
-                <span className="italic text-[#A77B73]">kitchen. ♡</span>
-              </h2>
-
-              <p className="mt-3 max-w-xl text-[10px] leading-5 text-[#8C7770]">
-                Everything stays here whether you build a meal plan or not. Use
-                whatever fits your week.
-              </p>
-            </div>
-
-            <div className="grid gap-4 xl:grid-cols-2">
-              {grocerySections.map((section) => (
-                <article
-                  key={section.number}
-                  className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-6 md:p-7"
-                >
-                  <div className="flex items-start gap-5 border-b border-[#E1D3CE] pb-5">
-                    <span className="font-serif text-4xl text-[#D2B0A9]">
-                      {section.number}
-                    </span>
-
-                    <div>
-                      <p className="text-[8px] tracking-[0.24em]">
-                        {section.title}
-                      </p>
-
-                      <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                        {section.subtitle}
-                      </p>
-                    </div>
+                {filteredCategories.length === 0 ? (
+                  <div className="rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] p-8 text-center text-[11px] text-[#8C7770]">
+                    No groceries to show. ♡
                   </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredCategories.map((section) => {
+                      const isOpen =
+                        openCategories.includes(section.title) ||
+                        search.trim().length > 0;
 
-                  <div className="mt-5 grid gap-2 sm:grid-cols-2">
-                    {section.items.map((item) => {
-                      const key = `${section.title}-${item}`;
-                      const checked = !!checkedItems[key];
+                      const categoryTotal = section.items.length;
+
+                      const categoryChecked =
+                        section.items.filter(
+                          (item) => checkedItems[item.key]
+                        ).length;
 
                       return (
-                        <button
-                          type="button"
-                          key={key}
-                          onClick={() => toggleItem(key)}
-                          className={`flex min-h-12 items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${
-                            checked
-                              ? "border-[#CBA9A2] bg-[#EAD8D3]/65"
-                              : "border-[#E7DCD8] bg-[#F7F1ED] hover:border-[#CBA9A2]"
-                          }`}
+                        <article
+                          key={section.number}
+                          className="overflow-hidden rounded-[1.35rem] border border-[#DED0CB] bg-[#FBF8F6]"
                         >
-                          <span
-                            className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[10px] ${
-                              checked
-                                ? "border-[#A77B73] bg-[#A77B73] text-white"
-                                : "border-[#CBA9A2] text-transparent"
-                            }`}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              toggleCategory(section.title)
+                            }
+                            aria-expanded={isOpen}
+                            className="flex w-full items-center gap-4 px-4 py-4 text-left transition hover:bg-[#F3EAE6] sm:px-5"
                           >
-                            ✓
-                          </span>
+                            <span className="w-8 shrink-0 font-serif text-2xl text-[#C9A69E]">
+                              {section.number}
+                            </span>
 
-                          <span
-                            className={`text-xs leading-5 ${
-                              checked
-                                ? "text-[#8C7770] line-through"
-                                : "text-[#5E504B]"
-                            }`}
-                          >
-                            {item}
-                          </span>
-                        </button>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-[10px] font-medium tracking-[0.15em] text-[#4D413D]">
+                                {section.title}
+                              </span>
+
+                              <span className="mt-1 block text-[10px] text-[#A08B83]">
+                                {categoryChecked} of {categoryTotal} checked
+                              </span>
+                            </span>
+
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              className={`h-4 w-4 shrink-0 text-[#9D6F67] transition-transform ${
+                                isOpen ? "rotate-180" : ""
+                              }`}
+                              aria-hidden="true"
+                            >
+                              <path d="m5 9 7 7 7-7" />
+                            </svg>
+                          </button>
+
+                          {isOpen && (
+                            <div className="border-t border-[#E9DFDA] px-3 pb-3 pt-3 sm:px-5 sm:pb-5">
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {section.items.map((item) =>
+                                  itemButton(item.name, item.key)
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </article>
                       );
                     })}
                   </div>
-                </article>
-              ))}
-            </div>
-          </section>
+                )}
+              </section>
+            )}
 
-          {/* FOOTER */}
+            {/* FOOTER */}
+            <footer className="mt-10 border-t border-[#DED0CB] pt-6">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+              
 
-          <section className="border-t border-[#DED0CB] pb-14 pt-10 text-center">
-            <p className="font-serif text-2xl italic text-[#A77B73] md:text-3xl">
-              stocked kitchen. easier week. ♡
-            </p>
+              
+              </div>
 
-            <div className="mt-7 flex flex-wrap justify-center gap-3">
-              <Link
-                href="/dashboard/resources/meal-plans/meal-prep"
-                className="inline-block rounded-full bg-[#211C19] px-8 py-3.5 text-[8px] tracking-[0.24em] text-[#F7F1ED] transition hover:-translate-y-0.5"
-              >
-                MEAL PREP GUIDE →
-              </Link>
+              {saveStatus === "saving" && (
+                <p className="mt-3 text-[10px] text-[#8C7770]">
+                  Saving checklist...
+                </p>
+              )}
 
-              <Link
-                href="/dashboard/resources/meal-plans"
-                className="inline-block rounded-full border border-[#CBA9A2] px-8 py-3.5 text-[8px] tracking-[0.24em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
-              >
-                BACK TO PLANS
-              </Link>
-            </div>
-          </section>
+              {saveStatus === "error" && (
+                <p className="mt-3 text-[10px] text-red-700">
+                  Checklist couldn't be saved. Try checking
+                  an item again.
+                </p>
+              )}
+            </footer>
+          </div>
         </section>
       </div>
     </main>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -19,7 +20,11 @@ type IconProps = {
   className?: string;
 };
 
-function CalendarIcon({ className = "" }: IconProps) {
+
+
+
+
+function JourneyIcon({ className = "" }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -31,20 +36,18 @@ function CalendarIcon({ className = "" }: IconProps) {
       className={className}
       aria-hidden="true"
     >
-      <rect x="3.5" y="5" width="17" height="15.5" rx="2.5" />
-      <path d="M8 3.5V7" />
-      <path d="M16 3.5V7" />
-      <path d="M3.5 9.5H20.5" />
-      <path d="M8 13H8.01" />
-      <path d="M12 13H12.01" />
-      <path d="M16 13H16.01" />
-      <path d="M8 17H8.01" />
-      <path d="M12 17H12.01" />
+      <path d="M5 19V13" />
+      <path d="M12 19V9" />
+      <path d="M19 19V5" />
+      <path d="M4 19.5h16" />
     </svg>
   );
 }
 
-function BookIcon({ className = "" }: IconProps) {
+
+
+
+function TrainIcon({ className = "" }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -56,13 +59,17 @@ function BookIcon({ className = "" }: IconProps) {
       className={className}
       aria-hidden="true"
     >
-      <path d="M4 5.5C4 4.67 4.67 4 5.5 4H9.5C10.88 4 12 5.12 12 6.5V20C12 18.62 10.88 17.5 9.5 17.5H4V5.5Z" />
-      <path d="M20 5.5C20 4.67 19.33 4 18.5 4H14.5C13.12 4 12 5.12 12 6.5V20C12 18.62 13.12 17.5 14.5 17.5H20V5.5Z" />
+      <path d="m6.5 6.5 11 11" />
+      <path d="m4.5 9.5 5-5" />
+      <path d="m14.5 19.5 5-5" />
+      <path d="m3 8 5-5" />
+      <path d="m16 21 5-5" />
     </svg>
   );
 }
 
-function ResourcesIcon({ className = "" }: IconProps) {
+
+function NourishIcon({ className = "" }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -74,14 +81,14 @@ function ResourcesIcon({ className = "" }: IconProps) {
       className={className}
       aria-hidden="true"
     >
-      <path d="M6 4.5H18C18.83 4.5 19.5 5.17 19.5 6V19.5L12 15.5L4.5 19.5V6C4.5 5.17 5.17 4.5 6 4.5Z" />
-      <path d="M8 8H16" />
-      <path d="M8 11H14" />
+      <path d="M4 3v7a3 3 0 0 0 6 0V3" />
+      <path d="M7 3v18" />
+      <path d="M17 21V3c3 2 4 5 4 9h-4" />
     </svg>
   );
 }
 
-function PhotoIcon({ className = "" }: IconProps) {
+function LoungeIcon({ className = "" }: IconProps) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -93,9 +100,8 @@ function PhotoIcon({ className = "" }: IconProps) {
       className={className}
       aria-hidden="true"
     >
-      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
-      <circle cx="9" cy="9.5" r="1.5" />
-      <path d="M5.5 17L10 12.5L13 15.5L15.5 13L18.5 16" />
+      <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5 8 8 0 0 1-3-.6L4 20l1.6-4.5A7.5 7.5 0 1 1 20 11.5Z" />
+      <path d="M8 10.5h8M8 13.5h5" />
     </svg>
   );
 }
@@ -112,19 +118,19 @@ const navigation = [
     icon: "journey",
   },
   {
-    label: "THE GUIDE",
+    label: "TRAIN",
     href: "/dashboard/guide",
-    icon: "guide",
+    icon: "train",
   },
   {
-    label: "RESOURCES",
+    label: "NOURISH",
     href: "/dashboard/resources",
-    icon: "resources",
+    icon: "nourish",
   },
   {
-    label: "PROGRESS",
-    href: "/dashboard/progress",
-    icon: "progress",
+    label: "LOUNGE",
+    href: "/dashboard/lounge",
+    icon: "lounge",
   },
 ] as const;
 
@@ -198,18 +204,18 @@ export default function DashboardSidebar({
     }
 
     if (icon === "journey") {
-      return <CalendarIcon className="h-6 w-6" />;
+      return <JourneyIcon className="h-6 w-6" />;
     }
 
-    if (icon === "guide") {
-      return <BookIcon className="h-6 w-6" />;
+    if (icon === "train") {
+      return <TrainIcon className="h-6 w-6" />;
     }
 
-    if (icon === "resources") {
-      return <ResourcesIcon className="h-6 w-6" />;
+    if (icon === "nourish") {
+      return <NourishIcon className="h-6 w-6" />;
     }
 
-    return <PhotoIcon className="h-6 w-6" />;
+    return <LoungeIcon className="h-6 w-6" />;
   }
 
   return (
@@ -256,7 +262,11 @@ export default function DashboardSidebar({
       {/* NAVIGATION */}
       <nav className="mt-8 space-y-3">
         {navigation.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
+              : pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
 
           return (
             <Link
