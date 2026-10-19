@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -51,16 +52,18 @@ function parseLocalDate(dateString: string) {
 }
 
 function formatLongDate(dateString: string) {
-  return parseLocalDate(dateString).toLocaleDateString("en-US", {
-    month: "long",
+  if (!dateString) return "Choose a date";
+
+  return parseLocalDate(dateString).toLocaleDateString("en-CA", {
+    month: "short",
     day: "numeric",
     year: "numeric",
   });
 }
 
 function formatDateObject(date: Date) {
-  return date.toLocaleDateString("en-US", {
-    month: "long",
+  return date.toLocaleDateString("en-CA", {
+    month: "short",
     day: "numeric",
     year: "numeric",
   });
@@ -78,19 +81,21 @@ export default function OnboardingPage() {
     useState<ChallengeLength>(DEFAULT_CHALLENGE_LENGTH);
 
   const [selectedDate, setSelectedDate] = useState(today);
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [isCheckingUser, setIsCheckingUser] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
-
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    let mounted = true;
+
     const checkUser = async () => {
       const {
         data: { user },
         error: userError,
       } = await supabase.auth.getUser();
+
+      if (!mounted) return;
 
       if (userError || !user) {
         router.replace("/auth");
@@ -99,8 +104,8 @@ export default function OnboardingPage() {
 
       const savedName = user.user_metadata?.name;
 
-      if (savedName) {
-        setFirstName(savedName);
+      if (typeof savedName === "string" && savedName.trim()) {
+        setFirstName(savedName.trim());
       } else if (user.email) {
         setFirstName(user.email.split("@")[0]);
       }
@@ -110,6 +115,8 @@ export default function OnboardingPage() {
         .select("challenge_start_date")
         .eq("id", user.id)
         .single();
+
+      if (!mounted) return;
 
       if (profileError) {
         console.error("Could not load profile:", profileError);
@@ -131,56 +138,72 @@ export default function OnboardingPage() {
     };
 
     checkUser();
+
+    return () => {
+      mounted = false;
+    };
   }, [router, supabase]);
 
   const endDate = useMemo(() => {
+    if (!selectedDate) return null;
+
     return getChallengeEndDate(selectedDate, selectedLength);
   }, [selectedDate, selectedLength]);
 
-  const startChallenge = async (startDate: string) => {
+  const startChallenge = async () => {
+    if (isStarting || !selectedDate) return;
+
     setErrorMessage("");
     setIsStarting(true);
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    if (userError || !user) {
-      router.replace("/auth");
-      return;
-    }
+      if (userError || !user) {
+        router.replace("/auth");
+        return;
+      }
 
-    const { error } = await supabase
-      .from("profiles")
-      .update({
-        challenge_start_date: startDate,
-        challenge_length: selectedLength,
-      })
-      .eq("id", user.id);
+      const { error } = await supabase.rpc("start_my_challenge", {
+        p_start_date: selectedDate,
+        p_challenge_length: selectedLength,
+      });
 
-    if (error) {
-      console.error("Could not start Lock In:", error);
+      if (error) {
+        console.error("Could not start Lock In:", error);
+
+        setErrorMessage(
+          "We couldn't start your Lock In just yet. Please try again."
+        );
+
+        return;
+      }
+
+      router.replace("/dashboard");
+      router.refresh();
+    } catch (error) {
+      console.error("Unexpected onboarding error:", error);
 
       setErrorMessage(
-        "We couldn't start your Lock In just yet. Please try again."
+        "Something went wrong. Please try again."
       );
-
+    } finally {
       setIsStarting(false);
-      return;
     }
-
-    router.replace("/dashboard");
-    router.refresh();
   };
 
   if (isCheckingUser) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#F7F1ED] text-[#211C19]">
+      <main className="flex min-h-dvh items-center justify-center bg-[#F7F1ED] text-[#211C19]">
         <div className="text-center">
-          <p className="font-serif text-4xl italic text-[#A77B73]">♡</p>
+          <p className="font-serif text-4xl italic text-[#A77B73]">
+            ♡
+          </p>
 
-          <p className="mt-4 text-[8px] tracking-[0.35em] text-[#9D6F67]">
+          <p className="mt-4 text-[10px] tracking-[0.25em] text-[#9D6F67]">
             GETTING THINGS READY
           </p>
         </div>
@@ -189,290 +212,225 @@ export default function OnboardingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
-      <div className="mx-auto flex min-h-screen max-w-[1500px] flex-col px-6 py-8 md:px-10 lg:px-14">
+    <main className="min-h-dvh bg-[#F7F1ED] text-[#211C19]">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[1100px] flex-col px-4 pb-8 pt-6 sm:px-8 sm:pt-8 lg:px-12">
         {/* BRAND */}
-        <header className="flex items-start justify-between">
+        <header className="mx-auto flex w-full max-w-[680px] items-center justify-between pb-5">
           <div>
-            <p className="font-serif text-2xl tracking-[0.08em]">LOCK IN</p>
+            <p className="font-serif text-[22px] leading-none tracking-[0.08em]">
+              LOCK IN
+            </p>
 
-            <p className="mt-1 text-[8px] tracking-[0.5em]">WITH LAV</p>
+            <p className="mt-1.5 text-[9px] tracking-[0.43em] text-[#9D6F67]">
+              WITH LAV
+            </p>
           </div>
 
-          <p className="hidden text-[7px] tracking-[0.3em] text-[#9D6F67] sm:block">
-            YOUR JOURNEY • YOUR TIMELINE
-          </p>
+          <span
+            aria-hidden="true"
+            className="font-serif text-2xl text-[#A77B73]"
+          >
+            ♡
+          </span>
         </header>
 
-        {/* MAIN CONTENT */}
-        <section className="flex flex-1 items-center py-10 lg:py-12">
-          <div className="grid w-full overflow-hidden rounded-[2.25rem] border border-[#DED0CB] bg-[#FBF8F6] lg:grid-cols-[0.9fr_1.1fr]">
-            {/* LEFT */}
-            <div className="flex flex-col justify-center px-7 py-12 sm:px-10 md:px-14 lg:px-16 lg:py-16">
-              <p className="text-[7px] tracking-[0.42em] text-[#9D6F67]">
-                WELCOME, {firstName.toUpperCase()}
+        {/* MAIN ONBOARDING CARD */}
+        <section className="mx-auto w-full max-w-[680px] flex-1">
+          <div className="rounded-[1.75rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 pb-7 pt-6 shadow-[0_12px_40px_rgba(33,28,25,0.035)] sm:rounded-[2.25rem] sm:px-10 sm:pb-10 sm:pt-9">
+            {/* WELCOME */}
+            <div className="border-b border-[#DED0CB] pb-7 text-center sm:pb-9">
+              <p className="text-[10px] font-medium tracking-[0.22em] text-[#9D6F67]">
+                WELCOME TO YOUR NEXT CHAPTER
               </p>
 
-              <h1 className="mt-6 max-w-xl font-serif text-5xl leading-[0.92] sm:text-6xl lg:text-7xl">
-                Ready to
-                <span className="block italic text-[#A77B73]">
+              <h1 className="mt-5 font-serif text-[42px] leading-[1.05] tracking-[-0.035em] sm:text-[58px]">
+                Ready to{" "}
+                <span className="italic text-[#A77B73]">
                   lock in? ♡
                 </span>
               </h1>
 
-              <p className="mt-7 max-w-md font-serif text-xl leading-relaxed italic text-[#806E68]">
-                Your journey. Your timeline. Your commitment.
+              <p className="mx-auto mt-4 max-w-[370px] text-[13px] leading-6 text-[#806E68] sm:text-sm">
+                Hey {firstName}! Choose your journey.
+                We'll take it one day at a time.
               </p>
+            </div>
 
-              <p className="mt-4 max-w-md text-[9px] leading-6 tracking-[0.08em] text-[#927D76]">
-                CHOOSE HOW LONG YOU WANT TO LOCK IN. YOUR START DATE BECOMES
-                DAY 01, AND WE&apos;LL TAKE IT ONE DAY AT A TIME FROM THERE.
-              </p>
+            {/* CHALLENGE LENGTH */}
+            <div className="pt-7 sm:pt-9">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] font-medium tracking-[0.16em] text-[#9D6F67]">
+                  01 / CHOOSE YOUR CHALLENGE
+                </p>
 
-              <div className="mt-9 flex items-center gap-3">
-                <span className="h-px w-12 bg-[#CBA9A2]" />
-
-                <span className="text-[7px] tracking-[0.3em] text-[#9D6F67]">
-                  7 COMMITMENTS • ONE DAY AT A TIME • JUST SHOW UP
+                <span className="font-serif text-lg italic text-[#A77B73]">
+                  make it yours.
                 </span>
+              </div>
+
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
+                {challengeOptions.map((option) => {
+                  const isSelected = selectedLength === option.days;
+
+                  return (
+                    <button
+                      key={option.days}
+                      type="button"
+                      disabled={isStarting}
+                      aria-pressed={isSelected}
+                      onClick={() => setSelectedLength(option.days)}
+                      className={`relative min-h-[135px] rounded-[1.35rem] border p-4 text-left transition duration-200 sm:min-h-[150px] sm:p-5 ${
+                        isSelected
+                          ? "border-[#C99C93] bg-[#EEDAD5]"
+                          : "border-[#DED0CB] bg-[#FBF8F6] hover:border-[#C99C93] hover:bg-[#F7F1ED]"
+                      } disabled:cursor-not-allowed disabled:opacity-60`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="font-serif text-[42px] leading-none tracking-[-0.04em] text-[#211C19] sm:text-5xl">
+                            {option.days}
+                          </span>
+
+                          <span className="ml-1.5 text-[9px] tracking-[0.12em] text-[#806E68]">
+                            DAYS
+                          </span>
+                        </div>
+
+                        <span
+                          aria-hidden="true"
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${
+                            isSelected
+                              ? "border-[#9D6F67] bg-[#9D6F67] text-white"
+                              : "border-[#D5C3BC] text-transparent"
+                          }`}
+                        >
+                          ✓
+                        </span>
+                      </div>
+
+                      <p className="mt-4 text-[10px] font-medium tracking-[0.14em] text-[#9D6F67]">
+                        {option.label}
+                      </p>
+
+                      <p className="mt-1.5 font-serif text-[13px] italic leading-5 text-[#806E68] sm:text-sm">
+                        {option.description}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* RIGHT */}
-            <div className="bg-[#211C19] px-7 py-10 text-[#F7F1ED] sm:px-10 md:px-12 lg:px-14 lg:py-12">
-              <div className="flex h-full flex-col">
-                <div>
-                  <p className="text-[7px] tracking-[0.4em] text-[#DDB5AE]">
-                    CHOOSE YOUR LOCK IN
+            {/* START DATE */}
+            <div className="mt-8 border-t border-[#DED0CB] pt-7 sm:mt-9 sm:pt-9">
+              <p className="text-[10px] font-medium tracking-[0.16em] text-[#9D6F67]">
+                02 / CHOOSE YOUR START DATE
+              </p>
+
+              <p className="mt-2 font-serif text-[15px] italic text-[#806E68]">
+                Every journey has a day one. ♡
+              </p>
+
+              <label
+                htmlFor="challenge-start-date"
+                className="mt-5 block text-[11px] font-medium text-[#806E68]"
+              >
+                Your Day 01
+              </label>
+
+              <input
+                id="challenge-start-date"
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+                disabled={isStarting}
+                className="mt-2 block min-h-[52px] w-full min-w-0 rounded-[1rem] border border-[#DED0CB] bg-white px-4 py-3 text-base text-[#211C19] outline-none transition focus:border-[#A77B73] focus:ring-2 focus:ring-[#EEDAD5] disabled:opacity-60"
+              />
+
+              <p className="mt-2 text-[11px] leading-5 text-[#927D76]">
+                Pick the date that feels right for you.
+              </p>
+            </div>
+
+            {/* JOURNEY SUMMARY */}
+            <div className="mt-7 rounded-[1.35rem] border border-[#E8DAD4] bg-[#F7F1ED] p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[10px] font-medium tracking-[0.16em] text-[#9D6F67]">
+                  YOUR JOURNEY AT A GLANCE
+                </p>
+
+                <span className="font-serif text-lg italic text-[#A77B73]">
+                  {selectedLength} days. ♡
+                </span>
+              </div>
+
+              <div className="mt-5 grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-t border-[#DED0CB] pt-5">
+                <div className="min-w-0">
+                  <p className="text-[10px] tracking-[0.14em] text-[#927D76]">
+                    DAY 01
                   </p>
 
-                  <div className="mt-3 flex items-end justify-between gap-4">
-                    <h2 className="font-serif text-4xl leading-none sm:text-5xl">
-                      How long are
-                      <span className="block italic text-[#DDB5AE]">
-                        you showing up? ♡
-                      </span>
-                    </h2>
-
-                    <p className="hidden pb-1 font-serif text-base italic text-[#A99791] xl:block">
-                      make it yours.
-                    </p>
-                  </div>
-
-                  {/* DURATION OPTIONS */}
-                  <div className="mt-8 grid grid-cols-2 gap-3">
-                    {challengeOptions.map((option) => {
-                      const isSelected = selectedLength === option.days;
-
-                      return (
-                        <button
-                          key={option.days}
-                          type="button"
-                          disabled={isStarting}
-                          onClick={() => setSelectedLength(option.days)}
-                          className={`group rounded-[1.4rem] border p-4 text-left transition duration-200 ${
-                            isSelected
-                              ? "border-[#DDB5AE] bg-[#DDB5AE] text-[#211C19]"
-                              : "border-[#51433F] bg-[#2A2421] text-[#F7F1ED] hover:border-[#8E736C]"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <span
-                                className={`font-serif text-4xl leading-none ${
-                                  isSelected
-                                    ? "text-[#211C19]"
-                                    : "text-[#DDB5AE]"
-                                }`}
-                              >
-                                {option.days}
-                              </span>
-
-                              <span
-                                className={`ml-1.5 text-[6px] tracking-[0.22em] ${
-                                  isSelected
-                                    ? "text-[#6F5751]"
-                                    : "text-[#A99791]"
-                                }`}
-                              >
-                                DAYS
-                              </span>
-                            </div>
-
-                            <span
-                              className={`flex h-5 w-5 items-center justify-center rounded-full border text-[9px] ${
-                                isSelected
-                                  ? "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
-                                  : "border-[#665650] text-transparent"
-                              }`}
-                            >
-                              ✓
-                            </span>
-                          </div>
-
-                          <p
-                            className={`mt-4 text-[7px] tracking-[0.25em] ${
-                              isSelected
-                                ? "text-[#5F4944]"
-                                : "text-[#D8C8C3]"
-                            }`}
-                          >
-                            {option.label}
-                          </p>
-
-                          <p
-                            className={`mt-1.5 font-serif text-sm italic leading-5 ${
-                              isSelected
-                                ? "text-[#6F5751]"
-                                : "text-[#A99791]"
-                            }`}
-                          >
-                            {option.description}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* JOURNEY SUMMARY */}
-                  <div className="mt-6 rounded-[1.5rem] border border-[#51433F] bg-[#2A2421] p-5">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-[6px] tracking-[0.3em] text-[#A99791]">
-                          YOUR LOCK IN
-                        </p>
-
-                        <p className="mt-1.5 font-serif text-xl italic text-[#DDB5AE]">
-                          {selectedLength} days. ♡
-                        </p>
-                      </div>
-
-                      <span className="rounded-full border border-[#665650] px-3 py-1.5 text-[6px] tracking-[0.22em] text-[#BFAEAA]">
-                        DAY 01 → DAY {selectedLength}
-                      </span>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 border-t border-[#51433F] pt-4">
-                      <div className="pr-4">
-                        <p className="text-[6px] tracking-[0.3em] text-[#A99791]">
-                          DAY 01
-                        </p>
-
-                        <p className="mt-2 font-serif text-base text-[#F7F1ED]">
-                          {formatLongDate(selectedDate)}
-                        </p>
-                      </div>
-
-                      <div className="border-l border-[#51433F] pl-4">
-                        <p className="text-[6px] tracking-[0.3em] text-[#A99791]">
-                          FINAL DAY
-                        </p>
-
-                        <p className="mt-2 font-serif text-base text-[#DDB5AE]">
-                          {formatDateObject(endDate)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* DIFFERENT DATE */}
-                  {showDatePicker && (
-                    <div className="mt-4 rounded-[1.25rem] border border-[#51433F] p-4">
-                      <label
-                        htmlFor="challenge-start-date"
-                        className="text-[7px] tracking-[0.3em] text-[#DDB5AE]"
-                      >
-                        SELECT YOUR START DATE
-                      </label>
-
-                      <input
-                        id="challenge-start-date"
-                        type="date"
-                        value={selectedDate}
-                        onChange={(event) =>
-                          setSelectedDate(event.target.value)
-                        }
-                        className="mt-3 w-full rounded-xl border border-[#665650] bg-[#F7F1ED] px-4 py-3 text-sm text-[#211C19] outline-none"
-                      />
-                    </div>
-                  )}
-
-                  {errorMessage && (
-                    <div className="mt-4 rounded-2xl border border-[#8C5D56] px-5 py-4">
-                      <p className="text-[8px] leading-5 tracking-[0.08em] text-[#E3BBB4]">
-                        {errorMessage}
-                      </p>
-                    </div>
-                  )}
+                  <p className="mt-2 font-serif text-[14px] leading-5 text-[#211C19] sm:text-base">
+                    {formatLongDate(selectedDate)}
+                  </p>
                 </div>
 
-                {/* ACTIONS */}
-                <div className="mt-6">
-                  {!showDatePicker ? (
-                    <>
-                      <button
-                        type="button"
-                        disabled={isStarting}
-                        onClick={() => startChallenge(today)}
-                        className="w-full rounded-full bg-[#DDB5AE] px-8 py-4 text-[8px] tracking-[0.3em] text-[#211C19] transition hover:-translate-y-0.5 hover:bg-[#E5C5BF] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isStarting
-                          ? "STARTING..."
-                          : `START MY ${selectedLength} DAY LOCK IN →`}
-                      </button>
+                <span
+                  aria-hidden="true"
+                  className="font-serif text-xl text-[#A77B73]"
+                >
+                  →
+                </span>
 
-                      <button
-                        type="button"
-                        disabled={isStarting}
-                        onClick={() => setShowDatePicker(true)}
-                        className="mt-2 w-full py-2 text-[7px] tracking-[0.28em] text-[#BFAEAA] transition hover:text-[#F7F1ED]"
-                      >
-                        CHOOSE A DIFFERENT START DATE
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        disabled={isStarting || !selectedDate}
-                        onClick={() => startChallenge(selectedDate)}
-                        className="w-full rounded-full bg-[#DDB5AE] px-8 py-4 text-[8px] tracking-[0.3em] text-[#211C19] transition hover:-translate-y-0.5 hover:bg-[#E5C5BF] disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {isStarting
-                          ? "STARTING..."
-                          : `BEGIN MY ${selectedLength} DAY LOCK IN →`}
-                      </button>
+                <div className="min-w-0 text-right">
+                  <p className="text-[10px] tracking-[0.14em] text-[#927D76]">
+                    FINAL DAY
+                  </p>
 
-                      <button
-                        type="button"
-                        disabled={isStarting}
-                        onClick={() => {
-                          setSelectedDate(today);
-                          setShowDatePicker(false);
-                        }}
-                        className="mt-2 w-full py-2 text-[7px] tracking-[0.28em] text-[#BFAEAA] transition hover:text-[#F7F1ED]"
-                      >
-                        USE TODAY INSTEAD
-                      </button>
-                    </>
-                  )}
-
-                  <p className="mt-3 text-center font-serif text-sm italic text-[#A99791]">
-                    choose your journey. show up for it. ♡
+                  <p className="mt-2 font-serif text-[14px] leading-5 text-[#211C19] sm:text-base">
+                    {endDate ? formatDateObject(endDate) : "—"}
                   </p>
                 </div>
               </div>
+            </div>
+
+            {/* ERROR */}
+            {errorMessage && (
+              <div
+                role="alert"
+                className="mt-5 rounded-[1rem] border border-[#C99C93] bg-[#F8EBE7] px-4 py-3"
+              >
+                <p className="text-[12px] leading-5 text-[#8F5149]">
+                  {errorMessage}
+                </p>
+              </div>
+            )}
+
+            {/* ACTION */}
+            <div className="mt-7">
+              <button
+                type="button"
+                disabled={isStarting || !selectedDate}
+                onClick={startChallenge}
+                className="flex min-h-[54px] w-full items-center justify-center rounded-full bg-[#211C19] px-6 py-4 text-[11px] font-medium tracking-[0.17em] text-[#F7F1ED] transition hover:bg-[#3A302C] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isStarting ? "STARTING YOUR JOURNEY..." : "BEGIN MY LOCK IN →"}
+              </button>
+
+              <p className="mt-4 text-center font-serif text-[16px] italic text-[#A77B73]">
+                show up for yourself. ♡
+              </p>
             </div>
           </div>
         </section>
 
         {/* FOOTER */}
-        <footer className="flex items-center justify-between border-t border-[#DED0CB] pt-6">
-          <p className="text-[6px] tracking-[0.28em] text-[#9A8780]">
+        <footer className="mx-auto mt-7 flex w-full max-w-[680px] items-center justify-between gap-4 border-t border-[#DED0CB] pt-5">
+          <p className="text-[9px] tracking-[0.18em] text-[#9A8780]">
             LOCK IN WITH LAV
           </p>
 
-          <p className="font-serif text-sm italic text-[#A77B73]">
+          <p className="font-serif text-[13px] italic text-[#A77B73]">
             just documenting discipline. ♡
           </p>
         </footer>

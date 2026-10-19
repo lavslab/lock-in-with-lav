@@ -925,7 +925,13 @@ useEffect(() => {
                     <div className="text-center"><SmallLabel>{showFullCalendar ? "YOUR FULL JOURNEY" : `WEEK ${String(displayedWeek + 1).padStart(2, "0")}`}</SmallLabel><p className="mt-1 font-serif text-base italic text-[#806D65]">{showFullCalendar ? `All ${length} days · tap to open a record` : weekDateLabel}</p></div>
                     <button type="button" disabled={showFullCalendar || displayedWeek >= totalWeeks - 1} onClick={() => setCalendarWeek((v) => v + 1)} aria-label="Next week" className="flex h-8 w-8 items-center justify-center rounded-full border border-[#EADDD7] bg-[#FFFCFA] text-[#A77B73] disabled:opacity-25">→</button>
                   </div>
-                  <div className={`grid grid-cols-7 gap-1 sm:gap-2 ${showFullCalendar ? "gap-y-2.5 sm:gap-y-3" : ""}`}>
+                  <div
+  className={`grid gap-2 sm:gap-3 ${
+    showFullCalendar
+      ? "grid-cols-3 sm:grid-cols-4 lg:grid-cols-5"
+      : "grid-cols-7"
+  }`}
+>
                     {visibleDays.map(({ challengeDay, date, valid }) => {
                       const record = progress.find((item) => item.challenge_day === challengeDay);
                       const done = complete(record);
@@ -933,7 +939,7 @@ useEffect(() => {
                       const future = challengeDay > safeCurrentDay;
                       const image = photoUrls[challengeDay];
                       return <button key={challengeDay} type="button" disabled={!valid || future} onClick={() => openDay(challengeDay)} aria-label={`Open day ${challengeDay}${done ? ", complete" : ""}`}
-                        className={`group relative flex min-h-[62px] min-w-0 flex-col items-center justify-center overflow-hidden rounded-[11px] border px-0.5 py-1.5 transition sm:min-h-[78px] ${!valid ? "border-transparent opacity-0" : future ? "border-[#EADDD7] bg-[#F8F2EF] text-[#BDA9A2]" : done ? "border-[#CBAAA1] bg-[#F1E2DD] text-[#805D55] hover:border-[#A77B73]" : "border-[#E7DAD5] bg-[#FFFCFA] text-[#805D55] hover:border-[#A77B73]"} ${today ? "ring-1 ring-[#A77B73] ring-offset-1 ring-offset-[#FBF8F6]" : ""}`}>
+                        className={`group relative flex min-h-[62px] min-w-0 flex-col items-center justify-center overflow-hidden rounded-[11px] border px-0.5 py-1.5 transition sm:min-h-[78px] ${showFullCalendar ? "min-h-[105px] sm:min-h-[150px]" : ""} ${!valid ? "border-transparent opacity-0" : future ? "border-[#EADDD7] bg-[#F8F2EF] text-[#BDA9A2]" : done ? "border-[#CBAAA1] bg-[#F1E2DD] text-[#805D55] hover:border-[#A77B73]" : "border-[#E7DAD5] bg-[#FFFCFA] text-[#805D55] hover:border-[#A77B73]"} ${today ? "ring-1 ring-[#A77B73] ring-offset-1 ring-offset-[#FBF8F6]" : ""}`}>
                         {image && valid && <><img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" /><span className="absolute inset-0 bg-[#211C19]/45" /></>}
                         <span className={`relative z-10 text-[7px] uppercase tracking-[0.02em] sm:text-[9px] ${image ? "text-white" : "text-[#A77B73]"}`}>{date?.toLocaleDateString("en-US", { weekday: "short" }) ?? "—"}</span>
                         <span className={`relative z-10 mt-0.5 font-serif text-base sm:text-xl ${image ? "text-white" : ""}`}>{date?.getDate() ?? "—"}</span>
@@ -1049,7 +1055,7 @@ useEffect(() => {
                 <section>
                   <SmallLabel>01 · PROGRESS PHOTO</SmallLabel>
                   <h3 className="mt-1 font-serif text-lg italic">
-                    this day, captured.
+                  
                   </h3>
                   <input
                     ref={fileInput}
@@ -1101,9 +1107,7 @@ useEffect(() => {
                       <p className="font-serif text-xl italic text-[#A77B73]">
                         no photo yet. ♡
                       </p>
-                      <p className="mt-2 text-xs text-[#8C7770]">
-                        A little moment worth remembering.
-                      </p>
+                     
                       <button
                         type="button"
                         disabled={uploading}
@@ -1132,7 +1136,7 @@ useEffect(() => {
                       <div>
                         <SmallLabel>02 · MEASUREMENTS</SmallLabel>
                         <h3 className="mt-1 font-serif text-lg italic text-[#30231F]">
-                          a little snapshot of you.
+                          
                         </h3>
                       </div>
                       {!editingMeasurements && (
@@ -1211,7 +1215,7 @@ useEffect(() => {
                 <section>
                   <SmallLabel>03 · THE GOOD STUFF</SmallLabel>
                   <h3 className="mt-1 font-serif text-lg italic">
-                    what went well.
+             
                   </h3>
                   {dayWins.length > 0 ? (
                     <div className="mt-4 space-y-2">

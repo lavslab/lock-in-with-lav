@@ -12,12 +12,13 @@ type Journey = {
   journey_number: number;
   start_date: string | null;
   challenge_length: number;
-  archived_at: string;
-  daily_progress: unknown[];
-  weekly_checkins: unknown[];
-  measurements: unknown[];
-  little_wins: unknown[];
-  progress_photos: unknown[];
+  status: string;
+  archived_at: string | null;
+  daily_progress: unknown[] | null;
+  weekly_checkins: unknown[] | null;
+  measurements: unknown[] | null;
+  little_wins: unknown[] | null;
+  progress_photos: unknown[] | null;
 };
 
 export default function MyJourneysPage() {
@@ -85,7 +86,12 @@ export default function MyJourneysPage() {
   const formatDate = (value: string | null) => {
     if (!value) return "Date not recorded";
 
-    const date = new Date(`${value}T12:00:00`);
+    const datePart = value.slice(0, 10);
+    const date = new Date(`${datePart}T12:00:00`);
+
+    if (Number.isNaN(date.getTime())) {
+      return "Date not recorded";
+    }
 
     return date.toLocaleDateString("en-CA", {
       month: "long",
@@ -93,6 +99,35 @@ export default function MyJourneysPage() {
       year: "numeric",
     });
   };
+
+  const formatArchivedDate = (value: string | null) => {
+    if (!value) return null;
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return date.toLocaleDateString("en-CA", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const activeJourneys = journeys.filter(
+    (journey) => journey.status === "active"
+  );
+
+  const archivedJourneys = journeys.filter(
+    (journey) => journey.status === "archived"
+  );
+
+  const orderedJourneys = [
+    ...activeJourneys,
+    ...archivedJourneys,
+  ];
 
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
@@ -105,14 +140,8 @@ export default function MyJourneysPage() {
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
           <header className="border-b border-[#DED0CB] pb-8">
-            <Link
-              href="/dashboard/account"
-              className="text-[10px] tracking-[0.25em] text-[#9D6F67] hover:underline"
-            >
-              ← MY ACCOUNT
-            </Link>
-
-            <p className="mt-8 text-[10px] tracking-[0.35em] text-[#9D6F67]">
+            
+            <p className="mt-0 text-[10px] tracking-[0.35em] text-[#9D6F67]">
               YOUR PERSONAL ARCHIVE
             </p>
 
@@ -159,20 +188,30 @@ export default function MyJourneysPage() {
                 </p>
 
                 <Link
-                  href="/dashboard/progress"
+                  href="/dashboard/journey"
                   className="mt-8 inline-block rounded-full bg-[#211C19] px-7 py-4 text-[10px] tracking-[0.2em] text-[#F7F1ED]"
                 >
-                  VIEW MY PROGRESS →
+                  VIEW MY JOURNEY →
                 </Link>
               </div>
             ) : (
               <div className="space-y-5">
                 <p className="mb-7 text-[10px] tracking-[0.25em] text-[#9D6F67]">
-                  {journeys.length} SAVED{" "}
-                  {journeys.length === 1 ? "JOURNEY" : "JOURNEYS"}
+                  {archivedJourneys.length} SAVED{" "}
+                  {archivedJourneys.length === 1
+                    ? "JOURNEY"
+                    : "JOURNEYS"}
+                  {activeJourneys.length > 0
+                    ? ` · ${activeJourneys.length} ACTIVE`
+                    : ""}
                 </p>
 
-                {journeys.map((journey) => {
+                {orderedJourneys.map((journey) => {
+                  const isActive = journey.status === "active";
+                  const archivedDate = formatArchivedDate(
+                    journey.archived_at
+                  );
+
                   const days = journey.daily_progress?.length ?? 0;
                   const photos = journey.progress_photos?.length ?? 0;
                   const checkins = journey.weekly_checkins?.length ?? 0;
@@ -185,12 +224,17 @@ export default function MyJourneysPage() {
                       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
                         <div>
                           <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
-                            SAVED CHAPTER
+                            {isActive
+                              ? "CURRENT CHAPTER"
+                              : "SAVED CHAPTER"}
                           </p>
 
                           <h2 className="mt-3 font-serif text-3xl md:text-4xl">
                             Journey{" "}
-                            {String(journey.journey_number).padStart(2, "0")}
+                            {String(journey.journey_number).padStart(
+                              2,
+                              "0"
+                            )}
                           </h2>
 
                           <p className="mt-3 text-sm text-[#806E68]">
@@ -198,58 +242,82 @@ export default function MyJourneysPage() {
                           </p>
 
                           <p className="mt-1 text-xs text-[#A77B73]">
-                            Archived{" "}
-                            {new Date(journey.archived_at).toLocaleDateString(
-                              "en-CA",
-                              {
-                                month: "long",
-                                day: "numeric",
-                                year: "numeric",
-                              }
-                            )}
+                            {journey.challenge_length}-day challenge
                           </p>
+
+                          {isActive ? (
+                            <p className="mt-2 text-xs italic text-[#A77B73]">
+                              your story is still unfolding. ♡
+                            </p>
+                          ) : archivedDate ? (
+                            <p className="mt-2 text-xs text-[#A77B73]">
+                              Archived {archivedDate}
+                            </p>
+                          ) : null}
                         </div>
 
-                        <span className="self-start rounded-full border border-[#DDB5AE] px-4 py-2 text-[10px] tracking-[0.15em] text-[#8F655E]">
-                          ARCHIVED ♡
+                        <span
+                          className={`self-start rounded-full border px-4 py-2 text-[10px] tracking-[0.15em] ${
+                            isActive
+                              ? "border-[#B9C7B1] bg-[#EDF1E9] text-[#62765A]"
+                              : "border-[#DDB5AE] text-[#8F655E]"
+                          }`}
+                        >
+                          {isActive ? "ACTIVE ♡" : "ARCHIVED ♡"}
                         </span>
                       </div>
 
-                      <div className="mt-8 grid grid-cols-3 gap-3 border-t border-[#DED0CB] pt-6 text-center">
-                        <div>
-                          <p className="font-serif text-3xl">{days}</p>
-                          <p className="mt-1 text-[10px] tracking-[0.15em] text-[#806E68]">
-                            DAYS LOGGED
+                      {isActive ? (
+                        <div className="mt-8 border-t border-[#DED0CB] pt-6">
+                          <p className="text-center font-serif text-lg italic text-[#A77B73]">
+                            the chapter you're writing right now. ♡
                           </p>
                         </div>
+                      ) : (
+                        <>
+                          <div className="mt-8 grid grid-cols-3 gap-3 border-t border-[#DED0CB] pt-6 text-center">
+                            <div>
+                              <p className="font-serif text-3xl">{days}</p>
+                              <p className="mt-1 text-[10px] tracking-[0.15em] text-[#806E68]">
+                                DAYS LOGGED
+                              </p>
+                            </div>
 
-                        <div>
-                          <p className="font-serif text-3xl">{photos}</p>
-                          <p className="mt-1 text-[10px] tracking-[0.15em] text-[#806E68]">
-                            PHOTOS
+                            <div>
+                              <p className="font-serif text-3xl">{photos}</p>
+                              <p className="mt-1 text-[10px] tracking-[0.15em] text-[#806E68]">
+                                PHOTOS
+                              </p>
+                            </div>
+
+                            <div>
+                              <p className="font-serif text-3xl">
+                                {checkins}
+                              </p>
+                              <p className="mt-1 text-[10px] tracking-[0.15em] text-[#806E68]">
+                                CHECK-INS
+                              </p>
+                            </div>
+                          </div>
+
+                          <p className="mt-7 text-center font-serif text-lg italic text-[#A77B73]">
+                            a chapter worth remembering. ♡
                           </p>
-                        </div>
+                        </>
+                      )}
 
-                        <div>
-                          <p className="font-serif text-3xl">{checkins}</p>
-                          <p className="mt-1 text-[10px] tracking-[0.15em] text-[#806E68]">
-                            CHECK-INS
-                          </p>
-                        </div>
-                      </div>
-
-                      <p className="mt-7 text-center font-serif text-lg italic text-[#A77B73]">
-                        a chapter worth remembering. ♡
-                      </p>
-
-                      
-<Link
-  href={`/dashboard/journeys/${journey.id}`}
-  className="mt-6 block rounded-full bg-[#211C19] px-7 py-4 text-center text-[10px] tracking-[0.25em] text-[#F7F1ED] transition hover:opacity-90"
->
-  OPEN THIS JOURNEY →
-</Link>
-
+                      <Link
+                        href={
+                          isActive
+                            ? "/dashboard/journey"
+                            : `/dashboard/journeys/${journey.id}`
+                        }
+                        className="mt-6 block rounded-full bg-[#211C19] px-7 py-4 text-center text-[10px] tracking-[0.25em] text-[#F7F1ED] transition hover:opacity-90"
+                      >
+                        {isActive
+                          ? "CONTINUE MY JOURNEY →"
+                          : "OPEN THIS JOURNEY →"}
+                      </Link>
                     </article>
                   );
                 })}

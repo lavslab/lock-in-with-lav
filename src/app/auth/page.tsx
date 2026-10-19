@@ -307,8 +307,8 @@ async function handleForgotPassword() {
         </section>
 
         {/* RIGHT */}
-        <section className="flex min-h-screen items-center justify-center px-6 py-12 md:px-12">
-          <div className="w-full max-w-md">
+        <section className="flex min-h-screen min-w-0 items-center justify-center px-6 py-12 md:px-12">
+          <div className="w-full min-w-0 max-w-md">
             {/* MOBILE LOGO */}
             <Link href="/" className="mb-14 inline-block lg:hidden">
               <p className="font-serif text-2xl tracking-[0.08em]">

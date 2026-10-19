@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { getCurrentChallengeDay } from "@/lib/challenge";
 import type { WorkoutDetail } from "@/lib/workoutDetails";
+import { getActiveJourney } from "@/lib/active-journey";
 
 export type LoggedSet = {
   completed: boolean;
@@ -175,13 +176,22 @@ export function useWorkoutSession(workout: WorkoutDetail) {
         if (cancelled) return;
 
         userIdRef.current = user.id;
+const activeJourney = await getActiveJourney();
+
+if (!activeJourney?.id || activeJourney.user_id !== user.id) {
+  throw new Error("No active journey found for this workout.");
+}
+
+if (cancelled) return;
+
 
         const { data, error: queryError } = await supabase
           .from("workout_sessions")
           .select("id, status, exercises")
           .eq("user_id", user.id)
-          .eq("workout_id", workout.id)
-          .eq("status", "in_progress")
+.eq("journey_id", activeJourney.id)
+.eq("workout_id", workout.id)
+.eq("status", "in_progress")
           .order("started_at", { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -281,10 +291,17 @@ export function useWorkoutSession(workout: WorkoutDetail) {
           profile.challenge_length ?? 75
         );
       }
+const activeJourney = await getActiveJourney();
+
+if (!activeJourney?.id || activeJourney.user_id !== userId) {
+  throw new Error("No active journey found for this workout.");
+}
+
 
       const payload = {
-        user_id: userId,
-        workout_id: workout.id,
+  user_id: userId,
+  journey_id: activeJourney.id,
+  workout_id: workout.id,
         workout_title:
           `${workout.title} ${workout.accentTitle ?? ""}`.trim(),
         status: nextStatus,
@@ -305,8 +322,9 @@ export function useWorkoutSession(workout: WorkoutDetail) {
         const { error: updateError } = await supabase
           .from("workout_sessions")
           .update(payload)
-          .eq("id", sessionIdRef.current)
-          .eq("user_id", userId);
+.eq("id", sessionIdRef.current)
+.eq("user_id", userId)
+.eq("journey_id", activeJourney.id);
 
         if (updateError) throw updateError;
       } else {

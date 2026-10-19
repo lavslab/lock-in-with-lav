@@ -736,7 +736,7 @@ const mergedWorkouts = [
         },
         {
           onConflict:
-            "user_id,challenge_day",
+            "journey_id,challenge_day",
         },
       );
 
