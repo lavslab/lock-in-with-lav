@@ -136,6 +136,8 @@ export default function DashboardPage() {
   const [userId, setUserId] = useState<string | null>(
     null
   );
+const [activeJourneyId, setActiveJourneyId] =
+  useState<string | null>(null);
 
   const [waterBottles, setWaterBottles] = useState(0);
   const [moveMinutes, setMoveMinutes] = useState(0);
@@ -148,6 +150,9 @@ export default function DashboardPage() {
   const [selectedWorkouts, setSelectedWorkouts] =
     useState<SelectedWorkout[]>([]);
 
+
+    const [deletingActivityId, setDeletingActivityId] =
+  useState<string | null>(null);
     const [manualActivities, setManualActivities] = useState<
   {
     id: string;
@@ -225,7 +230,12 @@ export default function DashboardPage() {
       setUserId(user.id);
 
       const activeJourney = await getActiveJourney();
-
+setActiveJourneyId(
+  activeJourney?.user_id === user.id &&
+  activeJourney.status === "active"
+    ? activeJourney.id
+    : null
+);
       const savedName = user.user_metadata?.name;
 
       if (savedName) {
@@ -264,17 +274,18 @@ const profileChallengeLength =
   profile.challenge_length ?? 75;
 
 setChallengeStartDate(
-  profile.challenge_start_date
+  activeJourney?.start_date ?? profile.challenge_start_date
 );
 
 setChallengeLength(
-  profileChallengeLength
+  activeJourney?.challenge_length ?? profileChallengeLength
 );
+
 
 const calculatedDay =
   getCurrentChallengeDay(
-    profile.challenge_start_date,
-    profileChallengeLength
+    activeJourney?.start_date ?? profile.challenge_start_date,
+    activeJourney?.challenge_length ?? profileChallengeLength
   );
   /*
  * GUIDE → TODAY WORKOUT SYNC
@@ -369,9 +380,10 @@ const {
   .select(
   "move, get_outside, hydrate, read, nourish, document, no_alcohol, water_bottles, selected_workouts, dismissed_guide_workouts"
 )
-  .eq("user_id", user.id)
-  .eq("challenge_day", calculatedDay)
-  .maybeSingle();
+ .eq("user_id", user.id)
+.eq("journey_id", activeJourney?.id ?? "")
+.eq("challenge_day", calculatedDay)
+.maybeSingle();
 
 
   
@@ -422,13 +434,13 @@ const { data: completedWorkouts, error: workoutMinutesError } =
     .from("workout_sessions")
     .select("duration_minutes")
     .eq("user_id", user.id)
-    .eq("status", "completed")
-    .eq("challenge_day", calculatedDay)
+.eq("journey_id", activeJourney?.id ?? "")
+.eq("status", "completed")
+.eq("challenge_day", calculatedDay)
     .gte(
-      "completed_at",
-      `${profile.challenge_start_date}T00:00:00`
-    );
-
+  "completed_at",
+  `${activeJourney?.start_date ?? profile.challenge_start_date}T00:00:00`
+);
 if (workoutMinutesError) {
   console.error(
     "Could not load completed workout minutes:",
@@ -447,19 +459,20 @@ setMoveMinutes(totalMoveMinutes);
 
 moveGoalReached = totalMoveMinutes >= 45;
 
-  if (moveGoalReached && !savedProgress?.move) {
+  if (activeJourney?.id && moveGoalReached && !savedProgress?.move) {
     const { error: moveUpdateError } = await supabase
       .from("daily_progress")
       .upsert(
         {
           user_id: user.id,
-          challenge_day: calculatedDay,
+journey_id: activeJourney?.id,
+challenge_day: calculatedDay,
           progress_date: formatDateForDatabase(new Date()),
           move: true,
           updated_at: new Date().toISOString(),
         },
         {
-          onConflict: "user_id,challenge_day",
+          onConflict: "journey_id,challenge_day",
         }
       );
 
@@ -559,7 +572,7 @@ const workoutsChanged =
   JSON.stringify(mergedWorkouts) !==
   JSON.stringify(savedWorkouts);
 
-if (workoutsChanged) {
+if (activeJourney?.id && workoutsChanged) {
   const { error: workoutSyncError } =
     await supabase
 
@@ -569,10 +582,8 @@ if (workoutsChanged) {
           mergedWorkouts,
       })
       .eq("user_id", user.id)
-      .eq(
-        "challenge_day",
-        calculatedDay
-      );
+.eq("journey_id", activeJourney?.id ?? "")
+.eq("challenge_day", calculatedDay);
 
   if (workoutSyncError) {
     console.error(
@@ -614,19 +625,20 @@ setProgress({
 
   // If The Guide has a workout scheduled for today,
   // create today's progress row with that workout already selected.
-  if (scheduledGuideWorkouts.length > 0) {
+  if (activeJourney?.id && scheduledGuideWorkouts.length > 0) {
     const { error: createProgressError } = await supabase
       .from("daily_progress")
       .upsert(
         {
           user_id: user.id,
-          challenge_day: calculatedDay,
+journey_id: activeJourney.id,
+challenge_day: calculatedDay,
           progress_date: new Date().toISOString().split("T")[0],
           selected_workouts: scheduledGuideWorkouts,
           updated_at: new Date().toISOString(),
         },
         {
-          onConflict: "user_id,challenge_day",
+          onConflict: "journey_id,challenge_day",
         }
       );
 
@@ -655,12 +667,10 @@ setProgress({
         .from("progress_photos")
         .select("challenge_day")
         .eq("user_id", user.id)
-        .eq(
-          "challenge_day",
-          calculatedDay
-        )
-        .eq("photo_type", "progress")
-        .maybeSingle();
+.eq("journey_id", activeJourney?.id ?? "")
+.eq("challenge_day", calculatedDay)
+.eq("photo_type", "progress")
+.maybeSingle();
 
       if (progressPhotoError) {
         console.error(
@@ -682,15 +692,17 @@ setProgress({
   }, []);
 
   const toggleCommitment = async (
+
     column: CommitmentColumn
   ) => {
-    if (
-      !userId ||
-      !challengeStartDate ||
-      isLoadingProgress
-    ) {
-      return;
-    }
+   if (
+  !userId ||
+  !activeJourneyId ||
+  !challengeStartDate ||
+  isLoadingProgress
+) {
+  return;
+}
 
     const newValue = !progress[column];
 
@@ -708,8 +720,9 @@ setProgress({
       .from("daily_progress")
       .upsert(
         {
-          user_id: userId,
-          challenge_day: currentDay,
+         user_id: userId,
+journey_id: activeJourneyId,
+challenge_day: currentDay,
           progress_date: progressDate,
           move: updatedProgress.move,
           get_outside:
@@ -725,8 +738,7 @@ setProgress({
             new Date().toISOString(),
         },
         {
-          onConflict:
-            "user_id,challenge_day",
+          onConflict: "journey_id,challenge_day",
         }
       );
 
@@ -744,12 +756,13 @@ setProgress({
   nextCount: number
 ) => {
   if (
-    !userId ||
-    !challengeStartDate ||
-    isLoadingProgress
-  ) {
-    return;
-  }
+  !userId ||
+  !activeJourneyId ||
+  !challengeStartDate ||
+  isLoadingProgress
+) {
+  return;
+}
 
   const clampedCount = Math.min(
     Math.max(nextCount, 0),
@@ -781,7 +794,8 @@ setProgress({
     .upsert(
       {
         user_id: userId,
-        challenge_day: currentDay,
+journey_id: activeJourneyId,
+challenge_day: currentDay,
         progress_date: progressDate,
         move: updatedProgress.move,
         get_outside:
@@ -801,8 +815,7 @@ setProgress({
           new Date().toISOString(),
       },
       {
-        onConflict:
-          "user_id,challenge_day",
+        onConflict: "journey_id,challenge_day",
       }
     );
 
@@ -831,12 +844,13 @@ setProgress({
     workoutId: string
   ) => {
     if (
-      !userId ||
-      !challengeStartDate ||
-      isLoadingProgress
-    ) {
-      return;
-    }
+  !userId ||
+  !activeJourneyId ||
+  !challengeStartDate ||
+  isLoadingProgress
+) {
+  return;
+}
 
     const previousWorkouts = selectedWorkouts;
 
@@ -858,8 +872,10 @@ if (workoutBeingRemoved?.source === "guide") {
       .from("daily_progress")
       .select("dismissed_guide_workouts")
       .eq("user_id", userId)
-      .eq("challenge_day", currentDay)
-      .maybeSingle();
+.eq("journey_id", activeJourneyId)
+.eq("challenge_day", currentDay)
+.maybeSingle();
+
 
   const existingDismissed =
     Array.isArray(
@@ -893,7 +909,8 @@ if (workoutBeingRemoved?.source === "guide") {
       .upsert(
         {
   user_id: userId,
-  challenge_day: currentDay,
+journey_id: activeJourneyId,
+challenge_day: currentDay,
   progress_date: progressDate,
   selected_workouts: updatedWorkouts,
   ...(workoutBeingRemoved?.source === "guide"
@@ -905,8 +922,7 @@ if (workoutBeingRemoved?.source === "guide") {
   updated_at: new Date().toISOString(),
 },
         {
-          onConflict:
-            "user_id,challenge_day",
+          onConflict: "journey_id,challenge_day",
         }
       );
 
@@ -926,6 +942,90 @@ if (workoutBeingRemoved?.source === "guide") {
       );
     }
   };
+
+  const deleteManualActivity = async (activityId: string) => {
+  if (!userId || deletingActivityId) return;
+
+  const activityToDelete = manualActivities.find(
+    (activity) => activity.id === activityId
+  );
+
+  if (!activityToDelete) return;
+
+  const confirmed = window.confirm(
+    `Remove "${activityToDelete.activity_name}" from today's movement log?`
+  );
+
+  if (!confirmed) return;
+
+  setDeletingActivityId(activityId);
+
+  try {
+    const { data: deletedActivity, error } = await supabase
+      .from("movement_activities")
+      .delete()
+      .eq("id", activityId)
+      .eq("user_id", userId)
+      .select("id")
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!deletedActivity) {
+      throw new Error("Activity could not be deleted.");
+    }
+
+    const remainingActivities = manualActivities.filter(
+      (activity) => activity.id !== activityId
+    );
+
+    const deletedMinutes = Math.max(
+      0,
+      activityToDelete.duration_minutes ?? 0
+    );
+
+    const updatedMinutes = Math.max(
+      0,
+      moveMinutes - deletedMinutes
+    );
+
+    setManualActivities(remainingActivities);
+    setMoveMinutes(updatedMinutes);
+
+    // Only automatically uncheck MOVE if it was completed
+    // based on logged minutes and the total falls below 45.
+    if (activeJourneyId && updatedMinutes < 45 && progress.move) {
+      const { error: progressError } = await supabase
+        .from("daily_progress")
+        .update({
+          move: false,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId)
+.eq("journey_id", activeJourneyId ?? "")
+.eq("challenge_day", currentDay);
+
+      if (progressError) {
+        console.error(
+          "Could not update MOVE commitment:",
+          progressError
+        );
+      } else {
+        setProgress((previous) => ({
+          ...previous,
+          move: false,
+        }));
+      }
+    }
+  } catch (error) {
+    console.error("Could not delete movement activity:", error);
+    window.alert(
+      "We couldn't remove this activity. Please try again."
+    );
+  } finally {
+    setDeletingActivityId(null);
+  }
+};
   const completedCount =
     commitments.filter(
       (item) => progress[item.column]
@@ -1442,7 +1542,15 @@ if (workoutBeingRemoved?.source === "guide") {
                 </p>
               </div>
 
-              <span className="text-sm text-[#A77B73]">✓</span>
+              <button
+  type="button"
+  onClick={() => deleteManualActivity(activity.id)}
+  disabled={deletingActivityId !== null}
+  aria-label={`Remove ${activity.activity_name}`}
+  className="shrink-0 text-[9px] tracking-[0.16em] text-[#B08A82] transition hover:text-[#211C19] disabled:cursor-not-allowed disabled:opacity-50"
+>
+  {deletingActivityId === activity.id ? "REMOVING..." : "REMOVE"}
+</button>
             </div>
           </div>
         ))}
