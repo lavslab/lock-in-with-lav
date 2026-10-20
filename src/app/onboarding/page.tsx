@@ -231,7 +231,7 @@ if (activeJourney) {
 
   return (
     <main className="min-h-dvh bg-[#F7F1ED] text-[#211C19]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-[1100px] flex-col px-4 pb-8 pt-6 sm:px-8 sm:pt-8 lg:px-12">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[1100px] flex-col px-4 pb-8 pt-[calc(env(safe-area-inset-top,0px)+24px)] sm:px-8 sm:pt-8 lg:px-12">
         {/* BRAND */}
         <header className="mx-auto flex w-full max-w-[680px] items-center justify-between pb-5">
           <div>
@@ -268,76 +268,87 @@ if (activeJourney) {
                 </span>
               </h1>
 
-              <p className="mx-auto mt-4 max-w-[370px] text-[13px] leading-6 text-[#806E68] sm:text-sm">
-                Hey {firstName}! Choose your journey.
-                We'll take it one day at a time.
-              </p>
+              
+<div className="mx-auto mt-4 text-center">
+  <p className="font-serif text-[17px] italic text-[#A77B73]">
+    Hey {firstName}! ♡
+  </p>
+
+  <p className="mx-auto mt-2 max-w-[370px] text-[13px] leading-6 text-[#806E68] sm:text-sm">
+    Choose your journey. We'll take it one day at a time.
+  </p>
+</div>
+
             </div>
 
-            {/* CHALLENGE LENGTH */}
-            <div className="pt-7 sm:pt-9">
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-[10px] font-medium tracking-[0.16em] text-[#9D6F67]">
-                  01 / CHOOSE YOUR CHALLENGE
-                </p>
+ 
+{/* CHALLENGE LENGTH */}
+<div className="pt-7 sm:pt-9">
+  <div className="flex items-center justify-between gap-3">
+    <p className="text-[10px] font-medium tracking-[0.16em] text-[#9D6F67]">
+      01 / CHOOSE YOUR CHALLENGE
+    </p>
 
-                <span className="font-serif text-lg italic text-[#A77B73]">
-                  make it yours.
-                </span>
-              </div>
+    <span className="font-serif text-lg italic text-[#A77B73]">
+      make it yours.
+    </span>
+  </div>
 
-              <div className="mt-5 grid grid-cols-2 gap-3 sm:gap-4">
-                {challengeOptions.map((option) => {
-                  const isSelected = selectedLength === option.days;
+  <div className="mt-4 grid grid-cols-2 gap-2.5 sm:gap-3">
+    {challengeOptions.map((option) => {
+      const isSelected = selectedLength === option.days;
 
-                  return (
-                    <button
-                      key={option.days}
-                      type="button"
-                      disabled={isStarting}
-                      aria-pressed={isSelected}
-                      onClick={() => setSelectedLength(option.days)}
-                      className={`relative min-h-[135px] rounded-[1.35rem] border p-4 text-left transition duration-200 sm:min-h-[150px] sm:p-5 ${
-                        isSelected
-                          ? "border-[#C99C93] bg-[#EEDAD5]"
-                          : "border-[#DED0CB] bg-[#FBF8F6] hover:border-[#C99C93] hover:bg-[#F7F1ED]"
-                      } disabled:cursor-not-allowed disabled:opacity-60`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <span className="font-serif text-[42px] leading-none tracking-[-0.04em] text-[#211C19] sm:text-5xl">
-                            {option.days}
-                          </span>
+      return (
+        <button
+          key={option.days}
+          type="button"
+          disabled={isStarting}
+          aria-pressed={isSelected}
+          onClick={() => setSelectedLength(option.days)}
+          className={`relative flex min-h-[112px] flex-col rounded-[1.15rem] border p-3 text-left transition duration-200 sm:min-h-[125px] sm:p-4 ${
+            isSelected
+              ? "border-[#C99C93] bg-[#EEDAD5]"
+              : "border-[#DED0CB] bg-[#FBF8F6] hover:border-[#C99C93] hover:bg-[#F7F1ED]"
+          } disabled:cursor-not-allowed disabled:opacity-60`}
+        >
+          <div className="flex w-full items-start justify-between gap-1">
+            <div className="flex items-baseline gap-1">
+              <span className="font-serif text-[34px] leading-none tracking-[-0.04em] text-[#211C19] sm:text-[40px]">
+                {option.days}
+              </span>
 
-                          <span className="ml-1.5 text-[9px] tracking-[0.12em] text-[#806E68]">
-                            DAYS
-                          </span>
-                        </div>
-
-                        <span
-                          aria-hidden="true"
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] ${
-                            isSelected
-                              ? "border-[#9D6F67] bg-[#9D6F67] text-white"
-                              : "border-[#D5C3BC] text-transparent"
-                          }`}
-                        >
-                          ✓
-                        </span>
-                      </div>
-
-                      <p className="mt-4 text-[10px] font-medium tracking-[0.14em] text-[#9D6F67]">
-                        {option.label}
-                      </p>
-
-                      <p className="mt-1.5 font-serif text-[13px] italic leading-5 text-[#806E68] sm:text-sm">
-                        {option.description}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
+              <span className="text-[9px] tracking-[0.08em] text-[#806E68]">
+                DAYS
+              </span>
             </div>
+
+            <span
+              aria-hidden="true"
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] ${
+                isSelected
+                  ? "border-[#9D6F67] bg-[#9D6F67] text-white"
+                  : "border-[#D5C3BC] text-transparent"
+              }`}
+            >
+              ✓
+            </span>
+          </div>
+
+          <p className="mt-2 text-[9px] font-medium tracking-[0.11em] text-[#9D6F67]">
+            {option.label}
+          </p>
+
+          <p className="mt-1 font-serif text-[12px] italic leading-[1.35] text-[#806E68]">
+            {option.description}
+          </p>
+        </button>
+      );
+    })}
+  </div>
+</div>
+
+
+
 
             {/* START DATE */}
             <div className="mt-8 border-t border-[#DED0CB] pt-7 sm:mt-9 sm:pt-9">
@@ -362,7 +373,7 @@ if (activeJourney) {
                 value={selectedDate}
                 onChange={(event) => setSelectedDate(event.target.value)}
                 disabled={isStarting}
-                className="mt-2 block min-h-[52px] w-full min-w-0 rounded-[1rem] border border-[#DED0CB] bg-white px-4 py-3 text-base text-[#211C19] outline-none transition focus:border-[#A77B73] focus:ring-2 focus:ring-[#EEDAD5] disabled:opacity-60"
+                className="mt-2 block min-h-[52px] w-full max-w-full min-w-0 appearance-none rounded-[1rem] border border-[#DED0CB] bg-white px-3 py-3 text-base text-[#211C19] outline-none transition focus:border-[#A77B73] focus:ring-2 focus:ring-[#EEDAD5] disabled:opacity-60 [box-sizing:border-box]"
               />
 
               <p className="mt-2 text-[11px] leading-5 text-[#927D76]">
