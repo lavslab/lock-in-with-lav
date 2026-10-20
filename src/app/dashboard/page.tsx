@@ -1954,24 +1954,26 @@ if (item.column === "nourish") {
   </section>
 )}
 
+
 {/* A NOTE FROM LAV — PERSONAL SIGN-OFF */}
 <section
-  className={`mb-8 text-center ${
+  className={`mb-5 text-center ${
     dayComplete
-      ? "mt-7 border-t border-[#E4D5CE] pt-7"
-      : "mt-10"
+      ? "mt-5 border-t border-[#E4D5CE] pt-5"
+      : "mt-8"
   }`}
 >
-  <p className="text-[9px] uppercase tracking-[0.25em] text-[#9D6F67]">
+  <p className="text-[9px] uppercase tracking-[0.2em] text-[#B49A91]">
     A NOTE FROM LAV:
   </p>
 
-  <p className="mx-auto mt-4 max-w-xl font-serif text-xl italic leading-snug text-[#A77B73] sm:text-2xl">
+  <p className="mx-auto mt-2 max-w-xs font-serif text-sm italic leading-relaxed text-[#B9948B] sm:text-base">
     um... look at you showing up ready to lock in
     <br />
     proud of you ♡
   </p>
 </section>
+
         </section>
       </div>
 
