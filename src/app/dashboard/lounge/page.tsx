@@ -35,6 +35,10 @@ type LoungeLike = {
   user_id: string;
 };
 
+type LoungeSavedPost = {
+  post_id: string;
+};
+
 export default async function LoungePage() {
   const supabase = await createClient();
 
@@ -98,7 +102,55 @@ export default async function LoungePage() {
     console.error("LOUNGE POSTS ERROR:", postsError);
   }
 
-  const posts: LoungePost[] = postsData ?? [];
+
+  // Load the current member's saved post IDs.
+const { data: savedData, error: savedError } = await supabase
+  .from("lounge_saved_posts")
+  .select("post_id")
+  .eq("user_id", user.id)
+  .order("created_at", { ascending: false });
+
+if (savedError) {
+  console.error("LOUNGE SAVED POSTS ERROR:", savedError);
+}
+
+const savedPosts: LoungeSavedPost[] = savedData ?? [];
+
+const savedPostIds = savedPosts.map(
+  (savedPost) => savedPost.post_id
+);
+  
+let savedPostRecords: LoungePost[] = [];
+
+if (savedPostIds.length > 0) {
+  const { data, error: savedPostsError } = await supabase
+    .from("lounge_posts")
+    .select("id, user_id, content, category, created_at")
+    .in("id", savedPostIds);
+
+  if (savedPostsError) {
+    console.error(
+      "LOUNGE SAVED POST DETAILS ERROR:",
+      savedPostsError
+    );
+  }
+
+  savedPostRecords = data ?? [];
+}
+
+// Combine recent posts and saved posts without duplicates.
+const postMap = new Map<string, LoungePost>();
+
+for (const post of postsData ?? []) {
+  postMap.set(post.id, post);
+}
+
+for (const post of savedPostRecords) {
+  postMap.set(post.id, post);
+}
+
+const posts: LoungePost[] = Array.from(postMap.values());
+
 
   const postIds = posts.map((post) => post.id);
 
@@ -310,9 +362,19 @@ export default async function LoungePage() {
             </section>
           ) : (
             <LoungeFeed
-              posts={feedPosts}
-              currentUserId={user.id}
-            />
+  posts={feedPosts.filter((post) =>
+    (postsData ?? []).some(
+      (recentPost) => recentPost.id === post.id
+    )
+  )}
+  savedPosts={savedPostIds
+    .map((id) => feedPosts.find((post) => post.id === id))
+    .filter(
+      (post): post is (typeof feedPosts)[number] =>
+        post !== undefined
+    )}
+  currentUserId={user.id}
+/>
           )}
         </LoungeSpaces>
       </div>

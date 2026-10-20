@@ -20,6 +20,11 @@ type Comment = {
   created_at: string;
 };
 
+
+type CommentLike = {
+  comment_id: string;
+  user_id: string;
+};
 type Author = {
   user_id: string;
   display_name: string | null;
@@ -30,6 +35,8 @@ type Author = {
 type Props = {
   postId: string;
   currentUserId: string;
+  onCountChange?: (count: number) => void;
+  openRequest?: number;
 };
 
 function formatDate(value: string) {
@@ -46,12 +53,17 @@ function formatDate(value: string) {
 export default function LoungeComments({
   postId,
   currentUserId,
+  onCountChange,
+  openRequest = 0,
 }: Props) {
   const [supabase] = useState(() => createClient());
 
   const [comments, setComments] = useState<Comment[]>([]);
+  const [commentLikes, setCommentLikes] = useState<CommentLike[]>([]);
+const [likingCommentId, setLikingCommentId] = useState<string | null>(null);
   const [authors, setAuthors] = useState<Author[]>([]);
   const [showAll, setShowAll] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [content, setContent] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [reportCommentId, setReportCommentId] =
@@ -85,6 +97,25 @@ export default function LoungeComments({
 
     const loadedComments: Comment[] = data ?? [];
     setComments(loadedComments);
+
+    // Load likes for all comments and replies on this post.
+const commentIds = loadedComments.map((comment) => comment.id);
+
+if (commentIds.length > 0) {
+  const { data: likesData, error: likesError } = await supabase
+    .from("lounge_comment_likes")
+    .select("comment_id, user_id")
+    .in("comment_id", commentIds);
+
+  if (likesError) {
+    console.error("LOUNGE COMMENT LIKES:", likesError);
+  } else {
+    setCommentLikes(likesData ?? []);
+  }
+} else {
+  setCommentLikes([]);
+}
+    onCountChange?.(loadedComments.length);
 
     const userIds = [
       ...new Set(
@@ -126,6 +157,22 @@ export default function LoungeComments({
     }
   }, [replyTo]);
 
+  useEffect(() => {
+  if (openRequest === 0) return;
+
+ setCommentsOpen(true);
+setShowAll(true);
+
+textareaRef.current?.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+  });
+
+  textareaRef.current?.focus({
+    preventScroll: true,
+  });
+}, [openRequest]);
+
   const authorMap = new Map(
     authors.map((author) => [author.user_id, author])
   );
@@ -134,9 +181,9 @@ export default function LoungeComments({
     (comment) => comment.parent_id === null
   );
 
-  const visibleTopLevelComments = showAll
-    ? topLevelComments
-    : topLevelComments.slice(-2);
+  const visibleTopLevelComments = commentsOpen
+  ? topLevelComments
+  : topLevelComments.slice(-2);
 
   const replyTarget = comments.find(
     (comment) => comment.id === replyTo
@@ -147,8 +194,101 @@ export default function LoungeComments({
       "Lounge Member"
     : null;
 
+
+async function toggleCommentLike(commentId: string) {
+  if (likingCommentId) return;
+
+  const alreadyLiked = commentLikes.some(
+    (like) =>
+      like.comment_id === commentId &&
+      like.user_id === currentUserId
+  );
+
+  setLikingCommentId(commentId);
+  setError("");
+
+  // Update the heart immediately.
+  setCommentLikes((previous) =>
+    alreadyLiked
+      ? previous.filter(
+          (like) =>
+            !(
+              like.comment_id === commentId &&
+              like.user_id === currentUserId
+            )
+        )
+      : [
+          ...previous,
+          {
+            comment_id: commentId,
+            user_id: currentUserId,
+          },
+        ]
+  );
+
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (
+      authError ||
+      !user ||
+      user.id !== currentUserId
+    ) {
+      throw new Error("Please sign in again.");
+    }
+
+    if (alreadyLiked) {
+      const { error: unlikeError } = await supabase
+        .from("lounge_comment_likes")
+        .delete()
+        .eq("comment_id", commentId)
+        .eq("user_id", user.id);
+
+      if (unlikeError) throw unlikeError;
+    } else {
+      const { error: likeError } = await supabase
+        .from("lounge_comment_likes")
+        .insert({
+          comment_id: commentId,
+          user_id: user.id,
+        });
+
+      if (likeError) throw likeError;
+    }
+  } catch (err) {
+    // Restore the original state if saving fails.
+    setCommentLikes((previous) =>
+      alreadyLiked
+        ? [
+            ...previous,
+            {
+              comment_id: commentId,
+              user_id: currentUserId,
+            },
+          ]
+        : previous.filter(
+            (like) =>
+              !(
+                like.comment_id === commentId &&
+                like.user_id === currentUserId
+              )
+          )
+    );
+
+    setError("Couldn't update your comment like.");
+    console.error("LOUNGE COMMENT LIKE ERROR:", err);
+  } finally {
+    setLikingCommentId(null);
+  }
+}
+
+
   function startReply(commentId: string) {
-    setShowAll(true);
+  setCommentsOpen(true);
+  setShowAll(true);
     setReplyTo(commentId);
     setContent("");
     setError("");
@@ -287,6 +427,16 @@ export default function LoungeComments({
     const isMyComment =
       comment.user_id === currentUserId;
 
+      const likedByMe = commentLikes.some(
+  (like) =>
+    like.comment_id === comment.id &&
+    like.user_id === currentUserId
+);
+
+const commentLikeCount = commentLikes.filter(
+  (like) => like.comment_id === comment.id
+).length;
+
     return (
       <div
         key={comment.id}
@@ -306,20 +456,55 @@ export default function LoungeComments({
           )}
         </div>
 
-        <div className="min-w-0 flex-1">
-          <p className="whitespace-pre-wrap break-words text-[11px] leading-[1.7] text-[#4D413D]">
-            <span className="mr-1.5 font-semibold text-[#302521]">
-              {name}
-            </span>
-            {comment.content}
-          </p>
+        
+<div className="min-w-0 flex-1">
+  <div className="flex items-start gap-2">
+    <p className="min-w-0 flex-1 whitespace-pre-wrap break-words text-[11px] leading-[1.7] text-[#4D413D]">
+      <span className="mr-1.5 font-semibold text-[#302521]">
+        {name}
+      </span>
+      {comment.content}
+    </p>
+
+    <button
+      type="button"
+      onClick={() => void toggleCommentLike(comment.id)}
+      disabled={likingCommentId !== null}
+      aria-label={
+        likedByMe ? "Unlike comment" : "Like comment"
+      }
+      aria-pressed={likedByMe}
+      className="flex shrink-0 items-center gap-1 pt-0.5 text-[#A18A82] transition hover:text-[#C9938C] disabled:opacity-50"
+    >
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 24 24"
+        fill={likedByMe ? "#C9938C" : "none"}
+        stroke={likedByMe ? "#C9938C" : "currentColor"}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" />
+      </svg>
+
+      {commentLikeCount > 0 && (
+        <span className="text-[9px] tabular-nums">
+          {commentLikeCount}
+        </span>
+      )}
+    </button>
+  </div>
+
 
           <div className="mt-1 flex flex-wrap items-center gap-3">
             <span className="text-[9px] text-[#A18A82]">
               {formatDate(comment.created_at)}
             </span>
 
-            {!isReply && (
+            {(
               <button
                 type="button"
                 onClick={() => startReply(comment.id)}
@@ -362,71 +547,69 @@ export default function LoungeComments({
 
   return (
     <div className="w-full min-w-0">
-      {/* COMMENT COUNT */}
-      <div className="flex items-center gap-2">
-        <svg
-          width="19"
-          height="19"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#B98F87"
-          strokeWidth="1.7"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 21l1.9-5.5a9 9 0 0 1-.9-4A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5Z" />
-        </svg>
+     
 
-        <span className="text-[11px] text-[#806D65]">
-          {loading ? "…" : comments.length}
-        </span>
-      </div>
-
-      {/* COMMENTS PREVIEW */}
       {!loading && comments.length > 0 && (
         <div className="mt-3">
           {topLevelComments.length > 2 && (
             <button
               type="button"
-              onClick={() =>
-                setShowAll((previous) => !previous)
-              }
-              aria-expanded={showAll}
+              onClick={() => {
+  setCommentsOpen((previous) => !previous);
+}}aria-expanded={commentsOpen}
               className="text-[10px] text-[#9D6F67] transition hover:text-[#302521]"
             >
-              {showAll
-                ? "Show fewer comments"
-                : `View all ${comments.length} comments`}
+              {commentsOpen
+  ? "Hide comments ↑"
+  : `View all ${comments.length} comments`}
             </button>
           )}
 
           {visibleTopLevelComments.map((comment) => {
-            const replies = comments.filter(
-              (reply) =>
-                reply.parent_id === comment.id
-            );
+            
+const replies = comments.filter((reply) => {
+  let parentId = reply.parent_id;
+  const visited = new Set<string>();
 
-            return (
-              <div key={comment.id}>
-                {renderComment(comment)}
+  while (parentId && !visited.has(parentId)) {
+    if (parentId === comment.id) return true;
 
-                {showAll &&
-                  replies.map((reply) =>
-                    renderComment(reply, true)
-                  )}
-              </div>
-            );
+    visited.add(parentId);
+
+    const parent = comments.find(
+      (item) => item.id === parentId
+    );
+
+    parentId = parent?.parent_id ?? null;
+  }
+
+  return false;
+});
+
+return (
+  <div key={comment.id}>
+    {renderComment(comment)}
+
+    {commentsOpen &&
+  replies.map((reply) =>
+    renderComment(reply, true)
+  )}
+  </div>
+);
+
           })}
 
-          {!showAll &&
+          {!commentsOpen &&
             topLevelComments.length <= 2 &&
             comments.some(
               (comment) => comment.parent_id !== null
             ) && (
               <button
                 type="button"
-                onClick={() => setShowAll(true)}
+                onClick={() => {
+  setCommentsOpen(true);
+  setShowAll(true);
+}}
                 className="ml-9 mt-2 text-[10px] text-[#9D6F67]"
               >
                 View replies

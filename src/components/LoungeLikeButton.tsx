@@ -86,36 +86,35 @@ export default function LoungeLikeButton({
     }
   }
 
+  
   return (
-    <div>
-      <div className="flex flex-col items-start">
-        <button
-          type="button"
-          onClick={toggleLike}
-          disabled={busy}
-          aria-label={liked ? "Unlike post" : "Like post"}
-          aria-pressed={liked}
-          className="inline-flex h-9 w-9 items-center justify-center text-[#302521] transition hover:scale-110 disabled:opacity-60"
+    <div className="min-w-0">
+      <button
+        type="button"
+        onClick={toggleLike}
+        disabled={busy}
+        aria-label={liked ? "Unlike post" : "Like post"}
+        aria-pressed={liked}
+        className="inline-flex items-center gap-1.5 pt-1.5 text-[#302521] transition hover:text-[#A77B73] disabled:opacity-60"
+      >
+        <svg
+          width="19"
+height="19"
+          viewBox="0 0 24 24"
+          fill={liked ? "#C9938C" : "none"}
+          stroke={liked ? "#C9938C" : "currentColor"}
+          strokeWidth="1.7"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
         >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill={liked ? "#C9938C" : "none"}
-            stroke={liked ? "#C9938C" : "#302521"}
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" />
-          </svg>
-        </button>
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78Z" />
+        </svg>
 
-        <span className="mt-1 text-[11px] font-semibold tabular-nums text-[#302521]">
-          {count} {count === 1 ? "like" : "likes"}
+        <span className="text-[11px] font-normal tabular-nums">
+          {count}
         </span>
-      </div>
+      </button>
 
       {error && (
         <p
