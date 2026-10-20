@@ -144,6 +144,12 @@ const [activeJourneyId, setActiveJourneyId] =
   const [showMoveWorkouts, setShowMoveWorkouts] = useState(false);
   const [showDayDetails, setShowDayDetails] = useState(false);
 
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
+const [isCompletingJourney, setIsCompletingJourney] = useState(false);
+const [journeyCompleted, setJourneyCompleted] = useState(false);
+
+  
+
   const [selectedWorkout, setSelectedWorkout] =
     useState<SelectedWorkout | null>(null);
 
@@ -186,6 +192,26 @@ const [activeJourneyId, setActiveJourneyId] =
         today
       )
     : 1;
+
+ 
+const isFinalChallengeDay =
+  !!activeJourneyId &&
+  !!challengeStartDate &&
+  (() => {
+    const [year, month, day] = challengeStartDate.split("-").map(Number);
+
+    const elapsedDays = Math.floor(
+      (
+        Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) -
+        Date.UTC(year, month - 1, day)
+      ) / 86400000
+    );
+
+    return elapsedDays + 1 >= challengeLength;
+  })();
+
+
+    
 
   const dayNumber = String(currentDay).padStart(2, "0");
 
@@ -287,6 +313,8 @@ const calculatedDay =
     activeJourney?.start_date ?? profile.challenge_start_date,
     activeJourney?.challenge_length ?? profileChallengeLength
   );
+
+
   /*
  * GUIDE → TODAY WORKOUT SYNC
  *
@@ -742,6 +770,7 @@ challenge_day: currentDay,
         }
       );
 
+    
     if (error) {
       console.error(
         "Could not save daily progress:",
@@ -749,8 +778,27 @@ challenge_day: currentDay,
       );
 
       setProgress(progress);
+      return;
+    }
+
+    const allCommitmentsComplete =
+      updatedProgress.move &&
+      updatedProgress.get_outside &&
+      updatedProgress.hydrate &&
+      updatedProgress.read &&
+      updatedProgress.nourish &&
+      updatedProgress.document &&
+      updatedProgress.no_alcohol;
+
+    if (
+      isFinalChallengeDay &&
+      allCommitmentsComplete &&
+      !journeyCompleted
+    ) {
+      setShowCompletionModal(true);
     }
   };
+
 
   const updateWaterBottles = async (
   nextCount: number
@@ -819,19 +867,36 @@ challenge_day: currentDay,
       }
     );
 
+  
   if (error) {
     console.error(
       "Could not save water progress:",
       error
     );
 
-    setWaterBottles(
-      previousWaterBottles
-    );
-
+    setWaterBottles(previousWaterBottles);
     setProgress(previousProgress);
+    return;
+  }
+
+  const allCommitmentsComplete =
+    updatedProgress.move &&
+    updatedProgress.get_outside &&
+    updatedProgress.hydrate &&
+    updatedProgress.read &&
+    updatedProgress.nourish &&
+    updatedProgress.document &&
+    updatedProgress.no_alcohol;
+
+  if (
+    isFinalChallengeDay &&
+    allCommitmentsComplete &&
+    !journeyCompleted
+  ) {
+    setShowCompletionModal(true);
   }
 };
+
 
   /**
    * REMOVE WORKOUT FROM TODAY
@@ -1873,6 +1938,157 @@ if (item.column === "nourish") {
 </section>
         </section>
       </div>
+
+
+      
+
+     
+
+    
+{showCompletionModal && (
+  <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-[#211C19]/60 px-5 backdrop-blur-[3px]">
+    <style>{`
+      @keyframes lavCelebrationEnter {
+        0% { opacity: 0; transform: translateY(18px) scale(.94); }
+        100% { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      @keyframes lavSparkle {
+        0%, 100% { opacity: .35; transform: scale(.8) rotate(0deg); }
+        50% { opacity: 1; transform: scale(1.25) rotate(25deg); }
+      }
+
+      @keyframes lavGlow {
+        0%, 100% { transform: scale(1); opacity: .45; }
+        50% { transform: scale(1.15); opacity: .8; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .lav-celebration,
+        .lav-sparkle,
+        .lav-glow {
+          animation: none !important;
+        }
+      }
+    `}</style>
+
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="completion-title"
+      className="lav-celebration relative w-full max-w-sm overflow-hidden rounded-[30px] border border-[#E9DAD2] bg-[#FBF8F6] px-7 pb-9 pt-10 text-center shadow-2xl"
+      style={{
+        animation: "lavCelebrationEnter .65s ease-out both",
+      }}
+    >
+      {/* Decorative sparkles */}
+      <span
+        aria-hidden="true"
+        className="lav-sparkle absolute left-8 top-10 text-xl text-[#C5A477]"
+        style={{ animation: "lavSparkle 2.5s ease-in-out infinite" }}
+      >
+        ✦
+      </span>
+
+      <span
+        aria-hidden="true"
+        className="lav-sparkle absolute right-9 top-16 text-sm text-[#C5A477]"
+        style={{
+          animation: "lavSparkle 2.2s ease-in-out .4s infinite",
+        }}
+      >
+        ✧
+      </span>
+
+      <span
+        aria-hidden="true"
+        className="lav-sparkle absolute bottom-28 left-7 text-sm text-[#C5A477]"
+        style={{
+          animation: "lavSparkle 2.8s ease-in-out .8s infinite",
+        }}
+      >
+        ✧
+      </span>
+
+      <span
+        aria-hidden="true"
+        className="lav-sparkle absolute bottom-32 right-7 text-lg text-[#C5A477]"
+        style={{
+          animation: "lavSparkle 2.6s ease-in-out .2s infinite",
+        }}
+      >
+        ✦
+      </span>
+
+      {/* Glowing heart */}
+      <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
+        <div
+          aria-hidden="true"
+          className="lav-glow absolute inset-0 rounded-full bg-[#EAD5CC]"
+          style={{ animation: "lavGlow 3s ease-in-out infinite" }}
+        />
+
+        <div className="relative flex h-16 w-16 items-center justify-center rounded-full border border-[#D8BEB3] bg-[#F6EBE5]">
+          <span className="font-serif text-4xl text-[#A77B73]">
+            ♡
+          </span>
+        </div>
+      </div>
+
+      <p className="mb-3 text-[10px] uppercase tracking-[0.28em] text-[#A77B73]">
+        YOU STAYED LOCKED IN
+      </p>
+
+      <h2
+        id="completion-title"
+        className="font-serif text-[42px] leading-tight text-[#211C19]"
+      >
+        You did it !
+      </h2>
+
+      {/* Personalized challenge length */}
+      <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-[#E5D2C7] bg-[#F6ECE6] px-4 py-2">
+        <span className="text-[#B99A6B]">✦</span>
+
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9D746B]">
+          {challengeLength} Days Completed
+        </span>
+
+        <span className="text-[#B99A6B]">✦</span>
+      </div>
+
+      <p className="mx-auto mt-6 max-w-[260px] text-sm leading-6 text-[#806E68]">
+  You should be so proud of yourself !
+  <span className="mt-2 block">
+    Take a moment to appreciate how far you've come.
+  </span>
+</p>
+
+     <p className="mt-5 font-serif text-lg italic text-[#A77B73]">
+  I'm so proud of you. ♡
+  <span className="mt-1 block text-sm not-italic">
+    — Lav
+  </span>
+</p>
+
+      <div className="mx-auto mt-6 h-px w-14 bg-[#DFC9BE]" />
+
+      <button
+        type="button"
+        onClick={() => setShowCompletionModal(false)}
+        className="mt-7 w-full rounded-full bg-[#A77B73] px-5 py-3.5 text-sm font-medium text-white transition hover:bg-[#946960]"
+      >
+        Complete my journey ♡
+      </button>
+
+      <p className="mt-4 text-[10px] tracking-wide text-[#A18C83]">
+        A moment worth celebrating.
+      </p>
+    </div>
+  </div>
+)}
+
+
     </main>
   );
 }
