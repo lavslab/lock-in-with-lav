@@ -145,6 +145,7 @@ export default function DashboardMobileNav({
   const supabase = useMemo(() => createClient(), []);
 
   const [currentDay, setCurrentDay] = useState<number | null>(null);
+  const [unreadLoungeCount, setUnreadLoungeCount] = useState(0);
 
   useEffect(() => {
     const loadCurrentDay = async () => {
@@ -188,6 +189,45 @@ export default function DashboardMobileNav({
 
     loadCurrentDay();
   }, [supabase]);
+
+  useEffect(() => {
+  let active = true;
+
+  const loadUnreadCount = async () => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) return;
+
+    const { count, error } = await supabase
+      .from("lounge_notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false);
+
+    if (error) {
+      console.error("Lounge notification count:", error);
+      return;
+    }
+
+    if (active) {
+      setUnreadLoungeCount(count ?? 0);
+    }
+  };
+
+  void loadUnreadCount();
+
+  const interval = window.setInterval(() => {
+    void loadUnreadCount();
+  }, 15000);
+
+  return () => {
+    active = false;
+    window.clearInterval(interval);
+  };
+}, [supabase, pathname]);
 
   const isWorkoutDetailPage =
     pathname.startsWith("/dashboard/resources/workouts/") &&
@@ -304,9 +344,18 @@ export default function DashboardMobileNav({
                     : "text-[#8C7770] hover:bg-[#F1E6E2]"
                 }`}
               >
-                <span className="flex h-[25px] w-[25px] items-center justify-center">
-                  {renderNavigationIcon(item.icon)}
-                </span>
+                <span className="relative flex h-[25px] w-[25px] items-center justify-center">
+  {renderNavigationIcon(item.icon)}
+
+  {item.icon === "lounge" && unreadLoungeCount > 0 && (
+    <span
+      aria-label={`${unreadLoungeCount} unread Lounge notifications`}
+      className="absolute -right-2 -top-2 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#A77B73] px-1 text-[9px] font-medium leading-none text-white"
+    >
+      {unreadLoungeCount > 9 ? "9+" : unreadLoungeCount}
+    </span>
+  )}
+</span>
 
                 <span className="mt-1.5 max-w-full truncate text-[8px] tracking-[0.06em]">
                   {item.label}

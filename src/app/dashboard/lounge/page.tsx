@@ -7,6 +7,7 @@ import LoungeWelcome from "@/components/LoungeWelcome";
 import LoungePostComposer from "@/components/LoungePostComposer";
 import LoungeFeed from "@/components/LoungeFeed";
 import LoungeSpaces from "@/components/LoungeSpaces";
+import LoungeNotifications from "@/components/LoungeNotifications";
 
 type LoungePost = {
   id: string;
@@ -319,31 +320,49 @@ const posts: LoungePost[] = Array.from(postMap.values());
     <main className="min-h-screen bg-[#F7F1ED] px-5 pb-28 pt-7 text-[#211C19] sm:px-8">
       <div className="mx-auto max-w-2xl">
         {/* PAGE HEADER */}
-       <header className="mb-5 border-b border-[#DED0CB] pb-4">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <p className="text-[9px] tracking-[0.25em] text-[#9D6F67]">
-              YOUR COMMUNITY
-            </p>
+       
 
-            <Link
-              href="/dashboard/lounge/profile"
-              className="text-[9px] tracking-[0.12em] text-[#9D6F67] transition hover:text-[#211C19]"
-            >
-              MY PROFILE →
-            </Link>
-          </div>
+<header className="mb-5 border-b border-[#DED0CB] pb-4">
+  <div className="flex items-center justify-between gap-2">
+    <h1 className="min-w-0 font-serif text-[24px] leading-tight tracking-tight text-[#211C19] sm:text-[29px]">
+      The Lock In{" "}
+      <span className="italic text-[#A77B73]">
+        Lounge.
+      </span>
+    </h1>
 
-         <h1 className="font-serif text-[25px] leading-tight tracking-tight text-[#211C19] sm:text-[29px]">
-            The Lock In{" "}
-            <span className="italic text-[#A77B73]">
-              Lounge.
-            </span>
-          </h1>
+    <div className="flex shrink-0 items-center gap-2">
+      <LoungeNotifications currentUserId={user.id} />
 
-          <p className="mt-2 text-[11px] leading-5 text-[#806D65]">
-            A space to connect, share & grow together. ♡
-          </p>
-        </header>
+      <Link
+        href="/dashboard/lounge/profile"
+        aria-label="My Lounge profile"
+        className="flex h-9 w-9 items-center justify-center rounded-full border border-[#DED0CB] bg-[#FBF8F6] text-[#806D65] transition hover:border-[#A77B73] hover:text-[#211C19]"
+      >
+        <svg
+          width="17"
+          height="17"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4.5 21a7.5 7.5 0 0 1 15 0" />
+        </svg>
+      </Link>
+    </div>
+  </div>
+
+  <p className="mt-2 text-[11px] leading-5 text-[#806D65]">
+    A space to connect, share &amp; grow together. ♡
+  </p>
+</header>
+
+
 
         {/* PUBLIC FEED + PRIVATE CIRCLE TABS */}
         <LoungeSpaces>
