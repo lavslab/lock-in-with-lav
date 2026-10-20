@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import DashboardMobileNav from "@/components/DashboardMobileNav";
+import PullToRefresh from "@/components/PullToRefresh";
 import WorkoutBackNav from "@/components/WorkoutBackNav";
 import { createClient } from "@/lib/supabase/server";
 
@@ -46,8 +47,10 @@ export default async function DashboardLayout({
     : "♡";
 
   return (
-    <>
-      <DashboardMobileNav initial={accountInitial} />
+  <>
+    <PullToRefresh />
+
+    <DashboardMobileNav initial={accountInitial} />
 
       <WorkoutBackNav />
 
