@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -7,42 +8,36 @@ import DashboardSidebar from "@/components/DashboardSidebar";
 
 const exercises = [
   {
-    number: "01",
     name: "March in Place",
     time: "45 SEC",
     cue: "Stand tall and alternate lifting your knees at an easy pace while letting your arms swing naturally.",
     easier: "Keep the knees lower and slow the pace.",
   },
   {
-    number: "02",
     name: "Arm Circles",
     time: "30 SEC",
     cue: "Reach your arms out to the sides and make controlled circles. Start small, then gradually make them larger.",
     easier: "Keep the circles small and stay within a comfortable range.",
   },
   {
-    number: "03",
     name: "Bodyweight Good Mornings",
     time: "45 SEC",
     cue: "Soften your knees, push your hips back and hinge forward with a long spine. Squeeze your glutes to stand.",
     easier: "Use a smaller hinge and place your hands on your hips for control.",
   },
   {
-    number: "04",
     name: "Alternating Reverse Lunge + Reach",
     time: "45 SEC",
     cue: "Step one foot back into a comfortable lunge while reaching your arms overhead, then return and switch sides.",
     easier: "Use a shallow step-back or replace the lunge with alternating step-backs.",
   },
   {
-    number: "05",
     name: "Squat to Reach",
     time: "45 SEC",
     cue: "Sit your hips back into a comfortable squat, stand tall and reach overhead. Keep the movement smooth.",
     easier: "Use a shallower squat or squat toward a chair.",
   },
   {
-    number: "06",
     name: "Walkout to High Plank",
     time: "45 SEC",
     cue: "Hinge forward, place your hands down and walk them out to a strong high plank. Walk back and stand tall.",
@@ -53,6 +48,7 @@ const exercises = [
 export default function FullBodyWarmUpPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
+  const [expandedMovement, setExpandedMovement] = useState<number | null>(null);
 
   useEffect(() => {
     const getUser = async () => {
@@ -60,23 +56,20 @@ export default function FullBodyWarmUpPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        setIsLoadingUser(false);
-        return;
-      }
+      if (user) {
+        const savedName = user.user_metadata?.name;
 
-      const savedName = user.user_metadata?.name;
-
-      if (savedName) {
-        setFirstName(savedName);
-      } else if (user.email) {
-        setFirstName(user.email.split("@")[0]);
+        if (savedName && typeof savedName === "string") {
+          setFirstName(savedName.split(" ")[0]);
+        } else if (user.email) {
+          setFirstName(user.email.split("@")[0]);
+        }
       }
 
       setIsLoadingUser(false);
     };
 
-    getUser();
+    void getUser();
   }, []);
 
   const initial =
@@ -94,222 +87,137 @@ export default function FullBodyWarmUpPage() {
         />
 
         <section className="min-w-0 flex-1 px-5 py-8 sm:px-6 md:px-10 lg:px-14">
-          {/* HEADER */}
-
-          <header className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                LOCK IN WITH LAV
+          <div className="mx-auto max-w-5xl">
+            <header className="border-b border-[#DED0CB] pb-7">
+              <p className="text-[9px] tracking-[0.3em] text-[#9D6F67]">
+                MOVEMENT ESSENTIALS · WARM-UP
               </p>
 
-              <p className="mt-2 font-serif text-lg italic text-[#A77B73] sm:text-xl">
-                get ready to move. ♡
+              <h1 className="mt-3 font-serif text-3xl leading-tight sm:text-4xl">
+                5-Min Full-Body{" "}
+                <span className="italic text-[#A77B73]">
+                  Warm-Up.
+                </span>
+              </h1>
+
+              <p className="mt-3 max-w-lg text-[11px] leading-5 text-[#806E68]">
+                Six simple movements to gradually wake up your whole body
+                before strength training, cardio, or a more active session.
               </p>
-            </div>
 
-            <Link
-              href="/dashboard/resources/recovery"
-              className="shrink-0 rounded-full border border-[#CBA9A2] px-4 py-2.5 text-[7px] tracking-[0.2em] transition hover:bg-[#EAD8D3] sm:px-5 sm:py-3 sm:text-[8px]"
-            >
-              ← RECOVERY
-            </Link>
-          </header>
+              <p className="mt-4 text-[9px] tracking-[0.15em] text-[#9D6F67]">
+                5 MIN · 6 MOVES · NO EQUIPMENT
+              </p>
+            </header>
 
-          {/* EDITORIAL INTRO */}
-
-          <section className="mx-auto max-w-6xl pb-10 pt-14 md:pb-14 md:pt-20">
-            <div className="grid gap-10 md:grid-cols-[1.3fr_0.7fr] md:items-end">
-              <div>
-                <div className="flex items-center gap-3">
-                  <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                    WARM-UP
-                  </p>
-
-                  <span className="h-px w-8 bg-[#CBA9A2]" />
-
+            <section className="border-b border-[#DED0CB] py-8">
+              <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+                <div>
                   <p className="text-[8px] tracking-[0.28em] text-[#9D6F67]">
-                    FULL BODY
+                    01 · THE ROUTINE
                   </p>
+
+                  <h2 className="mt-2 font-serif text-xl sm:text-2xl">
+                    One round.{" "}
+                    <span className="italic text-[#A77B73]">
+                      keep moving. ♡
+                    </span>
+                  </h2>
                 </div>
 
-                <h1 className="mt-6 max-w-4xl font-serif text-5xl leading-[0.92] sm:text-6xl md:text-7xl lg:text-[5.5rem]">
-                  5-Min Full-Body
-                  <span className="block italic text-[#A77B73]">
-                    Warm-Up. ♡
-                  </span>
-                </h1>
+                <p className="text-[10px] italic text-[#927D76]">
+                  Tap to explore
+                </p>
               </div>
 
-              <div className="md:pb-2">
-                <p className="max-w-sm text-xs leading-6 text-[#75635D]">
-                  Six simple movements to gradually wake up your
-                  whole body before strength training, cardio or
-                  a more active session.
-                </p>
+              <div className="overflow-hidden rounded-[1.15rem] border border-[#DED0CB] bg-[#FBF8F6]">
+                {exercises.map((exercise, index) => {
+                  const isExpanded = expandedMovement === index;
 
-                <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3">
-                  {[
-                    "5 MIN",
-                    "6 MOVES",
-                    "NO EQUIPMENT",
-                    "HOME + GYM",
-                  ].map((tag) => (
-                    <span
-                      key={tag}
-                      className="text-[7px] tracking-[0.2em] text-[#9D6F67]"
+                  return (
+                    <div
+                      key={exercise.name}
+                      className={
+                        index !== exercises.length - 1
+                          ? "border-b border-[#E1D3CE]"
+                          : ""
+                      }
                     >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedMovement(isExpanded ? null : index)
+                        }
+                        aria-expanded={isExpanded}
+                        className="flex w-full items-center justify-between gap-4 px-4 py-3.5 text-left transition hover:bg-[#F1E6E2] sm:px-5"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="w-5 shrink-0 font-serif text-sm italic text-[#C39A92]">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
 
-            <div className="mt-10 h-px bg-[#DED0CB]" />
-          </section>
+                          <div className="min-w-0">
+                            <p className="text-[10px] font-medium tracking-[0.08em] text-[#211C19]">
+                              {exercise.name}
+                            </p>
 
-          {/* BEFORE YOU BEGIN */}
+                            <p className="mt-0.5 font-serif text-sm italic text-[#A77B73]">
+                              {exercise.time}
+                            </p>
+                          </div>
+                        </div>
 
-          <section className="mx-auto max-w-6xl pb-12">
-            <div className="grid overflow-hidden rounded-[1.5rem] bg-[#EAD8D3]/55 md:grid-cols-[0.3fr_1.7fr]">
-              <div className="flex items-center border-b border-[#D9C2BC] px-6 py-5 md:border-b-0 md:border-r md:px-7">
-                <p className="text-[8px] tracking-[0.3em] text-[#8F655E]">
-                  BEFORE YOU BEGIN
-                </p>
-              </div>
-
-              <div className="px-6 py-5 md:px-8">
-                <p className="font-serif text-lg italic leading-7 text-[#8F655E] md:text-xl">
-                  Start easy. Let each movement get a little
-                  warmer and a little bigger as you go. ♡
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* ROUTINE INTRO */}
-
-          <section className="mx-auto max-w-6xl pb-7">
-            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
-              <div>
-                <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                  THE ROUTINE
-                </p>
-
-                <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                  One round.{" "}
-                  <span className="italic text-[#A77B73]">
-                    keep moving. ♡
-                  </span>
-                </h2>
-              </div>
-
-              <p className="text-[7px] tracking-[0.2em] text-[#927D76]">
-                MOVE WITH CONTROL • NO RUSH
-              </p>
-            </div>
-          </section>
-
-          {/* EXERCISES */}
-
-          <section className="mx-auto max-w-6xl">
-            <div className="border-y border-[#DED0CB]">
-              {exercises.map((exercise, index) => (
-                <article
-                  key={exercise.number}
-                  className={`grid gap-5 py-8 md:grid-cols-[90px_1fr_110px] md:gap-8 md:py-10 ${
-                    index !== exercises.length - 1
-                      ? "border-b border-[#DED0CB]"
-                      : ""
-                  }`}
-                >
-                  {/* NUMBER */}
-
-                  <div>
-                    <span className="font-serif text-4xl italic text-[#C39A92] md:text-5xl">
-                      {exercise.number}
-                    </span>
-                  </div>
-
-                  {/* MOVEMENT */}
-
-                  <div className="max-w-3xl">
-                    <h3 className="font-serif text-2xl leading-tight md:text-3xl">
-                      {exercise.name}
-                    </h3>
-
-                    <p className="mt-4 text-xs leading-6 text-[#6F5F59] sm:text-sm sm:leading-7">
-                      {exercise.cue}
-                    </p>
-
-                    <div className="mt-5 flex items-start gap-3">
-                      <span className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-[#C39A92]" />
-
-                      <p className="text-[10px] leading-5 text-[#927D76] sm:text-xs">
-                        <span className="mr-2 text-[7px] tracking-[0.18em] text-[#9D6F67]">
-                          MAKE IT EASIER
+                        <span className="shrink-0 font-serif text-lg text-[#A77B73]">
+                          {isExpanded ? "−" : "+"}
                         </span>
-                        {exercise.easier}
-                      </p>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="border-t border-[#EADDD8] bg-[#F7F1ED]/70 px-4 py-4 sm:px-5">
+                          <div className="space-y-3 pl-8">
+                            <p className="text-[11px] leading-6 text-[#75635D]">
+                              {exercise.cue}
+                            </p>
+
+                            <p className="text-[11px] leading-6 text-[#75635D]">
+                              <span className="font-medium text-[#9D6F67]">
+                                Make it easier:{" "}
+                              </span>
+                              {exercise.easier}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-
-                  {/* TIME */}
-
-                  <div className="flex md:justify-end">
-                    <span className="h-fit rounded-full border border-[#CBA9A2] px-4 py-2 text-[7px] tracking-[0.2em] text-[#8F655E]">
-                      {exercise.time}
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          {/* FINISH */}
-
-          <section className="mx-auto max-w-6xl py-12 md:py-16">
-            <div className="grid gap-7 md:grid-cols-[1fr_auto] md:items-center">
-              <div>
-                <p className="text-[8px] tracking-[0.35em] text-[#9D6F67]">
-                  DONE ♡
-                </p>
-
-                <p className="mt-3 font-serif text-3xl italic text-[#A77B73] md:text-4xl">
-                  body warm. now go train.
-                </p>
+                  );
+                })}
               </div>
+            </section>
 
-              <Link
-                href="/dashboard/resources/workouts"
-                className="w-fit rounded-full bg-[#211C19] px-7 py-3.5 text-[8px] tracking-[0.22em] text-[#F7F1ED] transition hover:-translate-y-0.5"
-              >
-                FIND A WORKOUT →
-              </Link>
-            </div>
-          </section>
+            <footer className="pb-10 pt-6">
+              <p className="max-w-xl text-[10px] leading-5 text-[#927D76]">
+                Start easy and gradually increase your movement.
+                Stop if an exercise causes sharp pain, dizziness,
+                numbness, or worsening symptoms.
+              </p>
 
-          {/* SAFETY NOTE */}
+              <div className="mt-5 flex flex-wrap items-center gap-5">
+                <Link
+                  href="/dashboard/resources/recovery"
+                  className="text-[9px] tracking-[0.15em] text-[#8F655E] transition hover:text-[#211C19]"
+                >
+                  ← BACK TO MOBILITY + RECOVERY
+                </Link>
 
-          <section className="mx-auto max-w-6xl border-t border-[#DED0CB] py-7">
-            <p className="max-w-4xl text-[9px] leading-5 text-[#927D76]">
-              Movement note: Warm-ups should feel comfortable and
-              gradually increase movement and body temperature.
-              Stop if a movement causes sharp pain, numbness,
-              dizziness or worsening symptoms.
-            </p>
-          </section>
-
-          {/* BACK */}
-
-          <section className="mx-auto max-w-6xl pb-14 pt-4 text-center">
-            <Link
-              href="/dashboard/resources/recovery"
-              className="inline-block rounded-full border border-[#CBA9A2] px-7 py-3.5 text-[8px] tracking-[0.23em] text-[#8F655E] transition hover:bg-[#EAD8D3]"
-            >
-              ← BACK TO MOBILITY + RECOVERY
-            </Link>
-          </section>
+                <Link
+                  href="/dashboard/resources/workouts"
+                  className="text-[9px] tracking-[0.15em] text-[#8F655E] transition hover:text-[#211C19]"
+                >
+                  EXPLORE WORKOUTS →
+                </Link>
+              </div>
+            </footer>
+          </div>
         </section>
       </div>
     </main>
