@@ -146,6 +146,7 @@ const [activeJourneyId, setActiveJourneyId] =
 
   const [showCompletionModal, setShowCompletionModal] = useState(false);
 const [isCompletingJourney, setIsCompletingJourney] = useState(false);
+const [completionError, setCompletionError] = useState<string | null>(null);
 const [journeyCompleted, setJourneyCompleted] = useState(false);
 
   
@@ -1091,6 +1092,37 @@ challenge_day: currentDay,
     setDeletingActivityId(null);
   }
 };
+
+
+const handleCompleteJourney = async () => {
+  if (isCompletingJourney) return;
+
+  setIsCompletingJourney(true);
+  setCompletionError(null);
+
+  try {
+    const { data, error } = await supabase.rpc(
+      "complete_my_challenge"
+    );
+
+    if (error) throw error;
+    if (!data) throw new Error("Journey completion was not confirmed.");
+
+    setJourneyCompleted(true);
+    setShowCompletionModal(false);
+
+    window.location.assign("/dashboard/journeys");
+  } catch (error) {
+    console.error("Unable to complete journey:", error);
+
+    setCompletionError(
+      "We couldn't complete your journey. Your progress is still saved. Please try again."
+    );
+  } finally {
+    setIsCompletingJourney(false);
+  }
+};
+
   const completedCount =
     commitments.filter(
       (item) => progress[item.column]
@@ -2075,11 +2107,22 @@ if (item.column === "nourish") {
 
       <button
         type="button"
-        onClick={() => setShowCompletionModal(false)}
+        onClick={handleCompleteJourney}
+disabled={isCompletingJourney}
         className="mt-7 w-full rounded-full bg-[#A77B73] px-5 py-3.5 text-sm font-medium text-white transition hover:bg-[#946960]"
       >
-        Complete my journey ♡
+        {isCompletingJourney ? "Saving your journey..." : "Complete my journey ♡"}
       </button>
+      
+{completionError && (
+  <p
+    role="alert"
+    className="mt-3 text-center text-sm leading-relaxed text-[#A04D4D]"
+  >
+    {completionError}
+  </p>
+)}
+
 
       <p className="mt-4 text-[10px] tracking-wide text-[#A18C83]">
         A moment worth celebrating.

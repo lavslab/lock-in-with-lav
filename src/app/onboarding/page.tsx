@@ -129,10 +129,28 @@ export default function OnboardingPage() {
         return;
       }
 
-      if (profile?.challenge_start_date) {
-        router.replace("/dashboard");
-        return;
-      }
+      
+const { data: activeJourney, error: journeyError } = await supabase
+  .from("challenge_journeys")
+  .select("id")
+  .eq("user_id", user.id)
+  .eq("status", "active")
+  .maybeSingle();
+
+if (!mounted) return;
+
+if (journeyError) {
+  console.error("Could not check active journey:", journeyError);
+  setErrorMessage("We couldn't check your journey. Please try again.");
+  setIsCheckingUser(false);
+  return;
+}
+
+if (activeJourney) {
+  router.replace("/dashboard");
+  return;
+}
+
 
       setIsCheckingUser(false);
     };

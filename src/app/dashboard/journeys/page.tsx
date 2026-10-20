@@ -14,6 +14,7 @@ type Journey = {
   challenge_length: number;
   status: string;
   archived_at: string | null;
+  completed_at: string | null;
   daily_progress: unknown[] | null;
   weekly_checkins: unknown[] | null;
   measurements: unknown[] | null;
@@ -120,9 +121,13 @@ export default function MyJourneysPage() {
     (journey) => journey.status === "active"
   );
 
-  const archivedJourneys = journeys.filter(
-    (journey) => journey.status === "archived"
-  );
+  
+const archivedJourneys = journeys.filter(
+  (journey) =>
+    journey.status === "archived" ||
+    journey.status === "completed"
+);
+
 
   const orderedJourneys = [
     ...activeJourneys,
@@ -145,7 +150,7 @@ export default function MyJourneysPage() {
               YOUR PERSONAL ARCHIVE
             </p>
 
-            <h1 className="mt-4 font-serif text-5xl md:text-6xl">
+            <h1 className="mt-4 font-serif text-4xl md:text-5xl">
               My Journeys
             </h1>
 
@@ -206,124 +211,101 @@ export default function MyJourneysPage() {
                     : ""}
                 </p>
 
-                {orderedJourneys.map((journey) => {
-                  const isActive = journey.status === "active";
-                  const archivedDate = formatArchivedDate(
-                    journey.archived_at
-                  );
+              
+{orderedJourneys.map((journey) => {
+  const isActive = journey.status === "active";
+  const isCompleted = journey.status === "completed";
 
-                  const days = journey.daily_progress?.length ?? 0;
-                  const photos = journey.progress_photos?.length ?? 0;
-                  const checkins = journey.weekly_checkins?.length ?? 0;
+  const savedDate = formatArchivedDate(
+    isCompleted ? journey.completed_at : journey.archived_at
+  );
 
-                  return (
-                    <article
-                      key={journey.id}
-                      className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-9"
-                    >
-                      <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
-                        <div>
-                          <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
-                            {isActive
-                              ? "CURRENT CHAPTER"
-                              : "SAVED CHAPTER"}
-                          </p>
+  const days = journey.daily_progress?.length ?? 0;
+  const photos = journey.progress_photos?.length ?? 0;
+  const checkins = journey.weekly_checkins?.length ?? 0;
 
-                          <h2 className="mt-3 font-serif text-3xl md:text-4xl">
-                            Journey{" "}
-                            {String(journey.journey_number).padStart(
-                              2,
-                              "0"
-                            )}
-                          </h2>
+  const destination = isActive
+    ? "/dashboard/journey"
+    : `/dashboard/journeys/${journey.id}`;
 
-                          <p className="mt-3 text-sm text-[#806E68]">
-                            Started {formatDate(journey.start_date)}
-                          </p>
+  return (
+    <article
+      key={journey.id}
+      className="rounded-[1.4rem] border border-[#DED0CB] bg-[#FBF8F6] px-4 py-4 sm:px-6"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+            {isActive ? "CURRENT CHAPTER" : "SAVED CHAPTER"}
+          </p>
 
-                          <p className="mt-1 text-xs text-[#A77B73]">
-                            {journey.challenge_length}-day challenge
-                          </p>
+          <h2 className="mt-2 font-serif text-[25px] leading-tight text-[#211C19]">
+            Journey {String(journey.journey_number).padStart(2, "0")}
+          </h2>
 
-                          {isActive ? (
-                            <p className="mt-2 text-xs italic text-[#A77B73]">
-                              your story is still unfolding. ♡
-                            </p>
-                          ) : archivedDate ? (
-                            <p className="mt-2 text-xs text-[#A77B73]">
-                              Archived {archivedDate}
-                            </p>
-                          ) : null}
-                        </div>
+          <p className="mt-1.5 text-[11px] leading-5 text-[#806E68]">
+            {journey.challenge_length} days · Started{" "}
+            {formatDate(journey.start_date)}
+          </p>
+        </div>
 
-                        <span
-                          className={`self-start rounded-full border px-4 py-2 text-[10px] tracking-[0.15em] ${
-                            isActive
-                              ? "border-[#B9C7B1] bg-[#EDF1E9] text-[#62765A]"
-                              : "border-[#DDB5AE] text-[#8F655E]"
-                          }`}
-                        >
-                          {isActive ? "ACTIVE ♡" : "ARCHIVED ♡"}
-                        </span>
-                      </div>
+        <span
+          className={`shrink-0 rounded-full border px-2.5 py-1.5 text-[9px] tracking-[0.08em] ${
+            isActive
+              ? "border-[#B9C7B1] bg-[#EDF1E9] text-[#62765A]"
+              : "border-[#DDB5AE] bg-[#F7F1ED] text-[#8F655E]"
+          }`}
+        >
+          {isActive
+            ? "ACTIVE ♡"
+            : isCompleted
+              ? "COMPLETED ♡"
+              : "ARCHIVED ♡"}
+        </span>
+      </div>
 
-                      {isActive ? (
-                        <div className="mt-8 border-t border-[#DED0CB] pt-6">
-                          <p className="text-center font-serif text-lg italic text-[#A77B73]">
-                            the chapter you're writing right now. ♡
-                          </p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="mt-8 grid grid-cols-3 gap-3 border-t border-[#DED0CB] pt-6 text-center">
-                            <div>
-                              <p className="font-serif text-3xl">{days}</p>
-                              <p className="mt-1 text-[10px] tracking-[0.15em] text-[#806E68]">
-                                DAYS LOGGED
-                              </p>
-                            </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#E8DAD4] pt-3">
+        <p className="text-[11px] text-[#806E68]">
+          {isActive
+            ? "your story is still unfolding. ♡"
+            : `${days} days logged · ${photos} photos · ${checkins} check-ins`}
+        </p>
 
-                            <div>
-                              <p className="font-serif text-3xl">{photos}</p>
-                              <p className="mt-1 text-[10px] tracking-[0.15em] text-[#806E68]">
-                                PHOTOS
-                              </p>
-                            </div>
+        <Link
+          href={destination}
+          className="inline-flex min-h-9 items-center text-[11px] font-medium text-[#9D6F67] transition hover:text-[#211C19]"
+        >
+          {isActive ? "Continue journey" : "View chapter"} &nbsp;→
+        </Link>
+      </div>
 
-                            <div>
-                              <p className="font-serif text-3xl">
-                                {checkins}
-                              </p>
-                              <p className="mt-1 text-[10px] tracking-[0.15em] text-[#806E68]">
-                                CHECK-INS
-                              </p>
-                            </div>
-                          </div>
+      {!isActive && savedDate && (
+        <p className="mt-1 text-[10px] text-[#A77B73]">
+          {isCompleted ? "Completed" : "Archived"} {savedDate}
+        </p>
+      )}
+    </article>
+  );
+})}
 
-                          <p className="mt-7 text-center font-serif text-lg italic text-[#A77B73]">
-                            a chapter worth remembering. ♡
-                          </p>
-                        </>
-                      )}
-
-                      <Link
-                        href={
-                          isActive
-                            ? "/dashboard/journey"
-                            : `/dashboard/journeys/${journey.id}`
-                        }
-                        className="mt-6 block rounded-full bg-[#211C19] px-7 py-4 text-center text-[10px] tracking-[0.25em] text-[#F7F1ED] transition hover:opacity-90"
-                      >
-                        {isActive
-                          ? "CONTINUE MY JOURNEY →"
-                          : "OPEN THIS JOURNEY →"}
-                      </Link>
-                    </article>
-                  );
-                })}
               </div>
             )}
           </div>
+
+          
+<div className="mt-8 text-center">
+  <Link
+    href="/onboarding"
+    className="inline-flex w-full items-center justify-center rounded-full bg-[#A77B73] px-6 py-4 text-[11px] font-medium tracking-[0.15em] text-white transition hover:bg-[#946960] sm:w-auto"
+  >
+    START A NEW CHALLENGE ♡
+  </Link>
+
+  <p className="mt-3 font-serif text-sm italic text-[#A77B73]">
+    another chapter awaits. ♡
+  </p>
+</div>
+
         </section>
       </div>
     </main>

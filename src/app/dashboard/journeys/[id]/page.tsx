@@ -60,10 +60,14 @@ type WinRecord = {
 
 type Journey = {
   id: string;
+  status: string;
   journey_number: number;
   start_date: string | null;
   challenge_length: number;
-  archived_at: string;
+  
+archived_at: string | null;
+completed_at: string | null;
+
   daily_progress: DailyRecord[];
   weekly_checkins: CheckinRecord[];
   measurements: MeasurementRecord[];
@@ -104,6 +108,9 @@ export default function JourneyDetailPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [savingPhoto, setSavingPhoto] = useState<string | null>(null);
   const [photoMessage, setPhotoMessage] = useState("");
+  
+const [selectedDay, setSelectedDay] = useState<number | null>(null);
+
 
   useEffect(() => {
     let mounted = true;
@@ -314,14 +321,9 @@ export default function JourneyDetailPage() {
 
         <section className="min-w-0 flex-1 px-6 py-8 md:px-10 lg:px-14">
           <header className="border-b border-[#DED0CB] pb-8">
-            <Link
-              href="/dashboard/journeys"
-              className="text-[10px] tracking-[0.25em] text-[#9D6F67] hover:underline"
-            >
-              ← ALL MY JOURNEYS
-            </Link>
+            
 
-            <p className="mt-8 text-[10px] tracking-[0.35em] text-[#9D6F67]">
+            <p className="mt-0 text-[10px] tracking-[0.35em] text-[#9D6F67]">
               YOUR PERSONAL ARCHIVE
             </p>
 
@@ -351,314 +353,461 @@ export default function JourneyDetailPage() {
               </div>
             ) : (
               <>
-                <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-9">
-                  <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
-                    THE CHAPTER
-                  </p>
+                
+<section className="rounded-[1.4rem] border border-[#DED0CB] bg-[#FBF8F6] px-5 py-5 sm:px-6">
+  <div className="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p className="text-[9px] tracking-[0.25em] text-[#9D6F67]">
+        THE CHAPTER
+      </p>
+      <h2 className="mt-1.5 font-serif text-2xl text-[#211C19]">
+        Your journey, remembered. ♡
+      </h2>
+    </div>
 
-                  <h2 className="mt-3 font-serif text-3xl">
-                    Your journey, remembered. ♡
-                  </h2>
+    <span className="rounded-full bg-[#EAD8D3] px-3 py-1.5 text-[9px] uppercase tracking-[0.15em] text-[#6F514B]">
+      {journey.status}
+    </span>
+  </div>
 
-                  <div className="mt-6 grid gap-5 sm:grid-cols-3">
-                    <div>
-                      <p className="text-[10px] tracking-[0.2em] text-[#806E68]">
-                        STARTED
-                      </p>
-                      <p className="mt-2 font-serif text-xl">
-                        {formatDate(journey.start_date)}
-                      </p>
-                    </div>
+  <div className="mt-5 grid grid-cols-3 gap-3 border-t border-[#E5D8D3] pt-4">
+    <div>
+      <p className="text-[9px] tracking-[0.12em] text-[#9D6F67]">
+        STARTED
+      </p>
+      <p className="mt-1 font-serif text-sm sm:text-base">
+        {formatDate(journey.start_date)}
+      </p>
+    </div>
 
-                    <div>
-                      <p className="text-[10px] tracking-[0.2em] text-[#806E68]">
-                        ARCHIVED
-                      </p>
-                      <p className="mt-2 font-serif text-xl">
-                        {formatDate(journey.archived_at)}
-                      </p>
-                    </div>
+    <div>
+      <p className="text-[9px] tracking-[0.12em] text-[#9D6F67]">
+        {journey.status === "completed" ? "COMPLETED" : "ARCHIVED"}
+      </p>
+      <p className="mt-1 font-serif text-sm sm:text-base">
+        {formatDate(
+          journey.status === "completed"
+            ? journey.completed_at
+            : journey.archived_at
+        )}
+      </p>
+    </div>
 
-                    <div>
-                      <p className="text-[10px] tracking-[0.2em] text-[#806E68]">
-                        DAYS LOGGED
-                      </p>
-                      <p className="mt-2 font-serif text-xl">
-                        {dailyRecords.length} / {journey.challenge_length}
-                      </p>
-                    </div>
+    <div>
+      <p className="text-[9px] tracking-[0.12em] text-[#9D6F67]">
+        DAYS LOGGED
+      </p>
+      <p className="mt-1 font-serif text-sm sm:text-base">
+        {dailyRecords.length} / {journey.challenge_length}
+      </p>
+    </div>
+  </div>
+</section>
+
+               
+<section className="rounded-[1.4rem] border border-[#DED0CB] bg-[#FBF8F6] p-4 sm:p-6">
+  <div className="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+        THE MEMORIES
+      </p>
+      <h2 className="mt-1.5 font-serif text-2xl text-[#211C19]">
+        Progress Photos ♡
+      </h2>
+    </div>
+
+    <span className="rounded-full bg-[#F1EAE6] px-3 py-1.5 text-[10px] text-[#806E68]">
+      {photos.length} {photos.length === 1 ? "photo" : "photos"}
+    </span>
+  </div>
+
+  {photoMessage && (
+    <p className="mt-3 text-xs text-[#9D6F67]">
+      {photoMessage}
+    </p>
+  )}
+
+  {photos.length === 0 ? (
+    <p className="mt-4 border-t border-[#E5D8D3] pt-4 text-xs italic text-[#A77B73]">
+      No photos saved in this chapter. ♡
+    </p>
+  ) : (
+    <>
+      <p className="mt-2 text-xs italic text-[#806E68]">
+        Little snapshots of how far you've come.
+      </p>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {photos.map((photo, index) => (
+          <div
+            key={`${photo.storage_path}-${index}`}
+            className="overflow-hidden rounded-xl border border-[#E5D8D3] bg-[#F7F1ED]"
+          >
+            {photoUrls[photo.storage_path] ? (
+              <img
+                src={photoUrls[photo.storage_path]}
+                alt={`${formatDay(photo.challenge_day)} progress`}
+                className="aspect-[3/4] w-full object-cover"
+              />
+            ) : (
+              <div className="flex aspect-[3/4] items-center justify-center px-3 text-center text-xs text-[#806E68]">
+                Photo unavailable
+              </div>
+            )}
+
+            <div className="p-3">
+              <p className="font-serif text-base text-[#211C19]">
+                {formatDay(photo.challenge_day)}
+              </p>
+
+              {photo.caption && (
+                <p className="mt-1 text-xs leading-5 text-[#806E68]">
+                  {photo.caption}
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={() => savePhoto(photo)}
+                disabled={
+                  savingPhoto !== null ||
+                  !photoUrls[photo.storage_path]
+                }
+                className="mt-3 w-full rounded-full border border-[#A77B73] px-2 py-2 text-[9px] tracking-[0.1em] text-[#6F514B] transition hover:bg-[#EAD8D3] disabled:opacity-50"
+              >
+                {savingPhoto === photo.storage_path
+                  ? "PREPARING..."
+                  : "SAVE PHOTO ↓"}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  )}
+</section>
+
+
+               
+<section className="rounded-[1.4rem] border border-[#DED0CB] bg-[#FBF8F6] p-4 sm:p-6">
+  <div className="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+        THE GROWTH
+      </p>
+      <h2 className="mt-1.5 font-serif text-2xl text-[#211C19]">
+        Measurements
+      </h2>
+    </div>
+
+    <span className="rounded-full bg-[#F1EAE6] px-3 py-1.5 text-[10px] text-[#806E68]">
+      {measurements.length}{" "}
+      {measurements.length === 1 ? "entry" : "entries"}
+    </span>
+  </div>
+
+  {measurements.length === 0 ? (
+    <p className="mt-4 border-t border-[#E5D8D3] pt-4 text-xs italic text-[#A77B73]">
+      No measurements saved in this chapter. ♡
+    </p>
+  ) : (
+    <div className="mt-4 space-y-2">
+      {measurements.map((record, index) => (
+        <details
+          key={index}
+          className="group rounded-xl border border-[#E5D8D3] bg-[#F7F1ED]"
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+            <span className="font-serif text-base">
+              {record.challenge_day
+                ? formatDay(record.challenge_day)
+                : formatDate(record.measurement_date)}
+            </span>
+
+            <span className="text-xs text-[#9D6F67] transition-transform group-open:rotate-180">
+              ↓
+            </span>
+          </summary>
+
+          <div className="grid grid-cols-2 gap-3 border-t border-[#E5D8D3] px-4 py-4 sm:grid-cols-3">
+            {(
+              [
+                ["Weight", record.weight],
+                ["Waist", record.waist],
+                ["Hips", record.hips],
+                ["Chest", record.chest],
+                ["Thigh", record.thigh],
+                ["Arm", record.arm],
+              ] as const
+            ).map(
+              ([label, value]) =>
+                value != null && (
+                  <div key={label}>
+                    <p className="text-[9px] uppercase tracking-[0.12em] text-[#9D6F67]">
+                      {label}
+                    </p>
+                    <p className="mt-1 font-serif text-lg text-[#211C19]">
+                      {value}
+                    </p>
                   </div>
-                </section>
+                )
+            )}
+          </div>
+        </details>
+      ))}
+    </div>
+  )}
+</section>
 
-                <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-9">
-                  <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
-                    THE MEMORIES
-                  </p>
+              
+<section className="rounded-[1.4rem] border border-[#DED0CB] bg-[#FBF8F6] p-4 sm:p-6">
+  <div className="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+        THE REFLECTIONS
+      </p>
+      <h2 className="mt-1.5 font-serif text-2xl text-[#211C19]">
+        Weekly Check-ins ♡
+      </h2>
+    </div>
 
-                  <h2 className="mt-3 font-serif text-3xl">
-                    Progress Photo Gallery
-                  </h2>
+    <span className="rounded-full bg-[#F1EAE6] px-3 py-1.5 text-[10px] text-[#806E68]">
+      {checkins.length} {checkins.length === 1 ? "check-in" : "check-ins"}
+    </span>
+  </div>
 
-                  <p className="mt-2 text-sm text-[#806E68]">
-                    Every photo is a reminder of showing up for yourself.
-                  </p>
+  {checkins.length === 0 ? (
+    <p className="mt-4 border-t border-[#E5D8D3] pt-4 text-xs italic text-[#A77B73]">
+      No weekly reflections saved in this chapter. ♡
+    </p>
+  ) : (
+    <div className="mt-4 space-y-2">
+      {checkins.map((checkin) => (
+        <details
+          key={checkin.week_number}
+          className="group rounded-xl border border-[#E5D8D3] bg-[#F7F1ED]"
+        >
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+            <span className="font-serif text-base text-[#211C19]">
+              Week {String(checkin.week_number).padStart(2, "0")}
+            </span>
 
-                  {photoMessage && (
-                    <p className="mt-4 text-sm text-[#9D6F67]">
-                      {photoMessage}
+            <span className="text-xs text-[#9D6F67] transition-transform group-open:rotate-180">
+              ↓
+            </span>
+          </summary>
+
+          <div className="space-y-4 border-t border-[#E5D8D3] px-4 py-4">
+            {(
+              [
+                ["WHAT WENT WELL", checkin.went_well],
+                ["WHAT FELT HARD", checkin.felt_hard],
+                ["WHAT I'M PROUD OF", checkin.proud_of],
+                ["NEXT WEEK'S FOCUS", checkin.next_week_focus],
+              ] as const
+            ).map(
+              ([label, value]) =>
+                value && (
+                  <div key={label}>
+                    <p className="text-[9px] tracking-[0.16em] text-[#9D6F67]">
+                      {label}
                     </p>
-                  )}
-
-                  {photos.length === 0 ? (
-                    <p className="mt-7 font-serif text-lg italic text-[#A77B73]">
-                      No photos were recorded in this chapter. ♡
+                    <p className="mt-1.5 whitespace-pre-wrap text-sm leading-6 text-[#806E68]">
+                      {value}
                     </p>
-                  ) : (
-                    <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                      {photos.map((photo, index) => (
-                        <div
-                          key={`${photo.storage_path}-${index}`}
-                          className="overflow-hidden rounded-[1.5rem] border border-[#DED0CB] bg-[#F7F1ED]"
-                        >
-                          {photoUrls[photo.storage_path] ? (
-                            <img
-                              src={photoUrls[photo.storage_path]}
-                              alt={`${formatDay(photo.challenge_day)} progress`}
-                              className="aspect-[3/4] w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex aspect-[3/4] items-center justify-center px-5 text-center text-sm text-[#806E68]">
-                              Photo unavailable
-                            </div>
-                          )}
+                  </div>
+                )
+            )}
+          </div>
+        </details>
+      ))}
+    </div>
+  )}
+</section>
 
-                          <div className="p-5">
-                            <p className="font-serif text-xl">
-                              {formatDay(photo.challenge_day)}
-                            </p>
 
-                            {photo.caption && (
-                              <p className="mt-2 text-sm text-[#806E68]">
-                                {photo.caption}
-                              </p>
-                            )}
+               
+<section className="rounded-[1.4rem] border border-[#DED0CB] bg-[#FBF8F6] p-4 sm:p-6">
+  <div className="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+        THE LITTLE VICTORIES
+      </p>
+      <h2 className="mt-1.5 font-serif text-2xl text-[#211C19]">
+        Little Wins ♡
+      </h2>
+    </div>
 
-                            <button
-                              type="button"
-                              onClick={() => savePhoto(photo)}
-                              disabled={
-                                savingPhoto !== null ||
-                                !photoUrls[photo.storage_path]
-                              }
-                              className="mt-4 w-full rounded-full border border-[#A77B73] px-5 py-3 text-[10px] tracking-[0.2em] text-[#6F514B] transition hover:bg-[#EAD8D3] disabled:opacity-50"
-                            >
-                              {savingPhoto === photo.storage_path
-                                ? "PREPARING..."
-                                : "SAVE PHOTO ↓"}
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
+    <span className="rounded-full bg-[#F1EAE6] px-3 py-1.5 text-[10px] text-[#806E68]">
+      {wins.length} {wins.length === 1 ? "win" : "wins"}
+    </span>
+  </div>
 
-                <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-9">
-                  <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
-                    THE GROWTH
-                  </p>
-                  <h2 className="mt-3 font-serif text-3xl">
-                    Measurements
-                  </h2>
+  {wins.length === 0 ? (
+    <p className="mt-4 border-t border-[#E5D8D3] pt-4 text-xs italic text-[#A77B73]">
+      No little wins saved in this chapter. ♡
+    </p>
+  ) : (
+    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+      {wins.map((win, index) => (
+        <div
+          key={index}
+          className="flex items-start gap-3 rounded-xl border border-[#E5D8D3] bg-[#F7F1ED] px-4 py-3"
+        >
+          <span className="mt-0.5 shrink-0 text-sm text-[#A77B73]">
+            ♡
+          </span>
 
-                  {measurements.length === 0 ? (
-                    <p className="mt-5 text-sm text-[#806E68]">
-                      No measurements recorded.
-                    </p>
-                  ) : (
-                    <div className="mt-6 space-y-4">
-                      {measurements.map((record, index) => (
-                        <div
-                          key={index}
-                          className="rounded-2xl border border-[#E5D8D3] p-5"
-                        >
-                          <p className="font-serif text-xl">
-                            {record.challenge_day
-                              ? formatDay(record.challenge_day)
-                              : formatDate(record.measurement_date)}
-                          </p>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm leading-5 text-[#211C19]">
+              {win.label || win.win_key || "Little win"}
+            </p>
 
-                          <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2 text-sm text-[#806E68]">
-                            {(
-                              [
-                                ["Weight", record.weight],
-                                ["Waist", record.waist],
-                                ["Hips", record.hips],
-                                ["Chest", record.chest],
-                                ["Thigh", record.thigh],
-                                ["Arm", record.arm],
-                              ] as const
-                            ).map(
-                              ([label, value]) =>
-                                value != null && (
-                                  <span key={label}>
-                                    {label}: {value}
-                                  </span>
-                                )
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
+            {win.challenge_day != null && (
+              <p className="mt-1 text-[10px] tracking-[0.12em] text-[#9D6F67]">
+                {formatDay(win.challenge_day)}
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</section>
 
-                <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-9">
-                  <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
-                    THE REFLECTIONS
-                  </p>
-                  <h2 className="mt-3 font-serif text-3xl">
-                    Weekly Check-ins
-                  </h2>
 
-                  {checkins.length === 0 ? (
-                    <p className="mt-5 text-sm text-[#806E68]">
-                      No weekly check-ins recorded.
-                    </p>
-                  ) : (
-                    <div className="mt-6 space-y-5">
-                      {checkins.map((checkin) => (
-                        <div
-                          key={checkin.week_number}
-                          className="rounded-2xl border border-[#E5D8D3] p-5"
-                        >
-                          <h3 className="font-serif text-2xl">
-                            Week {checkin.week_number}
-                          </h3>
+               
+<section className="rounded-[1.4rem] border border-[#DED0CB] bg-[#FBF8F6] p-4 sm:p-6">
+  <div className="flex items-center justify-between gap-3">
+    <div>
+      <p className="text-[9px] tracking-[0.22em] text-[#9D6F67]">
+        THE DAILY WORK
+      </p>
+      <h2 className="mt-1.5 font-serif text-2xl text-[#211C19]">
+        Your days, remembered. ♡
+      </h2>
+    </div>
 
-                          {[
-                            ["What went well", checkin.went_well],
-                            ["What felt hard", checkin.felt_hard],
-                            ["What I'm proud of", checkin.proud_of],
-                            ["Next week's focus", checkin.next_week_focus],
-                          ].map(
-                            ([label, value]) =>
-                              value && (
-                                <div key={label} className="mt-4">
-                                  <p className="text-[10px] tracking-[0.15em] text-[#9D6F67]">
-                                    {label}
-                                  </p>
-                                  <p className="mt-1 text-sm leading-6 text-[#806E68]">
-                                    {value}
-                                  </p>
-                                </div>
-                              )
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
+    <span className="shrink-0 text-[11px] text-[#806E68]">
+      {dailyRecords.length} logged
+    </span>
+  </div>
 
-                <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-9">
-                  <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
-                    THE LITTLE VICTORIES
-                  </p>
-                  <h2 className="mt-3 font-serif text-3xl">
-                    Little Wins ♡
-                  </h2>
+  <div className="mt-5 grid grid-cols-7 gap-1.5">
+    {Array.from(
+      { length: journey.challenge_length },
+      (_, index) => index + 1
+    ).map((day) => {
+      const record = dailyRecords.find(
+        (item) => item.challenge_day === day
+      );
 
-                  {wins.length === 0 ? (
-                    <p className="mt-5 text-sm text-[#806E68]">
-                      No little wins recorded.
-                    </p>
-                  ) : (
-                    <div className="mt-6 space-y-3">
-                      {wins.map((win, index) => (
-                        <div
-                          key={index}
-                          className="rounded-2xl border border-[#E5D8D3] px-5 py-4"
-                        >
-                          <p className="text-sm text-[#211C19]">
-                            ♡ {win.label || win.win_key || "Little win"}
-                          </p>
-                          {win.challenge_day != null && (
-                            <p className="mt-1 text-xs text-[#9D6F67]">
-                              {formatDay(win.challenge_day)}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </section>
+      const completedCount = record
+        ? [
+            record.move,
+            record.get_outside,
+            record.hydrate,
+            record.read,
+            record.nourish,
+            record.document,
+            record.no_alcohol,
+          ].filter(Boolean).length
+        : 0;
 
-                <section className="rounded-[2rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 md:p-9">
-                  <p className="text-[10px] tracking-[0.3em] text-[#9D6F67]">
-                    THE DAILY WORK
-                  </p>
-                  <h2 className="mt-3 font-serif text-3xl">
-                    Daily Progress
-                  </h2>
+      const isSelected = selectedDay === day;
 
-                  {dailyRecords.length === 0 ? (
-                    <p className="mt-5 text-sm text-[#806E68]">
-                      No daily progress recorded.
-                    </p>
-                  ) : (
-                    <div className="mt-6 space-y-3">
-                      {dailyRecords.map((record) => {
-                        const habits = [
-                          ["Move", record.move],
-                          ["Get outside", record.get_outside],
-                          ["Hydrate", record.hydrate],
-                          ["Read", record.read],
-                          ["Nourish", record.nourish],
-                          ["Document", record.document],
-                          ["No alcohol", record.no_alcohol],
-                        ];
+      return (
+        <button
+          key={day}
+          type="button"
+          onClick={() =>
+            setSelectedDay(isSelected ? null : day)
+          }
+          aria-pressed={isSelected}
+          className={`flex aspect-square items-center justify-center rounded-lg border text-[11px] transition ${
+            isSelected
+              ? "border-[#A77B73] bg-[#A77B73] text-white"
+              : completedCount === 7
+                ? "border-[#D8B5AC] bg-[#EAD8D3] text-[#6F514B]"
+                : record
+                  ? "border-[#E5D8D3] bg-[#F7F1ED] text-[#806E68]"
+                  : "border-[#EEE5E0] bg-white text-[#B9ACA6]"
+          }`}
+        >
+          {String(day).padStart(2, "0")}
+        </button>
+      );
+    })}
+  </div>
 
-                        return (
-                          <div
-                            key={record.challenge_day}
-                            className="rounded-2xl border border-[#E5D8D3] p-5"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <h3 className="font-serif text-xl">
-                                {formatDay(record.challenge_day)}
-                              </h3>
-                              <p className="text-xs text-[#806E68]">
-                                {formatDate(record.progress_date)}
-                              </p>
-                            </div>
+  {selectedDay !== null && (() => {
+    const record = dailyRecords.find(
+      (item) => item.challenge_day === selectedDay
+    );
 
-                            <div className="mt-4 flex flex-wrap gap-2">
-                              {habits.map(([label, completed]) => (
-                                <span
-                                  key={String(label)}
-                                  className={`rounded-full px-3 py-2 text-xs ${
-                                    completed
-                                      ? "bg-[#EAD8D3] text-[#6F514B]"
-                                      : "bg-[#F1EAE6] text-[#9C8C85]"
-                                  }`}
-                                >
-                                  {completed ? "✓ " : "○ "}
-                                  {label}
-                                </span>
-                              ))}
-                            </div>
+    const habits = record
+      ? [
+          ["Move", record.move],
+          ["Get outside", record.get_outside],
+          ["Hydrate", record.hydrate],
+          ["Read", record.read],
+          ["Nourish", record.nourish],
+          ["Document", record.document],
+          ["No alcohol", record.no_alcohol],
+        ] as const
+      : [];
 
-                            {record.note && (
-                              <p className="mt-4 text-sm italic leading-6 text-[#806E68]">
-                                {record.note}
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </section>
+    return (
+      <div className="mt-4 rounded-xl border border-[#E5D8D3] bg-[#F7F1ED] p-4">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="font-serif text-xl">
+            {formatDay(selectedDay)}
+          </h3>
+
+          {record?.progress_date && (
+            <span className="text-[10px] text-[#806E68]">
+              {formatDate(record.progress_date)}
+            </span>
+          )}
+        </div>
+
+        {record ? (
+          <>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {habits.map(([label, completed]) => (
+                <span
+                  key={label}
+                  className={`rounded-full px-3 py-1.5 text-[11px] ${
+                    completed
+                      ? "bg-[#EAD8D3] text-[#6F514B]"
+                      : "bg-white text-[#9C8C85]"
+                  }`}
+                >
+                  {completed ? "✓" : "○"} {label}
+                </span>
+              ))}
+            </div>
+
+            {record.note && (
+              <p className="mt-3 text-xs italic leading-5 text-[#806E68]">
+                {record.note}
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="mt-3 text-xs italic text-[#9D6F67]">
+            No progress was recorded for this day. ♡
+          </p>
+        )}
+      </div>
+    );
+  })()}
+
+  <p className="mt-4 text-center text-[10px] italic text-[#A77B73]">
+    tap a day to revisit your commitments. ♡
+  </p>
+</section>
+
 
                 <div className="pb-10 text-center">
                   <p className="font-serif text-2xl italic text-[#A77B73]">
