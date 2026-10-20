@@ -1596,13 +1596,22 @@ const handleCompleteJourney = async () => {
             <span className="font-serif text-sm">→</span>
           </Link>
 
-          <button
-            type="button"
-            onClick={() => removeWorkoutFromToday(workout.id)}
-            className="shrink-0 text-[7px] tracking-[0.16em] text-[#B08A82] transition hover:text-[#211C19]"
-          >
-            REMOVE
-          </button>
+          <div className="flex shrink-0 items-center gap-3">
+  <Link
+    href={`/dashboard/resources/workouts?mode=change&replace=${encodeURIComponent(workout.id)}`}
+    className="text-[7px] tracking-[0.16em] text-[#8F655E] transition hover:text-[#211C19]"
+  >
+    CHANGE
+  </Link>
+
+  <button
+    type="button"
+    onClick={() => removeWorkoutFromToday(workout.id)}
+    className="text-[7px] tracking-[0.16em] text-[#B08A82] transition hover:text-[#211C19]"
+  >
+    REMOVE
+  </button>
+</div>
         </div>
       </div>
     ))}
@@ -1663,12 +1672,7 @@ const handleCompleteJourney = async () => {
           selected ♡
         </span>
 
-        <Link
-          href="/dashboard/resources/workouts?mode=change"
-          className="shrink-0 text-[7px] tracking-[0.16em] text-[#9D6F67] transition hover:text-[#211C19]"
-        >
-          CHANGE
-        </Link>
+        
       </div>
     ) : (
       <Link

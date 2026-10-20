@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { supabase } from "@/lib/supabase";
+import { getActiveJourney } from "@/lib/active-journey";
 import { workouts, type Workout } from "@/lib/workouts";
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -448,6 +449,8 @@ export default function WorkoutsPage() {
 
   const isChangeMode =
     searchParams.get("mode") === "change";
+    const replaceWorkoutId =
+  searchParams.get("replace");
 
   const [firstName, setFirstName] =
     useState("there");
@@ -457,6 +460,8 @@ export default function WorkoutsPage() {
 
   const [userId, setUserId] =
     useState<string | null>(null);
+    const [activeJourneyId, setActiveJourneyId] =
+  useState<string | null>(null);
 
   const [
     currentChallengeDay,
@@ -499,6 +504,14 @@ export default function WorkoutsPage() {
       }
 
       setUserId(user.id);
+      const activeJourney = await getActiveJourney();
+
+setActiveJourneyId(
+  activeJourney?.user_id === user.id &&
+  activeJourney.status === "active"
+    ? activeJourney.id
+    : null
+);
 
       const savedName =
         user.user_metadata?.name;
@@ -532,18 +545,16 @@ export default function WorkoutsPage() {
         return;
       }
 
-      if (!profile?.challenge_start_date) {
-        setIsLoadingUser(false);
-        return;
-      }
+      if (!activeJourney?.start_date) {
+  setIsLoadingUser(false);
+  return;
+}
+     const challengeLength =
+  activeJourney?.challenge_length ?? 75;
 
-      const challengeLength =
-        profile.challenge_length ?? 75;
-
-      const startDate = new Date(
-        `${profile.challenge_start_date}T00:00:00`,
-      );
-
+const startDate = new Date(
+  `${activeJourney?.start_date}T00:00:00`,
+);
       const today = new Date();
 
       startDate.setHours(0, 0, 0, 0);
@@ -566,17 +577,17 @@ export default function WorkoutsPage() {
       );
 
       const {
-        data: savedProgress,
-        error: progressError,
-      } = await supabase
-        .from("daily_progress")
-        .select("selected_workouts")
-        .eq("user_id", user.id)
-        .eq(
-          "challenge_day",
-          calculatedDay,
-        )
-        .maybeSingle();
+  data: savedProgress,
+  error: progressError,
+} = activeJourney?.id
+  ? await supabase
+      .from("daily_progress")
+      .select("selected_workouts")
+      .eq("user_id", user.id)
+      .eq("journey_id", activeJourney.id)
+      .eq("challenge_day", calculatedDay)
+      .maybeSingle()
+  : { data: null, error: null };
 
       if (progressError) {
         console.error(
@@ -646,23 +657,23 @@ const filteredWorkouts = useMemo(() => {
 
 
   const saveSelectedWorkouts = async (
-    workoutIds: string[],
-  ) => {
+  workoutIds: string[],
+  replacedWorkoutId?: string,
+) => {
     if (
-      !userId ||
-      currentChallengeDay === null
-    ) {
-      return false;
-    }
+  !userId ||
+  !activeJourneyId ||
+  currentChallengeDay === null
+) {
+  return false;
+}
   const { data: currentProgress } =
     await supabase
       .from("daily_progress")
-      .select("selected_workouts")
+      .select("selected_workouts, dismissed_guide_workouts")
       .eq("user_id", userId)
-      .eq(
-        "challenge_day",
-        currentChallengeDay,
-      )
+.eq("journey_id", activeJourneyId)
+.eq("challenge_day", currentChallengeDay)
       .maybeSingle();
 
   const existingWorkouts =
@@ -671,6 +682,22 @@ const filteredWorkouts = useMemo(() => {
     )
       ? currentProgress.selected_workouts
       : [];
+
+      const existingDismissedGuideWorkouts: string[] =
+  Array.isArray(currentProgress?.dismissed_guide_workouts)
+    ? currentProgress.dismissed_guide_workouts
+    : [];
+
+const dismissedGuideWorkouts = [
+  ...existingDismissedGuideWorkouts,
+];
+
+if (
+  replacedWorkoutId &&
+  !dismissedGuideWorkouts.includes(replacedWorkoutId)
+) {
+  dismissedGuideWorkouts.push(replacedWorkoutId);
+}
     const selectedWorkouts =
       workoutIds
         .map((id) =>
@@ -709,8 +736,9 @@ source:
 
 const preservedCustomWorkouts = existingWorkouts.filter(
   (existing: { id?: string; source?: string }) =>
-    existing.source === "custom" ||
-    existing.id?.startsWith("custom:")
+    (existing.source === "custom" ||
+      existing.id?.startsWith("custom:")) &&
+    existing.id !== replacedWorkoutId
 );
 
 const mergedWorkouts = [
@@ -721,24 +749,28 @@ const mergedWorkouts = [
     const progressDate =
       formatLocalDate(new Date());
 
-    const { error } = await supabase
+    const workoutChanges = {
+  selected_workouts: mergedWorkouts,
+  dismissed_guide_workouts: dismissedGuideWorkouts,
+  updated_at: new Date().toISOString(),
+};
+
+const { error } = currentProgress
+  ? await supabase
       .from("daily_progress")
-      .upsert(
-        {
-          user_id: userId,
-          challenge_day:
-            currentChallengeDay,
-          progress_date:
-            progressDate,
-          selected_workouts: mergedWorkouts,
-          updated_at:
-            new Date().toISOString(),
-        },
-        {
-          onConflict:
-            "journey_id,challenge_day",
-        },
-      );
+      .update(workoutChanges)
+      .eq("user_id", userId)
+      .eq("journey_id", activeJourneyId)
+      .eq("challenge_day", currentChallengeDay)
+  : await supabase
+      .from("daily_progress")
+      .insert({
+        user_id: userId,
+        journey_id: activeJourneyId,
+        challenge_day: currentChallengeDay,
+        progress_date: progressDate,
+        ...workoutChanges,
+      });
 
     if (error) {
       console.error(
@@ -773,16 +805,23 @@ const mergedWorkouts = [
     const previousIds =
       selectedWorkoutIds;
 
-    const nextIds = isChangeMode
-  ? [workout.id]
-  : [...previousIds, workout.id];
+    const nextIds =
+  isChangeMode && replaceWorkoutId
+    ? [
+        ...previousIds.filter(
+          (id) => id !== replaceWorkoutId
+        ),
+        workout.id,
+      ]
+    : [...previousIds, workout.id];
 
     setSelectedWorkoutIds(nextIds);
 
     const saved =
-      await saveSelectedWorkouts(
-        nextIds,
-      );
+  await saveSelectedWorkouts(
+    nextIds,
+    isChangeMode ? replaceWorkoutId ?? undefined : undefined,
+  );
 
     if (!saved) {
       setSelectedWorkoutIds(
@@ -804,7 +843,7 @@ const mergedWorkouts = [
     const { data: currentProgress } =
   await supabase
     .from("daily_progress")
-    .select("selected_workouts")
+    .select("selected_workouts, dismissed_guide_workouts")
     .eq("user_id", userId)
     .eq(
       "challenge_day",
@@ -812,12 +851,8 @@ const mergedWorkouts = [
     )
     .maybeSingle();
 
-const existingWorkouts =
-  Array.isArray(
-    currentProgress?.selected_workouts,
-  )
-    ? currentProgress.selected_workouts
-    : [];
+
+
 
     const previousIds =
       selectedWorkoutIds;
@@ -830,10 +865,10 @@ const existingWorkouts =
 
     setSelectedWorkoutIds(nextIds);
 
-    const saved =
-      await saveSelectedWorkouts(
-        nextIds,
-      );
+    const saved = await saveSelectedWorkouts(
+  nextIds,
+  workoutId,
+);
 
     if (!saved) {
       setSelectedWorkoutIds(
