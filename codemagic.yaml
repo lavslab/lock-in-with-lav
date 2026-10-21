@@ -7,12 +7,16 @@ workflows:
     integrations:
       app_store_connect: Codemagic
 
+    
     environment:
+      groups:
+        - revenuecat
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.lockinwithlav.app
       node: latest
       xcode: latest
+
 
     scripts:
       - name: Install npm dependencies
