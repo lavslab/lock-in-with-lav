@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import { clearRevenueCatUserTracking } from "@/lib/revenuecat";
 import { createClient } from "@/lib/supabase/client";
 export default function AccountPage() {
   const router = useRouter();
@@ -42,6 +43,11 @@ export default function AccountPage() {
         console.error("Could not load account:", error);
       }
       if (!user) {
+
+        clearRevenueCatUserTracking();
+
+router.replace("/auth");
+router.refresh();
         router.replace("/auth");
         return;
       }
@@ -219,8 +225,11 @@ export default function AccountPage() {
         return;
       }
       await supabase.auth.signOut({ scope: "local" });
-      router.replace("/auth");
-      router.refresh();
+
+clearRevenueCatUserTracking();
+
+router.replace("/auth");
+router.refresh();
     } catch (error) {
       console.error("Could not delete account:", error);
       setDeleteMessage(

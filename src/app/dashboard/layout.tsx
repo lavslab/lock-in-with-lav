@@ -4,6 +4,7 @@ import DashboardMobileNav from "@/components/DashboardMobileNav";
 import PullToRefresh from "@/components/PullToRefresh";
 import WorkoutBackNav from "@/components/WorkoutBackNav";
 import { createClient } from "@/lib/supabase/server";
+import RevenueCatInitializer from "@/components/RevenueCatInitializer";
 
 export default async function DashboardLayout({
   children,
@@ -46,8 +47,9 @@ export default async function DashboardLayout({
     ? accountName.charAt(0).toUpperCase()
     : "♡";
 
-  return (
+ return (
   <>
+    <RevenueCatInitializer userId={user.id} />
     <PullToRefresh />
 
     <DashboardMobileNav initial={accountInitial} />
