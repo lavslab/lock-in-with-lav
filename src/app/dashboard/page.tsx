@@ -256,7 +256,32 @@ const isFinalChallengeDay =
 
       setUserId(user.id);
 
-      const activeJourney = await getActiveJourney();
+      // Automatically complete a challenge after its final day.
+const { error: autoCompleteError } = await supabase.rpc(
+  "auto_complete_my_challenge"
+);
+
+if (autoCompleteError) {
+  console.error(
+    "Could not automatically complete expired journey:",
+    autoCompleteError
+  );
+}
+
+const activeJourney = await getActiveJourney();
+
+if (!autoCompleteError && !activeJourney) {
+  const { data: profileCheck } = await supabase
+    .from("profiles")
+    .select("challenge_start_date")
+    .eq("id", user.id)
+    .single();
+
+  if (!profileCheck?.challenge_start_date) {
+    window.location.replace("/dashboard/journeys");
+    return;
+  }
+}
 setActiveJourneyId(
   activeJourney?.user_id === user.id &&
   activeJourney.status === "active"
@@ -291,7 +316,7 @@ if (profileError) {
   return;
 }
 
-if (!profile?.challenge_start_date) {
+if (!profile?.challenge_start_date || !activeJourney) {
   setIsLoadingUser(false);
   setIsLoadingProgress(false);
   return;

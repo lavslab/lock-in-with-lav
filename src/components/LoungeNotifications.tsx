@@ -86,22 +86,23 @@ export default function LoungeNotifications({
   ).length;
 
   function getMessage(notification: Notification) {
-  const name = actorNames[notification.actor_id] || "A Lounge member";
+    const name =
+      actorNames[notification.actor_id] || "A Lounge member";
 
-  switch (notification.type) {
-    case "post_like":
-      return `${name} liked your post ♡`;
+    switch (notification.type) {
+      case "post_like":
+        return `${name} liked your post ♡`;
 
-    case "comment_like":
-      return `${name} liked your comment ♡`;
+      case "comment_like":
+        return `${name} liked your comment ♡`;
 
-    case "comment":
-      return `${name} commented on your post.`;
+      case "comment":
+        return `${name} commented on your post.`;
 
-    case "reply":
-      return `${name} replied to your comment.`;
+      case "reply":
+        return `${name} replied to your comment.`;
+    }
   }
-}
 
   async function markAsRead(id: string) {
     const { error: updateError } = await supabase
@@ -180,22 +181,48 @@ export default function LoungeNotifications({
 
       {open && (
         <div className="fixed left-1/2 top-40 z-50 w-[calc(100vw-32px)] max-w-sm -translate-x-1/2 overflow-hidden rounded-2xl border border-[#DED0CB] bg-[#FFFCFA] shadow-xl sm:absolute sm:left-auto sm:right-0 sm:top-11 sm:w-80 sm:translate-x-0">
+
+          {/* NOTIFICATIONS HEADER */}
           <div className="flex items-center justify-between border-b border-[#E8DCD6] px-4 py-3">
             <h2 className="font-serif text-lg text-[#211C19]">
               Notifications.
             </h2>
 
-            {unreadCount > 0 && (
+            <div className="flex items-center gap-3">
+              {unreadCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => void markAllAsRead()}
+                  className="text-[10px] text-[#9D6F67]"
+                >
+                  Mark all as read
+                </button>
+              )}
+
+              {/* CLOSE NOTIFICATIONS */}
               <button
                 type="button"
-                onClick={() => void markAllAsRead()}
-                className="text-[10px] text-[#9D6F67]"
+                onClick={() => setOpen(false)}
+                aria-label="Close notifications"
+                className="flex h-7 w-7 items-center justify-center rounded-full text-[#806D65] transition hover:bg-[#F7F1ED] hover:text-[#211C19]"
               >
-                Mark all as read
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
               </button>
-            )}
+            </div>
           </div>
 
+          {/* NOTIFICATIONS LIST */}
           <div className="max-h-80 overflow-y-auto">
             {loading ? (
               <p className="px-4 py-8 text-center text-xs text-[#806D65]">
@@ -217,12 +244,14 @@ export default function LoungeNotifications({
                 <Link
                   key={notification.id}
                   href={`/dashboard/lounge?post=${encodeURIComponent(
-  notification.post_id
-)}${
-  notification.comment_id
-    ? `&comment=${encodeURIComponent(notification.comment_id)}`
-    : ""
-}`}
+                    notification.post_id
+                  )}${
+                    notification.comment_id
+                      ? `&comment=${encodeURIComponent(
+                          notification.comment_id
+                        )}`
+                      : ""
+                  }`}
                   onClick={() => {
                     void markAsRead(notification.id);
                     setOpen(false);
@@ -240,6 +269,7 @@ export default function LoungeNotifications({
                       <p className="text-[11px] leading-5 text-[#302521]">
                         {getMessage(notification)}
                       </p>
+
                       <p className="mt-1 text-[9px] text-[#A18A82]">
                         {new Date(
                           notification.created_at

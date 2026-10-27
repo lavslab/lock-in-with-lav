@@ -143,6 +143,13 @@ export default function MealPlansPage() {
   const [plannerError, setPlannerError] = useState("");
 
   const [activeHelperTab, setActiveHelperTab] = useState<HelperTab>(null);
+  const [targetsCompleted, setTargetsCompleted] = useState(false);
+const [planCompleted, setPlanCompleted] = useState(false);
+const [isLoadingNourishProgress, setIsLoadingNourishProgress] = useState(true);
+const [savingNourishSection, setSavingNourishSection] = useState<
+  "targets" | "plan" | null
+>(null);
+const [nourishProgressError, setNourishProgressError] = useState("");
   const planSectionRef = useRef<HTMLDivElement | null>(null);
 
   const [unit, setUnit] = useState<Unit>("imperial");
@@ -316,6 +323,43 @@ export default function MealPlansPage() {
     };
   }, []);
 
+
+  
+useEffect(() => {
+  if (!userId) return;
+
+  let active = true;
+
+  async function loadNourishProgress() {
+    setIsLoadingNourishProgress(true);
+    setNourishProgressError("");
+
+    const { data, error } = await supabase
+      .from("nourish_method_progress")
+      .select("targets_completed, plan_completed")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!active) return;
+
+    if (error) {
+      console.error("Could not load Nourish progress:", error);
+      setNourishProgressError("We couldn't load your Nourish progress.");
+    } else {
+      setTargetsCompleted(data?.targets_completed ?? false);
+      setPlanCompleted(data?.plan_completed ?? false);
+    }
+
+    setIsLoadingNourishProgress(false);
+  }
+
+  loadNourishProgress();
+
+  return () => {
+    active = false;
+  };
+}, [userId]);
+
   useEffect(() => {
     if (!userId || plannerWeek.length === 0) return;
 
@@ -407,6 +451,45 @@ export default function MealPlansPage() {
   function toggleHelperTab(tab: Exclude<HelperTab, null>) {
     setActiveHelperTab((current) => (current === tab ? null : tab));
   }
+
+
+  
+async function toggleNourishCompletion(section: "targets" | "plan") {
+  if (!userId || isLoadingNourishProgress || savingNourishSection) return;
+
+  const nextTargets =
+    section === "targets" ? !targetsCompleted : targetsCompleted;
+
+  const nextPlan =
+    section === "plan" ? !planCompleted : planCompleted;
+
+  setSavingNourishSection(section);
+  setNourishProgressError("");
+
+  const { error } = await supabase
+    .from("nourish_method_progress")
+    .upsert(
+      {
+        user_id: userId,
+        targets_completed: nextTargets,
+        plan_completed: nextPlan,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (error) {
+    console.error("Could not save Nourish progress:", error);
+    setNourishProgressError(
+      "We couldn't save your progress. Please try again."
+    );
+  } else {
+    setTargetsCompleted(nextTargets);
+    setPlanCompleted(nextPlan);
+  }
+
+  setSavingNourishSection(null);
+}
 
   function openMealPicker(date: string, slot: MealSlot) {
     setPickerDate(date);
@@ -709,9 +792,19 @@ export default function MealPlansPage() {
                       </div>
                     </div>
 
-                    <span className="text-xl text-[#A77B73]">
-                      {activeHelperTab === "targets" ? "−" : "+"}
-                    </span>
+                    
+<div className="flex items-center gap-3">
+  {targetsCompleted && (
+    <span className="text-lg text-[#A77B73]" aria-label="Completed">
+      ✓
+    </span>
+  )}
+
+  <span className="text-xl text-[#A77B73]">
+    {activeHelperTab === "targets" ? "−" : "+"}
+  </span>
+</div>
+
                   </button>
 
                   {activeHelperTab === "targets" && (
@@ -938,6 +1031,25 @@ export default function MealPlansPage() {
                         General estimates only, not individualized nutrition
                         advice. Adjust for your needs and how you feel.
                       </p>
+
+                      
+<button
+  type="button"
+  onClick={() => toggleNourishCompletion("targets")}
+  disabled={isLoadingNourishProgress || !!savingNourishSection}
+  className={`mt-5 flex w-full items-center justify-center gap-2 rounded-full border px-5 py-3.5 text-[9px] tracking-[0.12em] transition disabled:opacity-50 ${
+    targetsCompleted
+      ? "border-[#CBA9A2] bg-[#EAD8D3]/50 text-[#8F655E]"
+      : "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
+  }`}
+>
+  {savingNourishSection === "targets"
+    ? "SAVING..."
+    : targetsCompleted
+      ? "✓ TARGETS COMPLETE"
+      : "MARK TARGETS COMPLETE ✓"}
+</button>
+
                     </div>
                   )}
                 </div>
@@ -967,9 +1079,19 @@ export default function MealPlansPage() {
                       </div>
                     </div>
 
-                    <span className="text-xl text-[#A77B73]">
-                      {activeHelperTab === "plan" ? "−" : "+"}
-                    </span>
+                    
+<div className="flex items-center gap-3">
+  {planCompleted && (
+    <span className="text-lg text-[#A77B73]" aria-label="Completed">
+      ✓
+    </span>
+  )}
+
+  <span className="text-xl text-[#A77B73]">
+    {activeHelperTab === "plan" ? "−" : "+"}
+  </span>
+</div>
+
                   </button>
 
                   {activeHelperTab === "plan" && (
@@ -1037,11 +1159,40 @@ export default function MealPlansPage() {
                           </Link>
                         ))}
                       </div>
+
+                      
+<button
+  type="button"
+  onClick={() => toggleNourishCompletion("plan")}
+  disabled={isLoadingNourishProgress || !!savingNourishSection}
+  className={`mt-6 flex w-full items-center justify-center gap-2 rounded-full border px-5 py-3.5 text-[9px] tracking-[0.12em] transition disabled:opacity-50 ${
+    planCompleted
+      ? "border-[#CBA9A2] bg-[#EAD8D3]/50 text-[#8F655E]"
+      : "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
+  }`}
+>
+  {savingNourishSection === "plan"
+    ? "SAVING..."
+    : planCompleted
+      ? "✓ PLAN COMPLETE"
+      : "MARK PLAN COMPLETE ✓"}
+</button>
+
                     </div>
                   )}
                 </div>
               </div>
             </section>
+
+
+{targetsCompleted && planCompleted && (
+  <div className="mt-3 rounded-xl border border-[#DED0CB] bg-[#FBF8F6] px-4 py-3 text-center">
+    <p className="font-serif text-[13px] italic text-[#A77B73]">
+      ✓ Your Nourish Method is locked in. ♡
+    </p>
+  </div>
+)}
+
 
             {/* WEEKLY PLANNER */}
             <section className="pt-12">

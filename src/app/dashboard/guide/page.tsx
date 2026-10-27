@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import DashboardSidebar from "@/components/DashboardSidebar";
 import MovementLogger from "@/components/MovementLogger";
-
+import { getActiveJourney } from "@/lib/active-journey";
 /* ---------------------------------
    TRAINING TYPES
 --------------------------------- */
@@ -1068,6 +1068,12 @@ export default function GuidePage() {
        * the current training day.
        */
 
+      const activeJourney = await getActiveJourney();
+
+if (!activeJourney || activeJourney.user_id !== userId) {
+  throw new Error("No active journey found.");
+} 
+
       if (
         !isCurrentlySelected &&
         challengeStartDate
@@ -1089,19 +1095,15 @@ export default function GuidePage() {
             challengeLength &&
           dayId === todayTrainingDay
         ) {
-          const {
-            data: progress,
-          } = await supabase
-            .from("daily_progress")
-            .select(
-              "dismissed_guide_workouts"
-            )
-            .eq("user_id", userId)
-            .eq(
-              "challenge_day",
-              todayChallengeDay
-            )
-            .maybeSingle();
+         const {
+  data: progress,
+} = await supabase
+  .from("daily_progress")
+  .select("dismissed_guide_workouts")
+  .eq("user_id", userId)
+  .eq("journey_id", activeJourney.id)
+  .eq("challenge_day", todayChallengeDay)
+  .maybeSingle();
 
           const dismissed =
             Array.isArray(
@@ -1121,24 +1123,15 @@ export default function GuidePage() {
                   id !== workoutId
               );
 
-            const {
-              error: dismissalError,
-            } = await supabase
-              .from("daily_progress")
-              .update({
-                dismissed_guide_workouts:
-                  updatedDismissed,
-                updated_at:
-                  new Date().toISOString(),
-              })
-              .eq(
-                "user_id",
-                userId
-              )
-              .eq(
-                "challenge_day",
-                todayChallengeDay
-              );
+            const { error: dismissalError } = await supabase
+  .from("daily_progress")
+  .update({
+    dismissed_guide_workouts: updatedDismissed,
+    updated_at: new Date().toISOString(),
+  })
+  .eq("user_id", userId)
+  .eq("journey_id", activeJourney.id)
+  .eq("challenge_day", todayChallengeDay);
 
             if (dismissalError) {
               console.error(
@@ -1581,6 +1574,8 @@ export default function GuidePage() {
                       </Link>
                     ) : activeSelectedWorkouts.length > 0 ? (
                       <div className="divide-y divide-[#E1D3CE]">
+
+                        
                         {activeSelectedWorkouts.map((workout) => (
                           <Link
                             key={workout.id}

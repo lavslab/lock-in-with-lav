@@ -150,8 +150,95 @@ const [selectedDay, setSelectedDay] = useState<number | null>(null);
         return;
       }
 
-      const savedJourney = data as Journey;
-      setJourney(savedJourney);
+     const savedJourney = data as Journey;
+
+const [
+  dailyResult,
+  checkinsResult,
+  measurementsResult,
+  winsResult,
+  photosResult,
+] = await Promise.all([
+  supabase
+    .from("daily_progress")
+    .select("*")
+    .eq("journey_id", journeyId)
+    .eq("user_id", user.id),
+
+  supabase
+    .from("weekly_checkins")
+    .select("*")
+    .eq("journey_id", journeyId)
+    .eq("user_id", user.id),
+
+  supabase
+    .from("measurements")
+    .select("*")
+    .eq("journey_id", journeyId)
+    .eq("user_id", user.id),
+
+  supabase
+    .from("little_wins")
+    .select("*")
+    .eq("journey_id", journeyId)
+    .eq("user_id", user.id),
+
+  supabase
+    .from("progress_photos")
+    .select("*")
+    .eq("journey_id", journeyId)
+    .eq("user_id", user.id),
+]);
+
+if (!mounted) return;
+
+const results = [
+  dailyResult,
+  checkinsResult,
+  measurementsResult,
+  winsResult,
+  photosResult,
+];
+
+const firstError = results.find((result) => result.error)?.error;
+
+if (firstError) {
+  console.error("Could not load journey history:", firstError);
+  setErrorMessage("We couldn't load this journey's history.");
+  setIsLoading(false);
+  return;
+}
+
+const fullJourney: Journey = {
+  ...savedJourney,
+
+  daily_progress:
+    dailyResult.data && dailyResult.data.length > 0
+      ? dailyResult.data
+      : savedJourney.daily_progress ?? [],
+
+  weekly_checkins:
+    checkinsResult.data && checkinsResult.data.length > 0
+      ? checkinsResult.data
+      : savedJourney.weekly_checkins ?? [],
+
+  measurements:
+    measurementsResult.data && measurementsResult.data.length > 0
+      ? measurementsResult.data
+      : savedJourney.measurements ?? [],
+
+  little_wins:
+    winsResult.data && winsResult.data.length > 0
+      ? winsResult.data
+      : savedJourney.little_wins ?? [],
+
+  progress_photos:
+    photosResult.data && photosResult.data.length > 0
+      ? photosResult.data
+      : savedJourney.progress_photos ?? [],
+};
+
+setJourney(fullJourney);
 
       const paths = Array.from(
         new Set(
@@ -306,9 +393,18 @@ const [selectedDay, setSelectedDay] = useState<number | null>(null);
     (win) => win.is_completed
   );
 
-  const dailyRecords = [...(journey?.daily_progress ?? [])].sort(
-    (a, b) => a.challenge_day - b.challenge_day
-  );
+  const dailyRecords = [...(journey?.daily_progress ?? [])]
+  .filter(
+    (record) =>
+      Number.isInteger(record.challenge_day) &&
+      record.challenge_day >= 1 &&
+      record.challenge_day <= (journey?.challenge_length ?? 0)
+  )
+  .sort((a, b) => a.challenge_day - b.challenge_day);
+
+const daysLogged = new Set(
+  dailyRecords.map((record) => record.challenge_day)
+).size;
 
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
@@ -398,7 +494,7 @@ const [selectedDay, setSelectedDay] = useState<number | null>(null);
         DAYS LOGGED
       </p>
       <p className="mt-1 font-serif text-sm sm:text-base">
-        {dailyRecords.length} / {journey.challenge_length}
+        {daysLogged} / {journey.challenge_length}
       </p>
     </div>
   </div>

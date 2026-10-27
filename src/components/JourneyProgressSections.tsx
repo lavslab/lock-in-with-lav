@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getActiveJourney } from "@/lib/active-journey";
 import {
@@ -128,7 +128,13 @@ export default function JourneyProgressSections() {
   const [challengeLength, setChallengeLength] = useState(75);
 
   const [wins, setWins] = useState<Win[]>([]);
-  const [checkins, setCheckins] = useState<Checkin[]>([]);
+const [checkins, setCheckins] = useState<Checkin[]>([]);
+
+const [pendingWins, setPendingWins] = useState<
+  Record<string, boolean>
+>({});
+
+const savingWinsRef = useRef<Set<string>>(new Set());
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -356,66 +362,104 @@ export default function JourneyProgressSections() {
       setBusy(false);
     }
   };
+const toggleWin = async (key: string, label: string) => {
+  if (busy || currentDay === null || savingWinsRef.current.has(key)) return;
 
-  const toggleWin = (key: string, label: string) =>
-    void perform(async () => {
-      const j = await getWritable();
+  savingWinsRef.current.add(key);
 
-      const { data: existing, error: findError } =
-        await supabase
-          .from("little_wins")
-          .select("id,is_completed")
-          .eq("user_id", j.userId)
-          .eq("journey_id", j.id)
-          .eq("challenge_day", j.day)
-          .eq("win_key", key)
-          .maybeSingle();
+  const existingWin = wins.find(
+    (win) => win.win_key === key && win.challenge_day === currentDay
+  );
 
-      if (findError) throw findError;
+  const checked = pendingWins[key] ?? existingWin?.is_completed ?? false;
 
-      if (existing) {
-        const next = !existing.is_completed;
+  setPendingWins((previous) => ({
+    ...previous,
+    [key]: !checked,
+  }));
 
-        const { data, error: updateError } =
-          await supabase
-            .from("little_wins")
-            .update({
-              is_completed: next,
-              completed_at: next
-                ? new Date().toISOString()
-                : null,
-            })
-            .eq("id", existing.id)
-            .eq("user_id", j.userId)
-            .eq("journey_id", j.id)
-            .select("id")
-            .maybeSingle();
+  setError(null);
 
-        if (updateError) throw updateError;
+  try {
+    const j = await getWritable();
 
-        if (!data) {
-          throw new Error(
-            "This win could not be updated."
-          );
-        }
-      } else {
-        const { error: insertError } =
-          await supabase
-            .from("little_wins")
-            .insert({
-              user_id: j.userId,
-              journey_id: j.id,
-              challenge_day: j.day,
-              win_key: key,
-              label,
-              is_completed: true,
-              completed_at: new Date().toISOString(),
-            });
+    const { data: existing, error: findError } = await supabase
+      .from("little_wins")
+      .select("id,is_completed")
+      .eq("user_id", j.userId)
+      .eq("journey_id", j.id)
+      .eq("challenge_day", j.day)
+      .eq("win_key", key)
+      .maybeSingle();
 
-        if (insertError) throw insertError;
-      }
+    if (findError) throw findError;
+
+    const next = !checked;
+
+    if (existing) {
+      const { data, error: updateError } = await supabase
+        .from("little_wins")
+        .update({
+          is_completed: next,
+          completed_at: next ? new Date().toISOString() : null,
+        })
+        .eq("id", existing.id)
+        .eq("user_id", j.userId)
+        .eq("journey_id", j.id)
+        .select("id")
+        .maybeSingle();
+
+      if (updateError) throw updateError;
+      if (!data) throw new Error("This win could not be updated.");
+    } else {
+      const { error: insertError } = await supabase
+        .from("little_wins")
+        .insert({
+          user_id: j.userId,
+          journey_id: j.id,
+          challenge_day: j.day,
+          win_key: key,
+          label,
+          is_completed: next,
+          completed_at: next ? new Date().toISOString() : null,
+        });
+
+      if (insertError) throw insertError;
+    }
+
+    setWins((previous) => {
+      const remaining = previous.filter(
+        (win) => !(win.win_key === key && win.challenge_day === j.day)
+      );
+
+      return [
+        ...remaining,
+        {
+          ...(existingWin ?? {}),
+          id: existing?.id ?? existingWin?.id ?? 0,
+          user_id: j.userId,
+          journey_id: j.id,
+          challenge_day: j.day,
+          win_key: key,
+          label,
+          is_completed: next,
+          completed_at: next ? new Date().toISOString() : null,
+        } as Win,
+      ];
     });
-
+  } catch (e) {
+    setError(
+      e instanceof Error ? e.message : "Could not save your changes."
+    );
+  } finally {
+    setPendingWins((previous) => {
+      const next = { ...previous };
+      delete next[key];
+      return next;
+    });
+    savingWinsRef.current.delete(key);
+  }
+};
   const addCustomWin = () =>
     void perform(async () => {
       const label = customWin.trim();
@@ -655,13 +699,15 @@ export default function JourneyProgressSections() {
                       );
 
                       const checked =
-                        existing?.is_completed ?? false;
+  pendingWins[label] ??
+  existing?.is_completed ??
+  false;
 
                       return (
                         <button
                           key={label}
                           type="button"
-                          disabled={busy}
+                          disabled={busy || savingWinsRef.current.has(label)}
                           onClick={() =>
                             toggleWin(label, label)
                           }

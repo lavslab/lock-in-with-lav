@@ -327,11 +327,19 @@ export default function DashboardMobileNav({
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#DCCDC8] bg-[#FBF8F6]/95 px-2 pb-[max(0.65rem,env(safe-area-inset-bottom))] pt-2.5 backdrop-blur md:hidden">
         <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
           {navigation.map((item) => {
-            const isActive =
-              item.href === "/dashboard"
-                ? pathname === "/dashboard"
-                : pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
+            const isWorkoutLibrary =
+  pathname === "/dashboard/resources/workouts" ||
+  pathname.startsWith("/dashboard/resources/workouts/");
+
+const isActive =
+  item.icon === "train" && isWorkoutLibrary
+    ? true
+    : item.icon === "nourish" && isWorkoutLibrary
+    ? false
+    : item.href === "/dashboard"
+    ? pathname === "/dashboard"
+    : pathname === item.href ||
+      pathname.startsWith(`${item.href}/`);
 
             return (
               <Link

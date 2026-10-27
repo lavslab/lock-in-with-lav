@@ -840,20 +840,6 @@ const { error } = currentProgress
       return;
     }
 
-    const { data: currentProgress } =
-  await supabase
-    .from("daily_progress")
-    .select("selected_workouts, dismissed_guide_workouts")
-    .eq("user_id", userId)
-    .eq(
-      "challenge_day",
-      currentChallengeDay,
-    )
-    .maybeSingle();
-
-
-
-
     const previousIds =
       selectedWorkoutIds;
 

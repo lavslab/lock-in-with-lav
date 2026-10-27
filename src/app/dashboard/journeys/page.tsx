@@ -30,6 +30,11 @@ export default function MyJourneysPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [journeys, setJourneys] = useState<Journey[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
+  
+const [journeyToDelete, setJourneyToDelete] = useState<Journey | null>(null);
+const [isDeletingJourney, setIsDeletingJourney] = useState(false);
+const [deleteError, setDeleteError] = useState("");
+
 
   useEffect(() => {
     let mounted = true;
@@ -66,7 +71,84 @@ export default function MyJourneysPage() {
         console.error("Could not load journeys:", error);
         setErrorMessage("We couldn't load your journeys. Please try again.");
       } else {
-        setJourneys((data ?? []) as Journey[]);
+        const savedJourneys = (data ?? []) as Journey[];
+
+const savedJourneyIds = savedJourneys
+  .filter((journey) => journey.status !== "active")
+  .map((journey) => journey.id);
+
+if (savedJourneyIds.length === 0) {
+  setJourneys(savedJourneys);
+} else {
+  const [dailyResult, photosResult, checkinsResult] =
+    await Promise.all([
+      supabase
+        .from("daily_progress")
+        .select("*")
+        .eq("user_id", user.id)
+        .in("journey_id", savedJourneyIds),
+
+      supabase
+        .from("progress_photos")
+        .select("*")
+        .eq("user_id", user.id)
+        .in("journey_id", savedJourneyIds),
+
+      supabase
+        .from("weekly_checkins")
+        .select("*")
+        .eq("user_id", user.id)
+        .in("journey_id", savedJourneyIds),
+    ]);
+
+  if (!mounted) return;
+
+  const historyError =
+    dailyResult.error ||
+    photosResult.error ||
+    checkinsResult.error;
+
+  if (historyError) {
+    console.error("Could not load journey counts:", historyError);
+    setErrorMessage("We couldn't load your journey history.");
+  } else {
+    setJourneys(
+      savedJourneys.map((journey) => {
+        if (journey.status === "active") return journey;
+
+        const daily = (dailyResult.data ?? []).filter(
+          (record) => record.journey_id === journey.id
+        );
+
+        const photos = (photosResult.data ?? []).filter(
+          (record) => record.journey_id === journey.id
+        );
+
+        const checkins = (checkinsResult.data ?? []).filter(
+          (record) => record.journey_id === journey.id
+        );
+
+        return {
+  ...journey,
+  daily_progress:
+    daily.length > 0
+      ? daily
+      : journey.daily_progress ?? [],
+
+  progress_photos:
+    photos.length > 0
+      ? photos
+      : journey.progress_photos ?? [],
+
+  weekly_checkins:
+    checkins.length > 0
+      ? checkins
+      : journey.weekly_checkins ?? [],
+};
+      })
+    );
+  }
+}
       }
 
       setIsLoading(false);
@@ -78,6 +160,92 @@ export default function MyJourneysPage() {
       mounted = false;
     };
   }, [router, supabase]);
+
+
+
+const handleDeleteJourney = async () => {
+  if (!journeyToDelete || isDeletingJourney) return;
+
+  setIsDeletingJourney(true);
+  setDeleteError("");
+
+  try {
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error("Please sign in again.");
+    }
+
+    const { data: photos, error: photosError } = await supabase
+      .from("progress_photos")
+      .select("storage_path")
+      .eq("journey_id", journeyToDelete.id)
+      .eq("user_id", user.id);
+
+    if (photosError) throw photosError;
+
+    const photoPaths = Array.from(
+      new Set(
+        (photos ?? [])
+          .map((photo) => photo.storage_path)
+          .filter(
+            (path): path is string =>
+              typeof path === "string" &&
+              path.startsWith(`${user.id}/`)
+          )
+      )
+    );
+
+    // Delete the journey and its associated database records.
+    const { error: deleteJourneyError } = await supabase.rpc(
+      "delete_archived_journey",
+      {
+        p_journey_id: journeyToDelete.id,
+      }
+    );
+
+    if (deleteJourneyError) throw deleteJourneyError;
+
+    // Remove only this journey's photo files from Storage.
+    if (photoPaths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from("progress-photos")
+        .remove(photoPaths);
+
+      if (storageError) {
+        console.error(
+          "Journey deleted, but photo cleanup failed:",
+          storageError
+        );
+      }
+    }
+
+    setJourneys((previous) =>
+      previous
+        .filter((journey) => journey.id !== journeyToDelete.id)
+        .sort((a, b) => a.journey_number - b.journey_number)
+        .map((journey, index) => ({
+          ...journey,
+          journey_number: index + 1,
+        }))
+        .sort((a, b) => b.journey_number - a.journey_number)
+    );
+
+    setJourneyToDelete(null);
+  } catch (error) {
+    console.error("Could not delete journey:", error);
+    setDeleteError(
+      "We couldn't delete this journey. Please try again."
+    );
+  } finally {
+    setIsDeletingJourney(false);
+  }
+};
+
+
 
   const initial =
     firstName && firstName !== "there"
@@ -220,7 +388,27 @@ const archivedJourneys = journeys.filter(
     isCompleted ? journey.completed_at : journey.archived_at
   );
 
-  const days = journey.daily_progress?.length ?? 0;
+  const days = new Set(
+  (journey.daily_progress ?? [])
+    .map((record) => {
+      if (
+        typeof record !== "object" ||
+        record === null ||
+        !("challenge_day" in record)
+      ) {
+        return null;
+      }
+
+      return record.challenge_day;
+    })
+    .filter(
+      (day): day is number =>
+        typeof day === "number" &&
+        Number.isInteger(day) &&
+        day >= 1 &&
+        day <= journey.challenge_length
+    )
+).size;
   const photos = journey.progress_photos?.length ?? 0;
   const checkins = journey.weekly_checkins?.length ?? 0;
 
@@ -277,6 +465,21 @@ const archivedJourneys = journeys.filter(
         >
           {isActive ? "Continue journey" : "View chapter"} &nbsp;→
         </Link>
+
+        
+{!isActive && (
+  <button
+    type="button"
+    onClick={() => {
+      setDeleteError("");
+      setJourneyToDelete(journey);
+    }}
+    className="text-[10px] text-[#A77B73] underline-offset-4 transition hover:text-[#8F655E] hover:underline"
+  >
+    Delete journey
+  </button>
+)}
+
       </div>
 
       {!isActive && savedDate && (
@@ -292,7 +495,7 @@ const archivedJourneys = journeys.filter(
             )}
           </div>
 
-          
+ {!isLoading && !errorMessage && activeJourneys.length === 0 && (         
 <div className="mt-8 text-center">
   <Link
     href="/onboarding"
@@ -305,9 +508,68 @@ const archivedJourneys = journeys.filter(
     another chapter awaits. ♡
   </p>
 </div>
-
+)}
         </section>
       </div>
+
+      
+{journeyToDelete && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/50 px-5">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-journey-title"
+      className="w-full max-w-sm rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] p-7 text-center shadow-xl"
+    >
+      <p className="text-[10px] tracking-[0.25em] text-[#9D6F67]">
+        BEFORE YOU GO
+      </p>
+
+      <h2
+        id="delete-journey-title"
+        className="mt-4 font-serif text-3xl text-[#211C19]"
+      >
+        Delete Journey{" "}
+        {String(journeyToDelete.journey_number).padStart(2, "0")}?
+      </h2>
+
+      <p className="mt-4 text-sm leading-6 text-[#806E68]">
+        This chapter and its saved progress, photos, workouts, and
+        reflections will be permanently deleted. This cannot be undone.
+      </p>
+
+      {deleteError && (
+        <p role="alert" className="mt-4 text-xs text-red-700">
+          {deleteError}
+        </p>
+      )}
+
+      <div className="mt-7 flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={handleDeleteJourney}
+          disabled={isDeletingJourney}
+          className="rounded-full bg-[#211C19] px-6 py-3.5 text-[11px] tracking-[0.12em] text-white transition hover:bg-[#433631] disabled:opacity-50"
+        >
+          {isDeletingJourney ? "DELETING..." : "YES, DELETE JOURNEY"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setJourneyToDelete(null);
+            setDeleteError("");
+          }}
+          disabled={isDeletingJourney}
+          className="rounded-full border border-[#DED0CB] px-6 py-3.5 text-[11px] tracking-[0.12em] text-[#806E68] transition hover:bg-[#F7F1ED] disabled:opacity-50"
+        >
+          KEEP MY JOURNEY ♡
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </main>
   );
 }

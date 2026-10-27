@@ -48,7 +48,6 @@ export async function initializeRevenueCat(userId: string) {
     
   }
 
-  
 }
 
 export function clearRevenueCatUserTracking() {

@@ -13,6 +13,7 @@ import { Share } from "@capacitor/share";
 import { Capacitor } from "@capacitor/core";
 
 import { createClient } from "@/lib/supabase/client";
+import { getActiveJourney } from "@/lib/active-journey";
 
 import DashboardSidebar from "@/components/DashboardSidebar";
 
@@ -147,6 +148,9 @@ export default function ProgressPage() {
   const [checkinWeek, setCheckinWeek] =
     useState<number | null>(null);
 
+const [activeJourneyId, setActiveJourneyId] = useState<string | null>(null);
+
+
   const [checkinForm, setCheckinForm] = useState({
     went_well: "",
     felt_hard: "",
@@ -166,12 +170,15 @@ export default function ProgressPage() {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        setIsLoadingUser(false);
-        return;
-      }
+     if (!user) {
+  setIsLoadingUser(false);
+  return;
+}
 
-      const savedName = user.user_metadata?.name;
+const activeJourney = await getActiveJourney();
+setActiveJourneyId(activeJourney?.id ?? null);  
+
+const savedName = user.user_metadata?.name;
 
       if (savedName) {
         setFirstName(savedName);
@@ -212,9 +219,10 @@ export default function ProgressPage() {
           "challenge_day, storage_path, updated_at"
         )
         .eq("user_id", user.id)
-        .order("updated_at", {
-          ascending: false,
-        });
+.eq("journey_id", activeJourney?.id ?? "")
+.order("updated_at", {
+  ascending: false,
+});
 
       if (photosError) {
         console.error(
@@ -278,10 +286,11 @@ export default function ProgressPage() {
         error: winsError,
       } = await supabase
         .from("little_wins")
-        .select(
-          "win_key, is_completed"
-        )
-        .eq("user_id", user.id);
+.select(
+  "win_key, is_completed"
+)
+.eq("user_id", user.id)
+.eq("journey_id", activeJourney?.id ?? "");
 
       if (winsError) {
         console.error(
@@ -450,6 +459,11 @@ export default function ProgressPage() {
   ) => {
     setIsUploadingPhoto(true);
     setPhotoError(null);
+    if (!activeJourneyId) {
+  setPhotoError("No active journey found. Please start a challenge first.");
+  setIsUploadingPhoto(false);
+  return;
+}
 
     let newFilePath: string | null =
       null;
@@ -545,23 +559,21 @@ export default function ProgressPage() {
       } = await withTimeout(
         supabase
           .from("progress_photos")
-          .upsert(
-            {
-              user_id: user.id,
-              challenge_day: day,
-              storage_path:
-                newFilePath,
-              photo_type:
-                "progress",
-              caption: null,
-              updated_at:
-                new Date().toISOString(),
-            },
-            {
-              onConflict:
-                "user_id,challenge_day,photo_type",
-            }
-          ),
+
+.upsert(
+  {
+    user_id: user.id,
+   journey_id: activeJourneyId,
+    challenge_day: day,
+    storage_path: newFilePath,
+    photo_type: "progress",
+    caption: null,
+    updated_at: new Date().toISOString(),
+  },
+  {
+    onConflict: "journey_id,challenge_day,photo_type",
+  }
+),
         "The photo uploaded, but it could not be saved to your progress."
       );
 
@@ -1125,22 +1137,19 @@ const removeProgressPhoto = async (day: number) => {
         .from("little_wins")
         .upsert(
           {
-            user_id: user.id,
-            win_key: win,
-            label: win,
-            is_completed:
-              nextValue,
-            challenge_day:
-              safeCurrentDay,
-            completed_at:
-              nextValue
-                ? new Date().toISOString()
-                : null,
-          },
-          {
-            onConflict:
-              "user_id,win_key,challenge_day",
-          }
+  user_id: user.id,
+  journey_id: activeJourneyId,
+  win_key: win,
+  label: win,
+  is_completed: nextValue,
+  challenge_day: safeCurrentDay,
+  completed_at: nextValue
+    ? new Date().toISOString()
+    : null,
+},
+{
+  onConflict: "journey_id,win_key,challenge_day",
+}
         );
 
     if (error) {
