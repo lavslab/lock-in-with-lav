@@ -14,7 +14,7 @@ import { createClient } from "@/lib/supabase/client";
 import LoungePostPhotoEditor from "@/components/LoungePostPhotoEditor";
 
 const MAX_PHOTOS = 4;
-const MAX_SIZE = 5 * 1024 * 1024;
+const MAX_SIZE = 10 * 1024 * 1024;
 
 const categories = [
   { value: "general", label: "General" },
@@ -109,7 +109,7 @@ export default function LoungePostComposer({
       }
 
       if (file.size > MAX_SIZE) {
-        setError("Each photo must be 5 MB or smaller.");
+        setError("Each photo must be 10 MB or smaller.");
         return;
       }
     }
