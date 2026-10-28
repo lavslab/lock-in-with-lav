@@ -31,6 +31,15 @@ type LoungePhoto = {
   position: number;
 };
 
+
+type LoungeVideo = {
+  id: string;
+  post_id: string;
+  storage_path: string;
+  duration_seconds: number;
+};
+
+
 type LoungeLike = {
   post_id: string;
   user_id: string;
@@ -202,6 +211,22 @@ const posts: LoungePost[] = Array.from(postMap.values());
     photos = data ?? [];
   }
 
+  // Load post videos.
+  let videos: LoungeVideo[] = [];
+
+  if (postIds.length > 0) {
+    const { data, error: videosError } = await supabase
+      .from("lounge_post_videos")
+      .select("id, post_id, storage_path, duration_seconds")
+      .in("post_id", postIds);
+
+    if (videosError) {
+      console.error("LOUNGE VIDEOS ERROR:", videosError);
+    }
+
+    videos = data ?? [];
+  }
+
   // Load likes.
   let likes: LoungeLike[] = [];
 
@@ -265,6 +290,36 @@ const posts: LoungePost[] = Array.from(postMap.values());
     });
   }
 
+  // Generate signed URLs for private videos.
+  const videoPaths = videos.map(
+    (video) => video.storage_path
+  );
+
+  const videoUrls = new Map<string, string>();
+
+  if (videoPaths.length > 0) {
+    const { data: signedVideos, error: signedVideoError } =
+      await supabase.storage
+        .from("lounge-videos")
+        .createSignedUrls(videoPaths, 60 * 60);
+
+    if (signedVideoError) {
+      console.error(
+        "LOUNGE VIDEO SIGNED URL ERROR:",
+        signedVideoError
+      );
+    }
+
+    signedVideos?.forEach((video, index) => {
+      if (video.signedUrl) {
+        videoUrls.set(
+          videoPaths[index],
+          video.signedUrl
+        );
+      }
+    });
+  }
+
   const authorMap = new Map(
     authors.map((author) => [
       author.user_id,
@@ -298,6 +353,23 @@ const posts: LoungePost[] = Array.from(postMap.values());
       }))
       .filter((photo) => photo.url !== "");
 
+      
+    const postVideoRecord = videos.find(
+      (video) => video.post_id === post.id
+    );
+
+    const postVideo =
+      postVideoRecord &&
+      videoUrls.get(postVideoRecord.storage_path)
+        ? {
+            id: postVideoRecord.id,
+            storagePath: postVideoRecord.storage_path,
+            url: videoUrls.get(postVideoRecord.storage_path)!,
+            duration: postVideoRecord.duration_seconds,
+          }
+        : null;
+
+
     return {
       id: post.id,
       userId: post.user_id,
@@ -309,6 +381,7 @@ const posts: LoungePost[] = Array.from(postMap.values());
         author?.username || null,
       authorAvatar,
       photos: postPhotos,
+      video: postVideo,
       likeCount:
         likeCounts.get(post.id) ?? 0,
       likedByMe:

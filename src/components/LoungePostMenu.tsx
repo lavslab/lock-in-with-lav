@@ -5,15 +5,24 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import LoungeReportModal from "@/components/LoungeReportModal";
+import LoungePostPhotoEditor from "@/components/LoungePostPhotoEditor";
+
 
 type Props = {
   postId: string;
   authorId: string;
   isOwner: boolean;
   photoPaths?: string[];
+  hasVideo: boolean;
+  photos: {
+    id: string;
+    storagePath: string;
+    url: string;
+  }[];
   content: string;
   category: string;
 };
+
 
 const categories = [
   { value: "general", label: "General" },
@@ -27,6 +36,8 @@ export default function LoungePostMenu({
   postId,
   authorId,
   isOwner,
+    photos,
+     hasVideo,
   content,
   category,
 }: Props) {
@@ -34,6 +45,8 @@ export default function LoungePostMenu({
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
+  const [localPhotoUrl, setLocalPhotoUrl] = useState<string | null>(null);
   const [reporting, setReporting] = useState(false);
   const [confirmBlocking, setConfirmBlocking] = useState(false);
   const [blocking, setBlocking] = useState(false);
@@ -117,15 +130,76 @@ export default function LoungePostMenu({
     }
   }
 
+
+async function saveEditedPhoto(photoId: string, blob: Blob) {
+  if (!isOwner) {
+    throw new Error("You can only edit your own photos.");
+  }
+
+  const photo = photos.find((item) => item.id === photoId);
+
+  if (!photo) {
+    throw new Error("Photo not found.");
+  }
+
+  const supabase = createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("Please sign in again.");
+  }
+
+  const newPath = `${user.id}/${postId}/${crypto.randomUUID()}.jpg`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("lounge-posts")
+    .upload(newPath, blob, {
+      contentType: "image/jpeg",
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error("Could not upload your adjusted photo.");
+  }
+
+  const { data: updated, error: updateError } = await supabase
+    .from("lounge_post_photos")
+    .update({ storage_path: newPath })
+    .eq("id", photoId)
+    .eq("post_id", postId)
+    .eq("user_id", user.id)
+    .eq("storage_path", photo.storagePath)
+    .select("id");
+
+  if (updateError || !updated?.length) {
+    // The orphaned upload will be handled by server-side cleanup.
+    throw new Error("Could not save your adjusted photo. Please try again.");
+  }
+
+ if (localPhotoUrl) {
+  URL.revokeObjectURL(localPhotoUrl);
+}
+
+setLocalPhotoUrl(null);
+setEditingPhotoId(null);
+setEditing(false);
+router.refresh();
+}
+
+
   async function saveEdit() {
     if (!isOwner || saving) return;
 
     const text = editedContent.trim();
 
-    if (!text) {
-      setError("Your post needs a little caption ♡");
-      return;
-    }
+    if (!text && photos.length === 0 && !hasVideo) {
+  setError("Your post needs a little caption ♡");
+  return;
+}
 
     if (text.length > 2000) {
       setError("Posts must be 2,000 characters or less.");
@@ -388,6 +462,61 @@ export default function LoungePostMenu({
               ))}
             </select>
 
+
+
+{/* EDIT POST PHOTOS */}
+{photos.length > 0 && (
+  <div className="mt-5">
+    <p className="mb-3 text-[10px] tracking-[0.2em] text-[#806D65]">
+      POST PHOTOS
+    </p>
+
+    <div className="grid grid-cols-2 gap-3">
+      {photos.map((photo) => (
+        <div
+          key={photo.id}
+          className="overflow-hidden rounded-xl border border-[#E9DAD3] bg-[#F7F1ED]"
+        >
+          <img
+            src={photo.url}
+            alt="Your posted photo"
+            className="aspect-square w-full object-cover"
+          />
+
+          <button
+            type="button"
+            
+onClick={async () => {
+  setError("");
+
+  try {
+    const response = await fetch(photo.url);
+
+    if (!response.ok) {
+      throw new Error("Could not load this photo.");
+    }
+
+    const blob = await response.blob();
+    const localUrl = URL.createObjectURL(blob);
+
+    setLocalPhotoUrl(localUrl);
+    setEditingPhotoId(photo.id);
+  } catch {
+    setError("Could not prepare this photo for editing.");
+  }
+}}
+
+            disabled={saving}
+            className="w-full bg-[#FBF8F6] px-2 py-3 text-[10px] tracking-[0.1em] text-[#A77B73] transition hover:bg-[#F1E6E1] disabled:opacity-50"
+          >
+            ADJUST PHOTO →
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
             {error && (
               <p role="alert" className="mt-4 text-xs text-red-600">
                 {error}
@@ -417,6 +546,27 @@ export default function LoungePostMenu({
         </div>
       )}
 
+
+{editingPhotoId && (() => {
+  const selectedPhoto = photos.find(
+    (photo) => photo.id === editingPhotoId
+  );
+
+  if (!selectedPhoto) return null;
+
+  return (
+    <LoungePostPhotoEditor
+    image={localPhotoUrl ?? selectedPhoto.url}
+      onCancel={() => {
+  if (localPhotoUrl) URL.revokeObjectURL(localPhotoUrl);
+  setLocalPhotoUrl(null);
+  setEditingPhotoId(null);
+}}  
+onSave={(blob) => saveEditedPhoto(selectedPhoto.id, blob)}
+
+    />
+  );
+})()}
       {reporting && (
         <LoungeReportModal
           postId={postId}

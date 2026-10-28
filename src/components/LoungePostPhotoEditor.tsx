@@ -27,7 +27,8 @@ async function getImageSize(
   source: string
 ): Promise<{ width: number; height: number }> {
   return new Promise((resolve, reject) => {
-    const image = new Image();
+   const image = new Image();
+image.crossOrigin = "anonymous";
 
     image.onload = () => {
       resolve({

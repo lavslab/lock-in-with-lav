@@ -16,6 +16,15 @@ import LoungePostPhotoEditor from "@/components/LoungePostPhotoEditor";
 const MAX_PHOTOS = 4;
 const MAX_SIZE = 10 * 1024 * 1024;
 
+const MAX_VIDEO_SIZE = 45 * 1024 * 1024;
+const MAX_VIDEO_DURATION = 60;
+
+const ALLOWED_VIDEO_TYPES = [
+  "video/mp4",
+  "video/quicktime",
+  "video/webm",
+];
+
 const categories = [
   { value: "general", label: "General" },
   { value: "meals", label: "Meals" },
@@ -28,6 +37,12 @@ type SelectedPhoto = {
   id: string;
   file: File;
   preview: string;
+};
+
+type SelectedVideo = {
+  file: File;
+  preview: string;
+  duration: number;
 };
 
 type Props = {
@@ -47,6 +62,7 @@ export default function LoungePostComposer({
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("general");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
+  const [video, setVideo] = useState<SelectedVideo | null>(null);
   const [editingPhotoId, setEditingPhotoId] = useState<
     string | null
   >(null);
@@ -124,6 +140,91 @@ export default function LoungePostComposer({
     setIsExpanded(true);
   }
 
+  
+async function selectVideo(event: ChangeEvent<HTMLInputElement>) {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+
+  if (!file) return;
+
+  setError("");
+  setSuccess("");
+
+  if (photos.length > 0) {
+    setError("Remove your photos before adding a video.");
+    return;
+  }
+
+  if (!ALLOWED_VIDEO_TYPES.includes(file.type)) {
+    setError("Only MP4, MOV, and WebM videos are supported.");
+    return;
+  }
+
+  if (file.size > MAX_VIDEO_SIZE) {
+    setError("Your video must be 45 MB or smaller.");
+    return;
+  }
+
+  const preview = createPreview(file);
+  const videoElement = document.createElement("video");
+
+  try {
+    const duration = await new Promise<number>((resolve, reject) => {
+      videoElement.preload = "metadata";
+
+      videoElement.onloadedmetadata = () => {
+        if (
+          !Number.isFinite(videoElement.duration) ||
+          videoElement.duration <= 0
+        ) {
+          reject(new Error("We couldn't read this video's duration."));
+          return;
+        }
+
+        resolve(videoElement.duration);
+      };
+
+      videoElement.onerror = () => {
+        reject(new Error("We couldn't read this video. Try an MP4 file."));
+      };
+
+      videoElement.src = preview;
+      videoElement.load();
+    });
+
+    if (duration > MAX_VIDEO_DURATION) {
+      setError("Videos must be 60 seconds or shorter.");
+      releasePreview(preview);
+      return;
+    }
+
+    // Replace any previously selected video.
+    if (video) {
+      releasePreview(video.preview);
+    }
+
+    setVideo({
+      file,
+      preview,
+      duration,
+    });
+
+    setIsExpanded(true);
+  } catch (err) {
+    releasePreview(preview);
+
+    setError(
+      err instanceof Error
+        ? err.message
+        : "We couldn't load this video."
+    );
+  } finally {
+    videoElement.removeAttribute("src");
+    videoElement.load();
+  }
+}
+
+
   function removePhoto(id: string) {
     const photo = photos.find((item) => item.id === id);
 
@@ -194,11 +295,10 @@ export default function LoungePostComposer({
 
     const text = content.trim();
 
-    if (!text) {
-      setError("Write a little something before posting ♡");
-      return;
-    }
-
+    if (!text && photos.length === 0 && !video) {
+  setError("Write a little something or add a photo or video ♡");
+  return;
+}
     if (text.length > 2000) {
       setError("Posts must be 2,000 characters or less.");
       return;
@@ -234,6 +334,52 @@ export default function LoungePostComposer({
       }
 
       createdPostId = post.id;
+
+      
+if (video) {
+  const extension =
+    video.file.type === "video/quicktime"
+      ? "mov"
+      : video.file.type === "video/webm"
+        ? "webm"
+        : "mp4";
+
+  const path = `${user.id}/${post.id}/${crypto.randomUUID()}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("lounge-videos")
+    .upload(path, video.file, {
+      contentType: video.file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new Error("Your video couldn't upload. Please try again.");
+  }
+
+  const { error: videoError } = await supabase
+    .from("lounge_post_videos")
+    .insert({
+      post_id: post.id,
+      user_id: user.id,
+      storage_path: path,
+      duration_seconds: video.duration,
+    });
+
+  if (videoError) {
+    // Remove an unattached upload if the database insert fails.
+    const { error: cleanupError } = await supabase.storage
+      .from("lounge-videos")
+      .remove([path]);
+
+    if (cleanupError) {
+      console.error("Video upload cleanup failed:", cleanupError);
+    }
+
+    throw new Error("We couldn't attach your video. Please try again.");
+  }
+}
+
 
       for (let index = 0; index < photos.length; index++) {
         const photo = photos[index];
@@ -279,6 +425,11 @@ export default function LoungePostComposer({
       );
 
       setPhotos([]);
+
+      if (video) {
+  releasePreview(video.preview);
+  setVideo(null);
+}
       setContent("");
       setCategory("general");
       setIsExpanded(false);
@@ -440,6 +591,45 @@ export default function LoungePostComposer({
               </select>
             </div>
 
+{/* VIDEO PREVIEW */}
+{video && (
+  <div className="mt-4 overflow-hidden rounded-xl border border-[#E9DAD3] bg-[#F7F1ED]">
+    <div className="relative">
+      <video
+        src={video.preview}
+        controls
+        playsInline
+        preload="metadata"
+        className="max-h-[420px] w-full bg-black object-contain"
+      />
+
+      <button
+        type="button"
+        onClick={() => {
+          releasePreview(video.preview);
+          setVideo(null);
+          setError("");
+        }}
+        disabled={posting}
+        aria-label="Remove selected video"
+        className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg text-[#302521] shadow-sm disabled:opacity-50"
+      >
+        ×
+      </button>
+    </div>
+
+    <div className="flex items-center justify-between px-4 py-3">
+      <span className="text-[10px] text-[#806D65]">
+        VIDEO READY ♡
+      </span>
+
+      <span className="text-[10px] text-[#A77B73]">
+        {Math.ceil(video.duration)}s / 60s
+      </span>
+    </div>
+  </div>
+)}
+
             {/* PHOTO PREVIEWS */}
             {photos.length > 0 && (
               <div className="mt-4 grid grid-cols-2 gap-3">
@@ -487,7 +677,7 @@ export default function LoungePostComposer({
               <label
                 htmlFor="lounge-post-photos"
                 className={`flex items-center gap-2 text-[10px] text-[#A77B73] ${
-                  posting || photos.length >= MAX_PHOTOS
+                  posting || video !== null || photos.length >= MAX_PHOTOS
                     ? "cursor-not-allowed opacity-50"
                     : "cursor-pointer"
                 }`}
@@ -521,10 +711,44 @@ export default function LoungePostComposer({
                 accept="image/jpeg,image/png,image/webp"
                 onChange={selectPhotos}
                 disabled={
-                  posting || photos.length >= MAX_PHOTOS
+                  posting || video !== null || photos.length >= MAX_PHOTOS
                 }
                 className="sr-only"
               />
+
+              
+<label
+  htmlFor="lounge-post-video"
+  className={`flex items-center gap-2 text-[10px] text-[#A77B73] ${
+    posting || photos.length > 0
+      ? "cursor-not-allowed opacity-50"
+      : "cursor-pointer"
+  }`}
+>
+  <svg
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    className="h-4 w-4"
+    aria-hidden="true"
+  >
+    <rect x="3" y="5" width="14" height="14" rx="2" />
+    <path d="m17 10 4-3v10l-4-3" />
+  </svg>
+
+  {video ? "CHANGE VIDEO" : "ADD VIDEO"}
+</label>
+
+<input
+  id="lounge-post-video"
+  type="file"
+  accept="video/mp4,video/quicktime,video/webm"
+  onChange={selectVideo}
+  disabled={posting || photos.length > 0}
+  className="sr-only"
+/>
+
 
               <div className="flex items-center gap-3">
                 <button
@@ -539,11 +763,11 @@ export default function LoungePostComposer({
                 <button
                   type="button"
                   onClick={createPost}
-                  disabled={
-                    posting ||
-                    editingPhotoId !== null ||
-                    !content.trim()
-                  }
+                 disabled={
+  posting ||
+  editingPhotoId !== null ||
+  (!content.trim() && photos.length === 0 && !video)
+}
                   className="rounded-full bg-[#211C19] px-5 py-3 text-[9px] tracking-[0.13em] text-white transition hover:bg-[#4A3933] disabled:opacity-50"
                 >
                   {posting ? "SHARING..." : "SHARE POST →"}
