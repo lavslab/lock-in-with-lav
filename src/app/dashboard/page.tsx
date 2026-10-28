@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getCurrentChallengeDay } from "@/lib/challenge";
 import { getActiveJourney } from "@/lib/active-journey";
 import DashboardSidebar from "@/components/DashboardSidebar";
+import LockInLoader from "@/components/LockInLoader";
 import { workouts } from "@/lib/workouts";
 
 const commitments = [
@@ -118,14 +119,35 @@ function WaterDrop({ filled }: { filled: boolean }) {
     </svg>
   );
 }
+type TodaySnapshot = {
+  userId: string;
+  journeyId: string;
+  date: string;
+  firstName: string;
+  challengeStartDate: string;
+  challengeLength: number;
+  progress: DailyProgress;
+  waterBottles: number;
+  moveMinutes: number;
+  selectedWorkouts: SelectedWorkout[];
+};
+
+let lastTodaySnapshot: TodaySnapshot | null = null;
+
 
 export default function DashboardPage() {
   const supabase = createClient();
 
-  const [progress, setProgress] =
-    useState<DailyProgress>(emptyProgress);
+  const [progress, setProgress] = useState<DailyProgress>(
+  () =>
+    lastTodaySnapshot?.date === formatDateForDatabase(new Date())
+      ? lastTodaySnapshot.progress
+      : emptyProgress
+);
 
-  const [firstName, setFirstName] = useState("there");
+const [firstName, setFirstName] = useState(
+  lastTodaySnapshot?.firstName ?? "there"
+);
 
   const [isLoadingUser, setIsLoadingUser] =
     useState(true);
@@ -136,14 +158,30 @@ export default function DashboardPage() {
     const [hasLoadedDashboard, setHasLoadedDashboard] =
   useState(false);
 
-  const [userId, setUserId] = useState<string | null>(
-    null
-  );
-const [activeJourneyId, setActiveJourneyId] =
-  useState<string | null>(null);
+  const [isAccountVerified, setIsAccountVerified] = useState(false);
 
-  const [waterBottles, setWaterBottles] = useState(0);
-  const [moveMinutes, setMoveMinutes] = useState(0);
+  const [userId, setUserId] = useState<string | null>(
+  lastTodaySnapshot?.userId ?? null
+);
+
+const [activeJourneyId, setActiveJourneyId] =
+  useState<string | null>(
+    lastTodaySnapshot?.journeyId ?? null
+  );
+
+ const [waterBottles, setWaterBottles] = useState(
+  lastTodaySnapshot?.date === formatDateForDatabase(new Date())
+    ? lastTodaySnapshot.waterBottles
+    : 0
+);
+
+const [moveMinutes, setMoveMinutes] = useState(
+  lastTodaySnapshot?.date === formatDateForDatabase(new Date())
+    ? lastTodaySnapshot.moveMinutes
+    : 0
+);
+
+
   const [showMoveWorkouts, setShowMoveWorkouts] = useState(false);
   const [showDayDetails, setShowDayDetails] = useState(false);
 
@@ -158,7 +196,11 @@ const [journeyCompleted, setJourneyCompleted] = useState(false);
     useState<SelectedWorkout | null>(null);
 
   const [selectedWorkouts, setSelectedWorkouts] =
-    useState<SelectedWorkout[]>([]);
+  useState<SelectedWorkout[]>(() =>
+    lastTodaySnapshot?.date === formatDateForDatabase(new Date())
+      ? lastTodaySnapshot.selectedWorkouts
+      : []
+  );
 
 
     const [deletingActivityId, setDeletingActivityId] =
@@ -173,10 +215,12 @@ const [journeyCompleted, setJourneyCompleted] = useState(false);
 >([]);
 
   const [challengeStartDate, setChallengeStartDate] =
-    useState<string | null>(null);
+  useState<string | null>(
+    lastTodaySnapshot?.challengeStartDate ?? null
+  );
 
-  const [challengeLength, setChallengeLength] =
-    useState(75);
+const [challengeLength, setChallengeLength] =
+  useState(lastTodaySnapshot?.challengeLength ?? 75);
 
   const today = new Date();
 
@@ -252,13 +296,37 @@ const isFinalChallengeDay =
       }
 
       if (!user) {
-        setIsLoadingUser(false);
-setIsLoadingProgress(false);
-setHasLoadedDashboard(true);
-        return;
-      }
+  lastTodaySnapshot = null;
+  setUserId(null);
+  setActiveJourneyId(null);
+  setFirstName("there");
+  setChallengeStartDate(null);
+  setProgress(emptyProgress);
+  setIsLoadingUser(false);
+  setIsLoadingProgress(false);
+  setHasLoadedDashboard(true);
+  return;
+}
 
-      setUserId(user.id);
+if (
+  lastTodaySnapshot &&
+  lastTodaySnapshot.userId !== user.id
+) {
+  lastTodaySnapshot = null;
+  setFirstName("there");
+  setActiveJourneyId(null);
+  setChallengeStartDate(null);
+  setChallengeLength(75);
+  setProgress(emptyProgress);
+  setWaterBottles(0);
+  setMoveMinutes(0);
+  setSelectedWorkouts([]);
+  setSelectedWorkout(null);
+  setManualActivities([]);
+}
+
+setUserId(user.id);
+setIsAccountVerified(true);
 
       // Automatically complete a challenge after its final day.
 const { error: autoCompleteError } = await supabase.rpc(
@@ -743,11 +811,49 @@ challenge_day: calculatedDay,
       }
 
       setIsLoadingUser(false);
-      setIsLoadingProgress(false);
+setIsLoadingProgress(false);
+setHasLoadedDashboard(true);
     };
 
     loadDashboard();
-  }, []);
+   }, []);
+
+  useEffect(() => {
+    if (
+      isLoadingUser ||
+      isLoadingProgress ||
+      !userId ||
+      !activeJourneyId ||
+      !challengeStartDate
+    ) {
+      return;
+    }
+
+    lastTodaySnapshot = {
+      userId,
+      journeyId: activeJourneyId,
+      date: formatDateForDatabase(new Date()),
+      firstName,
+      challengeStartDate,
+      challengeLength,
+      progress,
+      waterBottles,
+      moveMinutes,
+      selectedWorkouts,
+    };
+  }, [
+    isLoadingUser,
+    isLoadingProgress,
+    userId,
+    activeJourneyId,
+    challengeStartDate,
+    challengeLength,
+    firstName,
+    progress,
+    waterBottles,
+    moveMinutes,
+    selectedWorkouts,
+  ]);
 
   const toggleCommitment = async (
 
@@ -1152,6 +1258,11 @@ const handleCompleteJourney = async () => {
   }
 };
 
+if (!isAccountVerified) {
+  return <LockInLoader message="loading your day... ♡" />;
+}
+
+
   const completedCount =
     commitments.filter(
       (item) => progress[item.column]
@@ -1166,25 +1277,7 @@ const handleCompleteJourney = async () => {
   const dayComplete =
     completedCount ===
     commitments.length;
-if (!hasLoadedDashboard && (isLoadingUser || isLoadingProgress)) {
-  return (
-    <div className="fixed inset-0 z-[9999] flex min-h-[100dvh] flex-col items-center justify-center bg-[#F7F1ED] text-[#211C19]">
-      <div className="flex flex-col items-center text-center">
-        <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#D6C3BD] bg-[#FBF8F6] font-serif text-4xl text-[#A77B73]">
-          ♡
-        </div>
 
-        <p className="mt-6 text-[10px] tracking-[0.32em] text-[#9D6F67]">
-          LOCKING IN
-        </p>
-
-        <p className="mt-3 font-serif text-xl italic text-[#A77B73]">
-          loading your day... ♡
-        </p>
-      </div>
-    </div>
-  );
-}
 
 
   return (
@@ -1206,20 +1299,21 @@ if (!hasLoadedDashboard && (isLoadingUser || isLoadingProgress)) {
               <h1 className="mt-2 font-serif text-3xl leading-none sm:text-4xl">
                 {greeting},{" "}
                 <span className="italic text-[#A77B73]">
-                  {firstName}. ♡
+                  {firstName === "there" ? "" : firstName}. ♡
                 </span>
               </h1>
             </div>
           </header>
 
-          <section className="mt-5 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] px-4 py-4 sm:px-7 sm:py-6">
-  <button
-    type="button"
-    onClick={() => setShowDayDetails((previous) => !previous)}
-    aria-expanded={showDayDetails}
-    aria-controls="today-progress-details"
-    className="flex w-full items-center justify-between gap-3 text-left"
-  >
+          {challengeStartDate && (
+  <section className="mt-5 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] px-4 py-4 sm:px-7 sm:py-6">
+    <button
+      type="button"
+      onClick={() => setShowDayDetails((previous) => !previous)}
+      aria-expanded={showDayDetails}
+      aria-controls="today-progress-details"
+      className="flex w-full items-center justify-between gap-3 text-left"
+    >
     <div className="min-w-0">
       <p className="text-[10px] tracking-[0.2em] text-[#9D6F67]">
         TODAY · DAY {dayNumber} OF {challengeLength}
@@ -1309,6 +1403,7 @@ if (!hasLoadedDashboard && (isLoadingUser || isLoadingProgress)) {
     )}
   </div>
 </section>
+)}
 
           <section className="mt-10 md:mt-12">
             <div className="flex items-end justify-between gap-5 border-b border-[#DED0CB] pb-4">
@@ -1934,7 +2029,6 @@ if (item.column === "nourish") {
               })}
             </div>
           </section>
-
 
         {/* DAILY COMPLETION — SMALL ACHIEVEMENT */}
 {dayComplete && (
