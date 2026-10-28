@@ -149,15 +149,17 @@ function LoungePostCard({
       {/* POST PHOTOS */}
 
 {post.video && (
-  <div className="mt-4 overflow-hidden rounded-xl bg-black">
-    <video
-  src={post.video.url}
-  poster={post.video.coverUrl ?? undefined}
-  controls
-  playsInline
-  preload="metadata"
-  className="max-h-[520px] w-full object-contain"
-/>
+  <div className="mt-4 flex justify-center">
+    <div className="w-fit max-w-full overflow-hidden rounded-xl bg-[#F7F1ED]">
+      <video
+        src={post.video.url}
+        controls
+        playsInline
+        preload="metadata"
+        poster={post.video.coverUrl ?? undefined}
+        className="block max-h-[520px] max-w-full object-contain"
+      />
+    </div>
   </div>
 )}
 

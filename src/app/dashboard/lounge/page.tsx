@@ -99,26 +99,28 @@ export default async function LoungePage() {
     : null;
 
   // Load newest posts.
-  const { data: postsData, error: postsError } =
-    await supabase
-      .from("lounge_posts")
-      .select(
-        "id, user_id, content, category, created_at"
-      )
-      .order("created_at", { ascending: false })
-      .limit(30);
+  const [recentPostsResult, savedPostsResult] = await Promise.all([
+  supabase
+    .from("lounge_posts")
+    .select("id, user_id, content, category, created_at")
+    .order("created_at", { ascending: false })
+    .limit(30),
 
+  supabase
+    .from("lounge_saved_posts")
+    .select("post_id")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false }),
+]);
+
+const { data: postsData, error: postsError } = recentPostsResult;
   if (postsError) {
     console.error("LOUNGE POSTS ERROR:", postsError);
   }
 
 
   // Load the current member's saved post IDs.
-const { data: savedData, error: savedError } = await supabase
-  .from("lounge_saved_posts")
-  .select("post_id")
-  .eq("user_id", user.id)
-  .order("created_at", { ascending: false });
+const { data: savedData, error: savedError } = savedPostsResult;
 
 if (savedError) {
   console.error("LOUNGE SAVED POSTS ERROR:", savedError);
@@ -168,16 +170,47 @@ const posts: LoungePost[] = Array.from(postMap.values());
     ...new Set(posts.map((post) => post.user_id)),
   ];
 
+
+  const [authorsResult, photosResult, videosResult, likesResult] =
+  await Promise.all([
+    authorIds.length > 0
+      ? supabase
+          .from("lounge_profiles")
+          .select("user_id, display_name, username, avatar_path")
+          .in("user_id", authorIds)
+      : Promise.resolve({ data: [], error: null }),
+
+    postIds.length > 0
+      ? supabase
+          .from("lounge_post_photos")
+          .select("id, post_id, storage_path, position")
+          .in("post_id", postIds)
+          .order("position", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+
+    postIds.length > 0
+      ? supabase
+          .from("lounge_post_videos")
+          .select(
+            "id, post_id, storage_path, duration_seconds, cover_storage_path"
+          )
+          .in("post_id", postIds)
+      : Promise.resolve({ data: [], error: null }),
+
+    postIds.length > 0
+      ? supabase
+          .from("lounge_post_likes")
+          .select("post_id, user_id")
+          .in("post_id", postIds)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
+
   // Load post authors.
   let authors: LoungeAuthor[] = [];
 
   if (authorIds.length > 0) {
-    const { data, error: authorsError } = await supabase
-      .from("lounge_profiles")
-      .select(
-        "user_id, display_name, username, avatar_path"
-      )
-      .in("user_id", authorIds);
+    const { data, error: authorsError } = authorsResult;
 
     if (authorsError) {
       console.error(
@@ -193,13 +226,7 @@ const posts: LoungePost[] = Array.from(postMap.values());
   let photos: LoungePhoto[] = [];
 
   if (postIds.length > 0) {
-    const { data, error: photosError } = await supabase
-      .from("lounge_post_photos")
-      .select(
-        "id, post_id, storage_path, position"
-      )
-      .in("post_id", postIds)
-      .order("position", { ascending: true });
+    const { data, error: photosError } = photosResult;
 
     if (photosError) {
       console.error(
@@ -215,10 +242,7 @@ const posts: LoungePost[] = Array.from(postMap.values());
   let videos: LoungeVideo[] = [];
 
   if (postIds.length > 0) {
-    const { data, error: videosError } = await supabase
-      .from("lounge_post_videos")
-      .select("id, post_id, storage_path, duration_seconds, cover_storage_path")
-      .in("post_id", postIds);
+    const { data, error: videosError } = videosResult;
 
     if (videosError) {
       console.error("LOUNGE VIDEOS ERROR:", videosError);
@@ -231,10 +255,7 @@ const posts: LoungePost[] = Array.from(postMap.values());
   let likes: LoungeLike[] = [];
 
   if (postIds.length > 0) {
-    const { data, error: likesError } = await supabase
-      .from("lounge_post_likes")
-      .select("post_id, user_id")
-      .in("post_id", postIds);
+    const { data, error: likesError } = likesResult;
 
     if (likesError) {
       console.error(
@@ -259,6 +280,43 @@ const posts: LoungePost[] = Array.from(postMap.values());
       likedPostIds.add(like.post_id);
     }
   }
+const photoPathsForSigning = photos.map(
+  (photo) => photo.storage_path
+);
+
+const videoPathsForSigning = videos.map(
+  (video) => video.storage_path
+);
+
+const coverPathsForSigning = [
+  ...new Set(
+    videos
+      .map((video) => video.cover_storage_path)
+      .filter((path): path is string => Boolean(path))
+  ),
+];
+
+const [signedPhotosResult, signedVideosResult, signedCoversResult] =
+  await Promise.all([
+    photoPathsForSigning.length > 0
+      ? supabase.storage
+          .from("lounge-posts")
+          .createSignedUrls(photoPathsForSigning, 60 * 60)
+      : Promise.resolve({ data: [], error: null }),
+
+    videoPathsForSigning.length > 0
+      ? supabase.storage
+          .from("lounge-videos")
+          .createSignedUrls(videoPathsForSigning, 60 * 60)
+      : Promise.resolve({ data: [], error: null }),
+
+    coverPathsForSigning.length > 0
+      ? supabase.storage
+          .from("lounge-video-covers")
+          .createSignedUrls(coverPathsForSigning, 60 * 60)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+
 
   // Generate signed URLs for private photos.
   const photoPaths = photos.map(
@@ -269,9 +327,7 @@ const posts: LoungePost[] = Array.from(postMap.values());
 
   if (photoPaths.length > 0) {
     const { data: signedPhotos, error: signedError } =
-      await supabase.storage
-        .from("lounge-posts")
-        .createSignedUrls(photoPaths, 60 * 60);
+  signedPhotosResult;
 
     if (signedError) {
       console.error(
@@ -298,10 +354,8 @@ const posts: LoungePost[] = Array.from(postMap.values());
   const videoUrls = new Map<string, string>();
 
   if (videoPaths.length > 0) {
-    const { data: signedVideos, error: signedVideoError } =
-      await supabase.storage
-        .from("lounge-videos")
-        .createSignedUrls(videoPaths, 60 * 60);
+   const { data: signedVideos, error: signedVideoError } =
+  signedVideosResult;
 
     if (signedVideoError) {
       console.error(
@@ -333,9 +387,7 @@ const videoCoverUrls = new Map<string, string>();
 
 if (coverPaths.length > 0) {
   const { data: signedCovers, error: signedCoverError } =
-    await supabase.storage
-      .from("lounge-video-covers")
-      .createSignedUrls(coverPaths, 60 * 60);
+  signedCoversResult;
 
   if (signedCoverError) {
     console.error(

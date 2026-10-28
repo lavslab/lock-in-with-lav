@@ -66,6 +66,21 @@ export default function LoungePostComposer({
   const [video, setVideo] = useState<SelectedVideo | null>(null);
   const [videoCover, setVideoCover] = useState<Blob | null>(null);
 const [editingVideoCover, setEditingVideoCover] = useState(false);
+
+const [videoCoverPreview, setVideoCoverPreview] = useState<string | null>(null);
+
+useEffect(() => {
+  if (!videoCover) {
+    setVideoCoverPreview(null);
+    return;
+  }
+
+  const url = URL.createObjectURL(videoCover);
+  setVideoCoverPreview(url);
+
+  return () => URL.revokeObjectURL(url);
+}, [videoCover]);
+
   const [editingPhotoId, setEditingPhotoId] = useState<
     string | null
   >(null);
@@ -707,13 +722,33 @@ const { error: videoError } = await supabase
 {video && (
   <div className="mt-4 overflow-hidden rounded-xl border border-[#E9DAD3] bg-[#F7F1ED]">
     <div className="relative">
-      <video
-        src={video.preview}
-        controls
-        playsInline
-        preload="metadata"
-        className="max-h-[420px] w-full bg-black object-contain"
-      />
+      {videoCoverPreview ? (
+  <div className="relative mx-auto w-fit max-w-full overflow-hidden rounded-xl">
+    <img
+      src={videoCoverPreview}
+      alt="Your selected video cover"
+      className="block max-h-[420px] max-w-full object-contain"
+    />
+
+    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#211C19]/65 text-xl text-white">
+        ▶
+      </span>
+    </div>
+
+    <span className="absolute bottom-3 left-3 rounded-full bg-[#211C19]/65 px-3 py-1.5 text-[9px] tracking-[0.1em] text-white">
+      COVER PREVIEW ♡
+    </span>
+  </div>
+) : (
+  <video
+    src={video.preview}
+    controls
+    playsInline
+    preload="metadata"
+    className="mx-auto block max-h-[420px] max-w-full rounded-xl object-contain"
+  />
+)}
 
       <button
         type="button"
