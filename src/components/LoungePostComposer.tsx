@@ -16,7 +16,7 @@ import LoungePostPhotoEditor from "@/components/LoungePostPhotoEditor";
 const MAX_PHOTOS = 4;
 const MAX_SIZE = 10 * 1024 * 1024;
 
-const MAX_VIDEO_SIZE = 45 * 1024 * 1024;
+const MAX_VIDEO_SIZE = 50 * 1024 * 1024;
 const MAX_VIDEO_DURATION = 60;
 
 const ALLOWED_VIDEO_TYPES = [
@@ -166,7 +166,7 @@ console.log("LOUNGE VIDEO FILE:", {
 });
   if (file.size > MAX_VIDEO_SIZE) {
   setError(
-    `Your video is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The current limit is 45 MB.`
+    `Your video is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The current limit is 50 MB.`
   );
   return;
 }
