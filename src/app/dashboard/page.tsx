@@ -133,6 +133,9 @@ export default function DashboardPage() {
   const [isLoadingProgress, setIsLoadingProgress] =
     useState(true);
 
+    const [hasLoadedDashboard, setHasLoadedDashboard] =
+  useState(false);
+
   const [userId, setUserId] = useState<string | null>(
     null
   );
@@ -250,7 +253,8 @@ const isFinalChallengeDay =
 
       if (!user) {
         setIsLoadingUser(false);
-        setIsLoadingProgress(false);
+setIsLoadingProgress(false);
+setHasLoadedDashboard(true);
         return;
       }
 
@@ -1162,22 +1166,23 @@ const handleCompleteJourney = async () => {
   const dayComplete =
     completedCount ===
     commitments.length;
-
-if (isLoadingUser || isLoadingProgress) {
+if (!hasLoadedDashboard && (isLoadingUser || isLoadingProgress)) {
   return (
-    <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
-      <div className="flex min-h-screen">
-        <DashboardSidebar
-          firstName={firstName}
-          initial={initial}
-          isLoadingUser={isLoadingUser}
-        />
+    <div className="fixed inset-0 z-[9999] flex min-h-[100dvh] flex-col items-center justify-center bg-[#F7F1ED] text-[#211C19]">
+      <div className="flex flex-col items-center text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full border border-[#D6C3BD] bg-[#FBF8F6] font-serif text-4xl text-[#A77B73]">
+          ♡
+        </div>
 
-        <section className="flex flex-1 items-center justify-center">
-          <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#E5D2CC] border-t-[#A77B73]" />
-        </section>
+        <p className="mt-6 text-[10px] tracking-[0.32em] text-[#9D6F67]">
+          LOCKING IN
+        </p>
+
+        <p className="mt-3 font-serif text-xl italic text-[#A77B73]">
+          loading your day... ♡
+        </p>
       </div>
-    </main>
+    </div>
   );
 }
 
