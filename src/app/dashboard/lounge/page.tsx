@@ -37,8 +37,8 @@ type LoungeVideo = {
   post_id: string;
   storage_path: string;
   duration_seconds: number;
+  cover_storage_path: string | null;
 };
-
 
 type LoungeLike = {
   post_id: string;
@@ -217,7 +217,7 @@ const posts: LoungePost[] = Array.from(postMap.values());
   if (postIds.length > 0) {
     const { data, error: videosError } = await supabase
       .from("lounge_post_videos")
-      .select("id, post_id, storage_path, duration_seconds")
+      .select("id, post_id, storage_path, duration_seconds, cover_storage_path")
       .in("post_id", postIds);
 
     if (videosError) {
@@ -320,6 +320,40 @@ const posts: LoungePost[] = Array.from(postMap.values());
     });
   }
 
+  // Create signed URLs for video cover images.
+const coverPaths = [
+  ...new Set(
+    videos
+      .map((video) => video.cover_storage_path)
+      .filter((path): path is string => Boolean(path))
+  ),
+];
+
+const videoCoverUrls = new Map<string, string>();
+
+if (coverPaths.length > 0) {
+  const { data: signedCovers, error: signedCoverError } =
+    await supabase.storage
+      .from("lounge-video-covers")
+      .createSignedUrls(coverPaths, 60 * 60);
+
+  if (signedCoverError) {
+    console.error(
+      "LOUNGE VIDEO COVER SIGNED URL ERROR:",
+      signedCoverError
+    );
+  }
+
+  signedCovers?.forEach((cover, index) => {
+    if (cover.signedUrl) {
+      videoCoverUrls.set(
+        coverPaths[index],
+        cover.signedUrl
+      );
+    }
+  });
+}
+
   const authorMap = new Map(
     authors.map((author) => [
       author.user_id,
@@ -359,15 +393,18 @@ const posts: LoungePost[] = Array.from(postMap.values());
     );
 
     const postVideo =
-      postVideoRecord &&
-      videoUrls.get(postVideoRecord.storage_path)
-        ? {
-            id: postVideoRecord.id,
-            storagePath: postVideoRecord.storage_path,
-            url: videoUrls.get(postVideoRecord.storage_path)!,
-            duration: postVideoRecord.duration_seconds,
-          }
-        : null;
+  postVideoRecord &&
+  videoUrls.get(postVideoRecord.storage_path)
+    ? {
+        id: postVideoRecord.id,
+        storagePath: postVideoRecord.storage_path,
+        url: videoUrls.get(postVideoRecord.storage_path)!,
+        duration: postVideoRecord.duration_seconds,
+        coverUrl: postVideoRecord.cover_storage_path
+          ? videoCoverUrls.get(postVideoRecord.cover_storage_path) ?? null
+          : null,
+      }
+    : null;
 
 
     return {

@@ -21,8 +21,8 @@ type FeedVideo = {
   storagePath: string;
   url: string;
   duration: number;
+  coverUrl: string | null;
 };
-
 type FeedPost = {
 
   id: string;
@@ -151,12 +151,13 @@ function LoungePostCard({
 {post.video && (
   <div className="mt-4 overflow-hidden rounded-xl bg-black">
     <video
-      src={post.video.url}
-      controls
-      playsInline
-      preload="metadata"
-      className="max-h-[520px] w-full object-contain"
-    />
+  src={post.video.url}
+  poster={post.video.coverUrl ?? undefined}
+  controls
+  playsInline
+  preload="metadata"
+  className="max-h-[520px] w-full object-contain"
+/>
   </div>
 )}
 

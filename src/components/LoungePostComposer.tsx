@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 import LoungePostPhotoEditor from "@/components/LoungePostPhotoEditor";
+import LoungeVideoCoverEditor from "@/components/LoungeVideoCoverEditor";
 
 const MAX_PHOTOS = 4;
 const MAX_SIZE = 10 * 1024 * 1024;
@@ -63,6 +64,8 @@ export default function LoungePostComposer({
   const [category, setCategory] = useState("general");
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
   const [video, setVideo] = useState<SelectedVideo | null>(null);
+  const [videoCover, setVideoCover] = useState<Blob | null>(null);
+const [editingVideoCover, setEditingVideoCover] = useState(false);
   const [editingPhotoId, setEditingPhotoId] = useState<
     string | null
   >(null);
@@ -139,7 +142,67 @@ export default function LoungePostComposer({
     setPhotos((current) => [...current, ...nextPhotos]);
     setIsExpanded(true);
   }
+async function generateVideoCover(
+  videoUrl: string,
+  time = 0.5
+): Promise<Blob> {
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
 
+  try {
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () =>
+        reject(new Error("Couldn't load the video for its cover."));
+
+      video.src = videoUrl;
+      video.load();
+    });
+
+    const targetTime = Math.min(
+      time,
+      Math.max(0, video.duration - 0.1)
+    );
+
+    await new Promise<void>((resolve, reject) => {
+      video.onseeked = () => resolve();
+      video.onerror = () =>
+        reject(new Error("Couldn't select a video frame."));
+
+      video.currentTime = targetTime;
+    });
+
+    const canvas = document.createElement("canvas");
+    const scale = Math.min(1, 720 / video.videoWidth);
+
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+
+    const context = canvas.getContext("2d");
+
+    if (!context) {
+      throw new Error("Couldn't create the video cover.");
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (blob) =>
+          blob
+            ? resolve(blob)
+            : reject(new Error("Couldn't save the cover.")),
+        "image/jpeg",
+        0.8
+      );
+    });
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+  }
+}
   
 async function selectVideo(event: ChangeEvent<HTMLInputElement>) {
   const file = event.target.files?.[0];
@@ -210,12 +273,15 @@ console.log("LOUNGE VIDEO FILE:", {
     }
 
     setVideo({
-      file,
-      preview,
-      duration,
-    });
+  file,
+  preview,
+  duration,
+});
 
-    setIsExpanded(true);
+setVideoCover(null);
+setEditingVideoCover(false);
+
+setIsExpanded(true);
   } catch (err) {
     releasePreview(preview);
 
@@ -363,27 +429,65 @@ if (video) {
     throw new Error("Your video couldn't upload. Please try again.");
   }
 
-  const { error: videoError } = await supabase
-    .from("lounge_post_videos")
-    .insert({
-      post_id: post.id,
-      user_id: user.id,
-      storage_path: path,
-      duration_seconds: video.duration,
+  let coverPath: string | null = null;
+let coverToUpload: Blob | null = videoCover;
+
+if (!coverToUpload && video) {
+  try {
+    coverToUpload = await generateVideoCover(video.preview);
+  } catch (coverError) {
+    console.warn("Automatic video cover failed:", coverError);
+  }
+}
+
+if (coverToUpload) {
+  coverPath = `${user.id}/${post.id}/${crypto.randomUUID()}.jpg`;
+
+  const { error: coverUploadError } = await supabase.storage
+    .from("lounge-video-covers")
+    .upload(coverPath, coverToUpload, {
+      contentType: "image/jpeg",
+      upsert: false,
     });
 
-  if (videoError) {
-    // Remove an unattached upload if the database insert fails.
-    const { error: cleanupError } = await supabase.storage
-      .from("lounge-videos")
-      .remove([path]);
-
-    if (cleanupError) {
-      console.error("Video upload cleanup failed:", cleanupError);
-    }
-
-    throw new Error("We couldn't attach your video. Please try again.");
+  if (coverUploadError) {
+    throw new Error("We couldn't upload your video cover. Please try again.");
   }
+}
+
+const { error: videoError } = await supabase
+  .from("lounge_post_videos")
+  .insert({
+    post_id: post.id,
+    user_id: user.id,
+    storage_path: path,
+    duration_seconds: video.duration,
+    cover_storage_path: coverPath,
+  });
+
+ if (videoError) {
+  // Remove the video if attaching it to the post fails.
+  const { error: cleanupError } = await supabase.storage
+    .from("lounge-videos")
+    .remove([path]);
+
+  if (cleanupError) {
+    console.error("Video upload cleanup failed:", cleanupError);
+  }
+
+  // Remove the cover too, if one was uploaded.
+  if (coverPath) {
+    const { error: coverCleanupError } = await supabase.storage
+      .from("lounge-video-covers")
+      .remove([coverPath]);
+
+    if (coverCleanupError) {
+      console.error("Video cover cleanup failed:", coverCleanupError);
+    }
+  }
+
+  throw new Error("We couldn't attach your video. Please try again.");
+}
 }
 
 
@@ -435,6 +539,8 @@ if (video) {
       if (video) {
   releasePreview(video.preview);
   setVideo(null);
+  setVideoCover(null);
+  setEditingVideoCover(false);
 }
       setContent("");
       setCategory("general");
@@ -612,10 +718,12 @@ if (video) {
       <button
         type="button"
         onClick={() => {
-          releasePreview(video.preview);
-          setVideo(null);
-          setError("");
-        }}
+  releasePreview(video.preview);
+  setVideo(null);
+  setVideoCover(null);
+  setEditingVideoCover(false);
+  setError("");
+}}
         disabled={posting}
         aria-label="Remove selected video"
         className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white text-lg text-[#302521] shadow-sm disabled:opacity-50"
@@ -632,6 +740,16 @@ if (video) {
       <span className="text-[10px] text-[#A77B73]">
         {Math.ceil(video.duration)}s / 60s
       </span>
+
+      <button
+  type="button"
+  onClick={() => setEditingVideoCover(true)}
+  disabled={posting}
+  className="rounded-full border border-[#D9C2BA] px-3 py-2 text-[9px] tracking-[0.1em] text-[#A77B73] transition hover:bg-[#EAD8D3] disabled:opacity-50"
+>
+  {videoCover ? "CHANGE COVER ♡" : "CHOOSE COVER ♡"}
+</button>
+
     </div>
   </div>
 )}
@@ -814,6 +932,17 @@ if (video) {
           onSave={saveAdjustedPhoto}
         />
       )}
+
+      {editingVideoCover && video && (
+  <LoungeVideoCoverEditor
+    videoUrl={video.preview}
+    onCancel={() => setEditingVideoCover(false)}
+    onSave={(cover) => {
+      setVideoCover(cover);
+      setEditingVideoCover(false);
+    }}
+  />
+)}
     </section>
   );
 }
