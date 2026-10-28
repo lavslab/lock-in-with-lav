@@ -1163,38 +1163,24 @@ const handleCompleteJourney = async () => {
     completedCount ===
     commitments.length;
 
-  if (
-    isLoadingUser ||
-    isLoadingProgress
-  ) {
-    return (
-      <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
-        <div className="flex min-h-screen">
-          <DashboardSidebar
-            firstName={firstName}
-            initial={initial}
-            isLoadingUser={isLoadingUser}
-          />
+if (isLoadingUser || isLoadingProgress) {
+  return (
+    <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">
+      <div className="flex min-h-screen">
+        <DashboardSidebar
+          firstName={firstName}
+          initial={initial}
+          isLoadingUser={isLoadingUser}
+        />
 
-          <section className="flex flex-1 items-center justify-center px-6 py-8 md:px-10 lg:px-14">
-            <div className="text-center">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-[#D6C3BD] bg-[#FBF8F6] font-serif text-xl text-[#A77B73]">
-                ♡
-              </div>
+        <section className="flex flex-1 items-center justify-center">
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#E5D2CC] border-t-[#A77B73]" />
+        </section>
+      </div>
+    </main>
+  );
+}
 
-              <p className="mt-5 text-[8px] tracking-[0.32em] text-[#9D6F67]">
-                LOCKING IN
-              </p>
-
-              <p className="mt-2 font-serif text-xl italic text-[#A77B73]">
-                loading your day... ♡
-              </p>
-            </div>
-          </section>
-        </div>
-      </main>
-    );
-  }
 
   return (
     <main className="min-h-screen bg-[#F7F1ED] text-[#211C19]">

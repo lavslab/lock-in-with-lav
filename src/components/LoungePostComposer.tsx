@@ -730,12 +730,6 @@ const { error: videoError } = await supabase
       className="block max-h-[420px] max-w-full object-contain"
     />
 
-    <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#211C19]/65 text-xl text-white">
-        ▶
-      </span>
-    </div>
-
     <span className="absolute bottom-3 left-3 rounded-full bg-[#211C19]/65 px-3 py-1.5 text-[9px] tracking-[0.1em] text-white">
       COVER PREVIEW ♡
     </span>
