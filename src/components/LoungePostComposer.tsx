@@ -159,11 +159,17 @@ async function selectVideo(event: ChangeEvent<HTMLInputElement>) {
     setError("Only MP4, MOV, and WebM videos are supported.");
     return;
   }
-
+console.log("LOUNGE VIDEO FILE:", {
+  name: file.name,
+  type: file.type,
+  sizeMB: (file.size / (1024 * 1024)).toFixed(2),
+});
   if (file.size > MAX_VIDEO_SIZE) {
-    setError("Your video must be 45 MB or smaller.");
-    return;
-  }
+  setError(
+    `Your video is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The current limit is 45 MB.`
+  );
+  return;
+}
 
   const preview = createPreview(file);
   const videoElement = document.createElement("video");
