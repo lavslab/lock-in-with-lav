@@ -17,6 +17,10 @@ type Recipe = {
   id: string;
   title: string;
   category: MealSlot;
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
 };
 
 type PlannerMeal = {
@@ -34,6 +38,10 @@ type CustomMeal = {
   id: string;
   user_id: string;
   name: string;
+  calories?: number | null;
+  protein?: number | null;
+  carbs?: number | null;
+  fat?: number | null;
   created_at?: string;
 };
 
@@ -47,6 +55,10 @@ const mealSlots: MealSlot[] = [
 const recipes: Recipe[] = recipeLibrary.map((recipe) => ({
   id: recipe.id,
   title: recipe.title,
+    calories: recipe.calories,
+  protein: recipe.protein,
+  carbs: recipe.carbs,
+  fat: recipe.fat,
   category:
     recipe.meal === "Breakfast"
       ? "BREAKFAST"
@@ -68,11 +80,16 @@ const plans = [
     subtitle: "simple. balanced. repeatable.",
     href: "/dashboard/resources/meal-plans/balanced-week",
   },
-  {
-    title: "TRAINING WEEK",
-    subtitle: "fuel the work.",
-    href: "/dashboard/resources/meal-plans/training-week",
-  },
+ {
+  title: "TRAINING WEEK",
+  subtitle: "fuel the work.",
+  href: "/dashboard/resources/meal-plans/training-week",
+},
+{
+  title: "MY OWN PLAN",
+  subtitle: "your meals. your routine. ♡",
+  href: "/dashboard/resources/meal-plans",
+},
 ];
 
 const activityLevels = [
@@ -131,6 +148,10 @@ export default function MealPlansPage() {
   const [firstName, setFirstName] = useState("there");
   const [isLoadingUser, setIsLoadingUser] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isEditingTargets, setIsEditingTargets] = useState(false);
+  const [nourishTab, setNourishTab] = useState<"diary" | "plan">("diary");
+
+
 
   // Always start on the current date instead of restoring
   // an older date from localStorage.
@@ -139,12 +160,72 @@ export default function MealPlansPage() {
 
   const [plannerMeals, setPlannerMeals] = useState<Record<string, PlannerMeal>>({});
   const [customMeals, setCustomMeals] = useState<CustomMeal[]>([]);
+
+  const [diaryEntries, setDiaryEntries] = useState<
+  {
+    id: string;
+    logged_date: string;
+    meal_slot: MealSlot;
+    food_name: string;
+    calories: number | null;
+    protein: number | null;
+    carbs: number | null;
+    fat: number | null;
+  }[]
+>([]);
+
+const [loggedPlannedMeals, setLoggedPlannedMeals] = useState<
+  { logged_date: string; meal_slot: MealSlot; food_name: string }[]
+>([]);
+
+const [isLoadingDiary, setIsLoadingDiary] = useState(true);
+
+
+const [diarySelectedDate, setDiarySelectedDate] = useState(() =>
+  new Date().toLocaleDateString("en-CA")
+);
+const [diaryFormSlot, setDiaryFormSlot] = useState<MealSlot | null>(null);
+
+const [diaryFoodName, setDiaryFoodName] = useState("");
+const [diaryCalories, setDiaryCalories] = useState("");
+const [diaryProtein, setDiaryProtein] = useState("");
+const [diaryCarbs, setDiaryCarbs] = useState("");
+const [diaryFat, setDiaryFat] = useState("");
+
+const [isSavingDiary, setIsSavingDiary] = useState(false);
+const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null);
+
+const diaryTotals = diaryEntries.reduce(
+  (totals, entry) => ({
+    calories: totals.calories + Number(entry.calories ?? 0),
+    protein: totals.protein + Number(entry.protein ?? 0),
+    carbs: totals.carbs + Number(entry.carbs ?? 0),
+    fat: totals.fat + Number(entry.fat ?? 0),
+  }),
+  { calories: 0, protein: 0, carbs: 0, fat: 0 }
+);
+
   const [isLoadingPlanner, setIsLoadingPlanner] = useState(true);
   const [plannerError, setPlannerError] = useState("");
 
   const [activeHelperTab, setActiveHelperTab] = useState<HelperTab>(null);
   const [targetsCompleted, setTargetsCompleted] = useState(false);
 const [planCompleted, setPlanCompleted] = useState(false);
+
+const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+const [isSavingPlan, setIsSavingPlan] = useState(false);
+const [planSaveError, setPlanSaveError] = useState("");
+
+const [isSavingTargets, setIsSavingTargets] = useState(false);
+const [targetsSaveError, setTargetsSaveError] = useState("");
+
+const [savedTargets, setSavedTargets] = useState<{
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+} | null>(null);
+
 const [isLoadingNourishProgress, setIsLoadingNourishProgress] = useState(true);
 const [savingNourishSection, setSavingNourishSection] = useState<
   "targets" | "plan" | null
@@ -169,6 +250,18 @@ const [nourishProgressError, setNourishProgressError] = useState("");
   const [pickerTab, setPickerTab] = useState<"recipes" | "custom">("recipes");
   const [recipeSearch, setRecipeSearch] = useState("");
   const [customMealName, setCustomMealName] = useState("");
+
+  const [customPlanSlot, setCustomPlanSlot] =
+  useState<MealSlot>("BREAKFAST");
+
+  const [isCustomPlanOpen, setIsCustomPlanOpen] = useState(false);
+const [customPlanDate, setCustomPlanDate] = useState("");
+
+  const [customMealCalories, setCustomMealCalories] = useState("");
+const [customMealProtein, setCustomMealProtein] = useState("");
+const [customMealCarbs, setCustomMealCarbs] = useState("");
+const [customMealFat, setCustomMealFat] = useState("");
+
   const [isSavingMeal, setIsSavingMeal] = useState(false);
   const [isSavingCustomMeal, setIsSavingCustomMeal] = useState(false);
   const [deletingCustomMealId, setDeletingCustomMealId] = useState<string | null>(null);
@@ -324,6 +417,35 @@ const [nourishProgressError, setNourishProgressError] = useState("");
   }, []);
 
 
+useEffect(() => {
+  if (!userId) return;
+
+  let active = true;
+
+  async function loadSavedTargets() {
+    const { data, error } = await supabase
+      .from("nourish_nutrition_targets")
+      .select("calories, protein, carbs, fat")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!active) return;
+
+    if (error) {
+      console.error("Could not load nutrition targets:", error);
+      return;
+    }
+
+    setSavedTargets(data ?? null);
+  }
+
+  loadSavedTargets();
+
+  return () => {
+    active = false;
+  };
+}, [userId]);
+
   
 useEffect(() => {
   if (!userId) return;
@@ -336,7 +458,7 @@ useEffect(() => {
 
     const { data, error } = await supabase
       .from("nourish_method_progress")
-      .select("targets_completed, plan_completed")
+      .select("targets_completed, plan_completed, selected_plan")
       .eq("user_id", userId)
       .maybeSingle();
 
@@ -348,6 +470,7 @@ useEffect(() => {
     } else {
       setTargetsCompleted(data?.targets_completed ?? false);
       setPlanCompleted(data?.plan_completed ?? false);
+      setSelectedPlan(data?.selected_plan ?? null);
     }
 
     setIsLoadingNourishProgress(false);
@@ -437,6 +560,175 @@ useEffect(() => {
     };
   }, [pickerOpen]);
 
+
+
+  useEffect(() => {
+  if (!userId) {
+    setIsLoadingDiary(false);
+    return;
+  }
+
+  let active = true;
+
+  async function loadFoodDiary() {
+    setIsLoadingDiary(true);
+
+    const { data, error } = await supabase
+      .from("nourish_food_diary")
+      .select(
+        "id, logged_date, meal_slot, food_name, calories, protein, carbs, fat"
+      )
+      .eq("user_id", userId)
+      .eq("logged_date", diarySelectedDate)
+      .order("created_at", { ascending: true });
+
+    if (!active) return;
+
+    if (error) {
+      console.error("Could not load food diary:", error);
+      
+    } else {
+      setDiaryEntries(data ?? []);
+    }
+
+    setIsLoadingDiary(false);
+  }
+
+  loadFoodDiary();
+
+  return () => {
+    active = false;
+  };
+}, [userId, diarySelectedDate]);
+
+
+useEffect(() => {
+  if (!userId || plannerWeek.length !== 7) {
+    setLoggedPlannedMeals([]);
+    return;
+  }
+
+  let active = true;
+
+  async function loadLoggedPlannedMeals() {
+    const { data, error } = await supabase
+      .from("nourish_food_diary")
+      .select("logged_date, meal_slot, food_name")
+      .eq("user_id", userId)
+      .gte("logged_date", plannerWeek[0].date)
+      .lte("logged_date", plannerWeek[6].date);
+
+    if (!active) return;
+
+    if (error) {
+      console.error("Could not load logged planned meals:", error);
+      return;
+    }
+
+    setLoggedPlannedMeals(data ?? []);
+  }
+
+  void loadLoggedPlannedMeals();
+
+  return () => {
+    active = false;
+  };
+}, [userId, plannerWeek, diaryEntries]);
+
+function editDiaryFood(entry: (typeof diaryEntries)[number]) {
+  setEditingDiaryId(entry.id);
+  setDiaryFormSlot(entry.meal_slot);
+
+  setDiaryFoodName(entry.food_name);
+  setDiaryCalories(entry.calories?.toString() ?? "");
+  setDiaryProtein(entry.protein?.toString() ?? "");
+  setDiaryCarbs(entry.carbs?.toString() ?? "");
+  setDiaryFat(entry.fat?.toString() ?? "");
+}
+
+async function deleteDiaryFood(entryId: string) {
+  if (!userId) return;
+
+  const confirmed = window.confirm(
+    "Remove this food from your diary?"
+  );
+
+  if (!confirmed) return;
+
+  const { error } = await supabase
+    .from("nourish_food_diary")
+    .delete()
+    .eq("id", entryId)
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Could not delete food:", error);
+    alert("Could not remove this food. Please try again.");
+    return;
+  }
+
+  setDiaryEntries((previous) =>
+    previous.filter((entry) => entry.id !== entryId)
+  );
+}
+async function saveDiaryFood() {
+  if (!userId || !diaryFormSlot || !diaryFoodName.trim() || isSavingDiary) {
+    return;
+  }
+
+  setIsSavingDiary(true);
+
+  const nutritionValue = (value: string) =>
+    value.trim() === "" ? null : Number(value);
+
+  const foodValues = {
+  meal_slot: diaryFormSlot,
+  food_name: diaryFoodName.trim(),
+  calories: nutritionValue(diaryCalories),
+  protein: nutritionValue(diaryProtein),
+  carbs: nutritionValue(diaryCarbs),
+  fat: nutritionValue(diaryFat),
+};
+
+const query = editingDiaryId
+  ? supabase
+      .from("nourish_food_diary")
+      .update(foodValues)
+      .eq("id", editingDiaryId)
+      .eq("user_id", userId)
+  : supabase
+      .from("nourish_food_diary")
+      .insert({
+        ...foodValues,
+        user_id: userId,
+        logged_date: diarySelectedDate,
+      });
+
+const { data, error } = await query
+  .select(
+    "id, logged_date, meal_slot, food_name, calories, protein, carbs, fat"
+  )
+  .single();
+
+  if (error) {
+    console.error("Could not save food diary entry:", error);
+    alert(`Could not save food: ${error.message}`);
+  } else {
+    setDiaryEntries((previous) =>
+  editingDiaryId
+    ? previous.map((entry) =>
+        entry.id === editingDiaryId ? data : entry
+      )
+    : [...previous, data]
+);
+
+setEditingDiaryId(null);
+    setDiaryFormSlot(null);
+  }
+
+  setIsSavingDiary(false);
+}
+
   function changeWeek(value: string) {
     if (!value) return;
 
@@ -448,12 +740,177 @@ useEffect(() => {
     changeWeek(dateKey(shiftDate(parseDate(weekStart), days)));
   }
 
-  function toggleHelperTab(tab: Exclude<HelperTab, null>) {
-    setActiveHelperTab((current) => (current === tab ? null : tab));
+async function saveSelectedPlan(planHref: string) {
+  if (!userId || isSavingPlan) return false;
+
+  const planId =
+  planHref === "/dashboard/resources/meal-plans"
+    ? "my-own-plan"
+    : planHref.split("/").pop();
+
+  if (!planId) return false;
+
+  setIsSavingPlan(true);
+  setPlanSaveError("");
+
+  const { error } = await supabase
+    .from("nourish_method_progress")
+    .upsert(
+      {
+        user_id: userId,
+        selected_plan: planId,
+        plan_completed: true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+
+  setIsSavingPlan(false);
+
+  if (error) {
+    console.error("Could not save selected plan:", error);
+    setPlanSaveError("Couldn't save your plan. Please try again.");
+    return false;
   }
 
+  setSelectedPlan(planId);
+  setPlanCompleted(true);
+  return true;
+}
 
-  
+async function saveNutritionTargets() {
+  if (!userId || !macroResult || isSavingTargets) return;
+
+  setIsSavingTargets(true);
+  setTargetsSaveError("");
+
+  const targets = {
+    user_id: userId,
+    calories: macroResult.calories,
+    protein: macroResult.protein,
+    carbs: macroResult.carbs,
+    fat: macroResult.fat,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await supabase
+    .from("nourish_nutrition_targets")
+    .upsert(targets, { onConflict: "user_id" });
+
+  if (error) {
+    console.error("Could not save nutrition targets:", error);
+    setTargetsSaveError(
+      "We couldn't save your targets. Please try again."
+    );
+    setIsSavingTargets(false);
+    return;
+  }
+
+  // Update the displayed numbers immediately.
+  setSavedTargets({
+    calories: targets.calories,
+    protein: targets.protein,
+    carbs: targets.carbs,
+    fat: targets.fat,
+  });
+
+  setIsEditingTargets(false);
+
+  // Automatically mark Find Your Targets complete.
+  const { error: progressError } = await supabase
+    .from("nourish_method_progress")
+    .upsert(
+      {
+        user_id: userId,
+        targets_completed: true,
+        plan_completed: planCompleted,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (progressError) {
+    console.error(
+      "Could not update targets completion:",
+      progressError
+    );
+    setTargetsSaveError(
+      "Your targets were saved, but the completion checkmark couldn't update."
+    );
+  } else {
+    setTargetsCompleted(true);
+  }
+
+  setIsSavingTargets(false);
+}
+
+
+async function resetNutritionTargets() {
+  if (!userId || isSavingTargets) return;
+
+  const confirmed = window.confirm(
+    "Reset your nutrition targets? You can calculate them again anytime."
+  );
+
+  if (!confirmed) return;
+
+  setIsSavingTargets(true);
+  setTargetsSaveError("");
+
+  const { error } = await supabase
+    .from("nourish_nutrition_targets")
+    .delete()
+    .eq("user_id", userId);
+
+  if (error) {
+    console.error("Could not reset nutrition targets:", error);
+    setTargetsSaveError(
+      "We couldn't reset your targets. Please try again."
+    );
+    setIsSavingTargets(false);
+    return;
+  }
+
+  setSavedTargets(null);
+
+  setAge("");
+  setWeight("");
+  setFeet("");
+  setInches("");
+  setHeightCm("");
+  setActivity("1.55");
+  setGoal("maintain");
+  setUnit("imperial");
+  setSex("female");
+
+  const { error: progressError } = await supabase
+    .from("nourish_method_progress")
+    .upsert(
+      {
+        user_id: userId,
+        targets_completed: false,
+        plan_completed: planCompleted,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (progressError) {
+    console.error("Could not reset targets completion:", progressError);
+    setTargetsSaveError(
+      "Targets cleared, but we couldn't update the completion checkmark."
+    );
+  } else {
+    setTargetsCompleted(false);
+  }
+
+  setIsSavingTargets(false);
+}
+
+function toggleHelperTab(tab: Exclude<HelperTab, null>) {
+  setActiveHelperTab((current) => (current === tab ? null : tab));
+}
+
 async function toggleNourishCompletion(section: "targets" | "plan") {
   if (!userId || isLoadingNourishProgress || savingNourishSection) return;
 
@@ -490,6 +947,8 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
 
   setSavingNourishSection(null);
 }
+
+
 
   function openMealPicker(date: string, slot: MealSlot) {
     setPickerDate(date);
@@ -572,10 +1031,17 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
 
     if (!existing) {
       const { data, error } = await supabase
-        .from("custom_meals")
-        .insert({ user_id: userId, name })
-        .select()
-        .single();
+  .from("custom_meals")
+  .insert({
+    user_id: userId,
+    name,
+    calories: customMealCalories.trim() === "" ? null : Number(customMealCalories),
+    protein: customMealProtein.trim() === "" ? null : Number(customMealProtein),
+    carbs: customMealCarbs.trim() === "" ? null : Number(customMealCarbs),
+    fat: customMealFat.trim() === "" ? null : Number(customMealFat),
+  })
+  .select()
+  .single();
 
       if (error || !data) {
         console.error("Could not create custom meal:", error);
@@ -663,6 +1129,16 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
       meal?.custom_meal_name ??
       (meal?.recipe_id ? "Saved recipe" : "");
 
+      const isMealLogged = loggedPlannedMeals.some(
+  (entry) =>
+    entry.logged_date === date &&
+    entry.meal_slot === slot &&
+    entry.food_name.trim().toLowerCase() ===
+      mealName.trim().toLowerCase()
+);
+
+    
+
     return (
       <div
         key={`${date}-${slot}`}
@@ -692,7 +1168,37 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
                 </p>
               )}
             </div>
+<button
+  type="button"
+  onClick={() => {
+    setEditingDiaryId(null);
+    setDiarySelectedDate(date);
+    setDiaryFormSlot(slot);
+    setDiaryFoodName(mealName);
+   const matchingCustomMeal = customMeals.find(
+  (item) => item.name === meal?.custom_meal_name
+);
 
+setDiaryCalories(
+  (recipe?.calories ?? matchingCustomMeal?.calories)?.toString() ?? ""
+);
+setDiaryProtein(
+  (recipe?.protein ?? matchingCustomMeal?.protein)?.toString() ?? ""
+);
+setDiaryCarbs(
+  (recipe?.carbs ?? matchingCustomMeal?.carbs)?.toString() ?? ""
+);
+setDiaryFat(
+  (recipe?.fat ?? matchingCustomMeal?.fat)?.toString() ?? ""
+);
+    setNourishTab("diary");
+
+  }}
+  className="text-[8px] tracking-[0.1em] text-[#A77B73] hover:text-[#211C19]"
+  aria-label={`Log ${mealName} to food diary`}
+>
+{isMealLogged ? "LOGGED ♡" : "LOG"}
+</button>
             <div className="flex shrink-0 items-center gap-3">
               <button
                 type="button"
@@ -714,6 +1220,7 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
             </div>
           </>
         ) : (
+          
           <button
             type="button"
             onClick={() => openMealPicker(date, slot)}
@@ -758,8 +1265,349 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
               </p>
             </section>
 
-            {/* GUIDANCE */}
-            <section className="pt-3">
+
+
+{/* NOURISH TABS */}
+<div className="mt-6 grid grid-cols-2 gap-2 rounded-2xl bg-[#EAD8D3]/35 p-1.5">
+  <button
+    type="button"
+    onClick={() => setNourishTab("diary")}
+    className={`rounded-xl px-4 py-3 text-[9px] tracking-[0.12em] transition ${
+      nourishTab === "diary"
+        ? "bg-[#211C19] text-[#F7F1ED]"
+        : "text-[#8F655E]"
+    }`}
+  >
+    FOOD DIARY
+  </button>
+
+  <button
+    type="button"
+    onClick={() => setNourishTab("plan")}
+    className={`rounded-xl px-4 py-3 text-[9px] tracking-[0.12em] transition ${
+      nourishTab === "plan"
+        ? "bg-[#211C19] text-[#F7F1ED]"
+        : "text-[#8F655E]"
+    }`}
+  >
+    MEAL PLAN
+  </button>
+</div>
+
+{/* FOOD DIARY TAB */}
+{nourishTab === "diary" && (
+  <section className="pt-8">
+    <p className="text-[8px] tracking-[0.2em] text-[#9D6F67]">
+      YOUR DAILY NOURISHMENT
+    </p>
+
+    <h2 className="mt-2 font-serif text-3xl text-[#211C19]">
+      Your <span className="italic text-[#A77B73]">Diary. ♡</span>
+    </h2>
+
+    <p className="mt-2 text-[11px] text-[#806E68]">
+      A little space to keep track of what you eat.
+    </p>
+
+{/* FOOD DIARY DATE NAVIGATION */}
+<div className="mt-6 flex items-center justify-between rounded-2xl border border-[#DED0CB] bg-[#FBF8F6] px-4 py-3">
+  <button
+    type="button"
+    onClick={() => {
+      const date = new Date(`${diarySelectedDate}T12:00:00`);
+      date.setDate(date.getDate() - 1);
+      setDiarySelectedDate(
+        `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+      );
+    }}
+    className="px-2 text-xl text-[#A77B73]"
+    aria-label="Previous day"
+  >
+    ‹
+  </button>
+
+  <div className="text-center">
+    <p className="text-[8px] tracking-[0.16em] text-[#A77B73]">
+      FOOD DIARY
+    </p>
+    <p className="mt-1 font-serif text-base text-[#211C19]">
+      {new Date(`${diarySelectedDate}T12:00:00`).toLocaleDateString(
+        "en-CA",
+        { month: "long", day: "numeric", year: "numeric" }
+      )}
+    </p>
+  </div>
+
+  <button
+    type="button"
+    onClick={() => {
+      const date = new Date(`${diarySelectedDate}T12:00:00`);
+      date.setDate(date.getDate() + 1);
+      setDiarySelectedDate(
+        `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+      );
+    }}
+    disabled={diarySelectedDate >= today}
+    className="px-2 text-xl text-[#A77B73] disabled:opacity-30"
+    aria-label="Next day"
+  >
+    ›
+  </button>
+</div>
+
+
+    {/* DAILY NUTRITION SUMMARY */}
+<div className="mt-6 rounded-[1.5rem] border border-[#DED0CB] bg-[#FBF8F6] p-5">
+  <div className="flex items-center justify-between">
+    <p className="text-[8px] tracking-[0.18em] text-[#9D6F67]">
+      TODAY'S NUTRITION
+    </p>
+  
+  </div>
+
+  <div className="mt-5 flex items-baseline gap-2">
+    <span className="font-serif text-4xl text-[#211C19]">
+  {Math.round(diaryTotals.calories).toLocaleString()}
+</span>
+    <span className="text-[10px] text-[#92776F]">
+      {savedTargets
+        ? `/ ${savedTargets.calories.toLocaleString()} cal`
+        : "calories logged"}
+    </span>
+  </div>
+
+  {/* CALORIE PROGRESS */}
+{savedTargets && savedTargets.calories > 0 && (
+  <div className="mt-4">
+    <div className="h-1.5 w-full overflow-hidden rounded-full bg-[#E9DEDA]">
+      <div
+        className="h-full rounded-full bg-[#A77B73] transition-all duration-300"
+        style={{
+          width: `${Math.min(
+            (diaryTotals.calories / savedTargets.calories) * 100,
+            100
+          )}%`,
+        }}
+      />
+    </div>
+
+    <p className="mt-2 text-right text-[9px] text-[#92776F]">
+      {Math.round(
+        (diaryTotals.calories / savedTargets.calories) * 100
+      )}% of daily target
+    </p>
+  </div>
+)}
+
+  <div className="mt-5 grid grid-cols-3 gap-3 border-t border-[#E9DEDA] pt-4">
+   {[
+  {
+    label: "PROTEIN",
+    value: diaryTotals.protein,
+    target: savedTargets?.protein,
+  },
+  {
+    label: "CARBS",
+    value: diaryTotals.carbs,
+    target: savedTargets?.carbs,
+  },
+  {
+    label: "FAT",
+    value: diaryTotals.fat,
+    target: savedTargets?.fat,
+  },
+].map((macro) => (
+
+
+      <div key={macro.label}>
+        <p className="font-serif text-xl text-[#211C19]">
+          {Math.round(macro.value)}<span className="text-xs text-[#A77B73]">g</span>
+        </p>
+        <p className="mt-1 text-[8px] tracking-[0.1em] text-[#92776F]">
+          {macro.label}
+        </p>
+        {macro.target != null && (
+          <p className="mt-1 text-[9px] text-[#A77B73]">
+            of {macro.target}g
+          </p>
+        )}
+      </div>
+    ))}
+  </div>
+</div>
+
+    <div className="mt-6 space-y-3">
+      {mealSlots.map((slot) => (
+        <div
+          key={slot}
+          className="rounded-[1.25rem] border border-[#DED0CB] bg-[#FBF8F6] p-5"
+        >
+          <p className="text-[10px] tracking-[0.12em] text-[#211C19]">
+            {slot === "SNACK" ? "SNACKS" : slot}
+          </p>
+
+          {isLoadingDiary ? (
+  <p className="mt-3 text-xs text-[#B69A92]">
+    Loading your foods...
+  </p>
+) : diaryEntries.filter((entry) => entry.meal_slot === slot).length === 0 ? (
+  <p className="mt-3 font-serif text-sm italic text-[#B69A92]">
+    Nothing logged yet. ♡
+  </p>
+) : (
+  <div className="mt-4 space-y-3">
+    {diaryEntries
+      .filter((entry) => entry.meal_slot === slot)
+      .map((entry) => (
+        <div
+          key={entry.id}
+          className="flex items-start justify-between gap-3 border-t border-[#E9DEDA] pt-3"
+        >
+          <div>
+            <p className="text-sm text-[#211C19]">
+              {entry.food_name}
+            </p>
+            <p className="mt-1 text-[10px] text-[#92776F]">
+              {entry.protein ?? 0}g protein ·{" "}
+              {entry.carbs ?? 0}g carbs ·{" "}
+              {entry.fat ?? 0}g fat
+            </p>
+          </div>
+
+          <div className="flex shrink-0 flex-col items-end gap-2">
+  <p className="text-xs text-[#A77B73]">
+    {entry.calories ?? 0} cal
+  </p>
+
+<button
+  type="button"
+  onClick={() => editDiaryFood(entry)}
+  className="text-[9px] text-[#A77B73] underline underline-offset-2 transition hover:text-[#211C19]"
+  aria-label={`Edit ${entry.food_name}`}
+>
+  Edit
+</button>
+
+  <button
+    type="button"
+    onClick={() => deleteDiaryFood(entry.id)}
+    className="text-[9px] text-[#A77B73] underline underline-offset-2 transition hover:text-[#211C19]"
+    aria-label={`Remove ${entry.food_name}`}
+  >
+    Remove
+  </button>
+</div>
+        </div>
+      ))}
+  </div>
+)}
+
+          <button
+  type="button"
+  onClick={() => {
+    setEditingDiaryId(null);
+    setDiaryFormSlot(slot);
+    setDiaryFoodName("");
+    setDiaryCalories("");
+    setDiaryProtein("");
+    setDiaryCarbs("");
+    setDiaryFat("");
+  }}
+  className="mt-4 text-[9px] tracking-[0.12em] text-[#A77B73] transition hover:text-[#211C19]"
+>
+  + ADD FOOD
+</button>
+        </div>
+      ))}
+    </div>
+  </section>
+)}
+
+
+{/* FOOD DIARY FORM */}
+{diaryFormSlot && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#211C19]/50 px-4">
+    <div className="w-full max-w-md rounded-[1.5rem] bg-[#F7F1ED] p-6 shadow-xl">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[9px] tracking-[0.18em] text-[#A77B73]">
+            YOUR FOOD DIARY
+          </p>
+          <h2 className="mt-2 font-serif text-2xl text-[#211C19]">
+            {editingDiaryId
+  ? `Edit ${diaryFormSlot === "SNACK" ? "Snacks" : diaryFormSlot.toLowerCase()} ♡`
+  : `Add to ${diaryFormSlot === "SNACK" ? "Snacks" : diaryFormSlot.toLowerCase()} ♡`}
+          </h2>
+        </div>
+
+        <button
+          type="button"
+onClick={() => {
+  setDiaryFormSlot(null);
+  setEditingDiaryId(null);
+}}          className="text-xl text-[#92776F]"
+          aria-label="Close food diary form"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="mt-6 space-y-4">
+        <div>
+          <label className="text-[10px] text-[#806E68]">FOOD NAME</label>
+          <input
+            type="text"
+            value={diaryFoodName}
+            onChange={(e) => setDiaryFoodName(e.target.value)}
+            placeholder="e.g. Greek yogurt with berries"
+            className="mt-2 w-full rounded-xl border border-[#DED0CB] bg-white px-4 py-3 text-sm outline-none"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: "CALORIES", value: diaryCalories, setter: setDiaryCalories },
+            { label: "PROTEIN (G)", value: diaryProtein, setter: setDiaryProtein },
+            { label: "CARBS (G)", value: diaryCarbs, setter: setDiaryCarbs },
+            { label: "FAT (G)", value: diaryFat, setter: setDiaryFat },
+          ].map((field) => (
+            <div key={field.label}>
+              <label className="text-[10px] text-[#806E68]">
+                {field.label}
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                value={field.value}
+                onChange={(e) => field.setter(e.target.value)}
+                placeholder="0"
+                className="mt-2 w-full rounded-xl border border-[#DED0CB] bg-white px-4 py-3 text-sm outline-none"
+              />
+            </div>
+          ))}
+        </div>
+
+        <button
+  type="button"
+  onClick={saveDiaryFood}
+  disabled={isSavingDiary || !diaryFoodName.trim()}
+  className="w-full rounded-xl bg-[#211C19] px-5 py-3 text-[10px] tracking-[0.15em] text-[#F7F1ED] transition hover:bg-[#4A3934] disabled:cursor-not-allowed disabled:opacity-50"
+>
+{isSavingDiary
+  ? "SAVING..."
+  : editingDiaryId
+    ? "SAVE CHANGES ♡"
+    : "SAVE FOOD ♡"}</button>
+      </div>
+    </div>
+  </div>
+)}
+
+            {/* MEAL PLAN TAB */}
+<div className={nourishTab === "plan" ? "block" : "hidden"}>
+  {/* GUIDANCE */}
+  <section className="pt-3">
               <div className="mb-2">
                 <p className="text-[8px] tracking-[0.24em] text-[#9D6F67]">
                   A LITTLE GUIDANCE
@@ -783,12 +1631,33 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
                       </span>
 
                       <div>
-                        <p className="text-[9px] tracking-[0.16em]">
-                          FIND YOUR TARGETS
-                        </p>
-                        <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
-                          calories + macros, made simple.
-                        </p>
+                        
+<p className="text-[9px] tracking-[0.16em]">
+  {savedTargets ? "YOUR TARGETS" : "FIND YOUR TARGETS"}
+</p>
+
+
+{savedTargets ? (
+  <div className="mt-2">
+    <p className="font-serif text-xl leading-tight text-[#211C19]">
+      {savedTargets.calories.toLocaleString()}
+      <span className="ml-1 font-sans text-[9px] text-[#92776F]">
+        calories / day
+      </span>
+    </p>
+
+    <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[#8F655E]">
+      <span>P {savedTargets.protein}g</span>
+      <span>C {savedTargets.carbs}g</span>
+      <span>F {savedTargets.fat}g</span>
+    </div>
+  </div>
+) : (
+  <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
+    calories + macros, made simple.
+  </p>
+)}
+
                       </div>
                     </div>
 
@@ -814,9 +1683,51 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
                         activity and goals.
                       </p>
 
-                      <div className="grid gap-7 lg:grid-cols-[1.25fr_0.75fr]">
-                        <div>
-                          <div className="mb-5 flex items-center justify-between gap-3">
+
+                      {savedTargets && !isEditingTargets && (
+  <div className="rounded-[1.2rem] bg-[#EAD8D3]/40 p-4">
+    <p className="text-[8px] tracking-[0.18em] text-[#9D6F67]">
+      YOUR SAVED TARGETS
+    </p>
+
+    <div className="mt-3 flex items-baseline gap-2">
+      <p className="font-serif text-3xl text-[#211C19]">
+        {savedTargets.calories.toLocaleString()}
+      </p>
+      <span className="text-[9px] text-[#92776F]">
+        calories / day
+      </span>
+    </div>
+
+    <p className="mt-2 text-[10px] text-[#806E68]">
+      {savedTargets.protein}g protein · {savedTargets.carbs}g carbs ·{" "}
+      {savedTargets.fat}g fat
+    </p>
+
+    <button
+      type="button"
+      onClick={() => setIsEditingTargets(true)}
+      className="mt-4 w-full rounded-full border border-[#CBA9A2] px-4 py-2.5 text-[9px] tracking-[0.12em] text-[#8F655E]"
+    >
+      EDIT TARGETS
+    </button>
+  </div>
+)}
+
+
+{savedTargets && isEditingTargets && (
+  <button
+    type="button"
+    onClick={() => setIsEditingTargets(false)}
+    className="mb-4 text-[9px] tracking-[0.12em] text-[#9D6F67] underline underline-offset-4"
+  >
+    ← CANCEL EDITING
+  </button>
+)}
+                      {(!savedTargets || isEditingTargets) && (
+  <div className="grid gap-7 lg:grid-cols-[1.25fr_0.75fr]">
+    <div>
+      <div className="mb-5 flex items-center justify-between gap-3">
                             <p className="text-[8px] tracking-[0.18em] text-[#9D6F67]">
                               YOUR DETAILS
                             </p>
@@ -948,107 +1859,123 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
                           </div>
                         </div>
 
-                        <div className="rounded-[1.2rem] bg-[#EAD8D3]/40 p-5">
-                          <p className="text-[8px] tracking-[0.18em] text-[#9D6F67]">
-                            YOUR STARTING TARGETS
-                          </p>
+                       
 
-                          {macroResult ? (
-                            <>
-                              <div className="border-b border-[#D8C4BE] py-5">
-                                <p className="font-serif text-4xl">
-                                  {macroResult.calories.toLocaleString()}
-                                </p>
-                                <p className="mt-1 text-[8px] tracking-[0.13em] text-[#92776F]">
-                                  ESTIMATED CALORIES / DAY
-                                </p>
-                              </div>
+<div className="rounded-[1.2rem] bg-[#EAD8D3]/40 p-4">
+  <p className="text-[8px] tracking-[0.18em] text-[#9D6F67]">
+    {savedTargets ? "YOUR TARGETS" : "YOUR STARTING TARGETS"}
+  </p>
 
-                              <div className="grid grid-cols-3 gap-2 border-b border-[#D8C4BE] py-5">
-                                {[
-                                  {
-                                    label: "PROTEIN",
-                                    value: macroResult.protein,
-                                  },
-                                  {
-                                    label: "CARBS",
-                                    value: macroResult.carbs,
-                                  },
-                                  {
-                                    label: "FAT",
-                                    value: macroResult.fat,
-                                  },
-                                ].map((item) => (
-                                  <div key={item.label}>
-                                    <p className="font-serif text-2xl">
-                                      {item.value}
-                                      <span className="text-xs italic text-[#A77B73]">
-                                        g
-                                      </span>
-                                    </p>
-                                    <p className="mt-1 text-[7px] tracking-[0.1em] text-[#92776F]">
-                                      {item.label}
-                                    </p>
-                                  </div>
-                                ))}
-                              </div>
+  {macroResult || savedTargets ? (
+    (() => {
+      const targets = macroResult ?? savedTargets!;
 
-                              <p className="mt-4 text-[10px] text-[#806E68]">
-                                Maintenance estimate:{" "}
-                                {macroResult.maintenance.toLocaleString()} cal
-                              </p>
+      const isCurrentSaved =
+        !!macroResult &&
+        !!savedTargets &&
+        savedTargets.calories === macroResult.calories &&
+        savedTargets.protein === macroResult.protein &&
+        savedTargets.carbs === macroResult.carbs &&
+        savedTargets.fat === macroResult.fat;
 
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveHelperTab("plan");
-                                  window.setTimeout(() => {
-                                    planSectionRef.current?.scrollIntoView({
-                                      behavior: "smooth",
-                                      block: "start",
-                                    });
-                                  }, 100);
-                                }}
-                                className="mt-5 w-full rounded-full bg-[#211C19] px-4 py-3 text-[8px] tracking-[0.12em] text-[#F7F1ED]"
-                              >
-                                SEE MY PLAN →
-                              </button>
-                            </>
-                          ) : (
-                            <div className="py-8">
-                              <p className="font-serif text-xl italic text-[#A77B73]">
-                                your numbers will appear here. ♡
-                              </p>
-                              <p className="mt-3 text-[11px] leading-5 text-[#806E68]">
-                                Add your details to get started.
-                              </p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+      return (
+        <>
+          <div className="mt-3 flex items-baseline gap-2">
+            <p className="font-serif text-3xl leading-none text-[#211C19]">
+              {targets.calories.toLocaleString()}
+            </p>
+            <p className="text-[9px] text-[#92776F]">
+              calories / day
+            </p>
+          </div>
 
-                      <p className="mt-5 text-[9px] leading-5 text-[#927D76]">
-                        General estimates only, not individualized nutrition
-                        advice. Adjust for your needs and how you feel.
-                      </p>
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-[#D8C4BE] pt-3">
+            {[
+              { label: "PROTEIN", value: targets.protein },
+              { label: "CARBS", value: targets.carbs },
+              { label: "FAT", value: targets.fat },
+            ].map((item) => (
+              <div key={item.label}>
+                <p className="font-serif text-xl text-[#211C19]">
+                  {item.value}
+                  <span className="ml-0.5 text-xs text-[#A77B73]">
+                    g
+                  </span>
+                </p>
+                <p className="mt-1 text-[7px] tracking-[0.1em] text-[#92776F]">
+                  {item.label}
+                </p>
+              </div>
+            ))}
+          </div>
 
-                      
-<button
-  type="button"
-  onClick={() => toggleNourishCompletion("targets")}
-  disabled={isLoadingNourishProgress || !!savingNourishSection}
-  className={`mt-5 flex w-full items-center justify-center gap-2 rounded-full border px-5 py-3.5 text-[9px] tracking-[0.12em] transition disabled:opacity-50 ${
-    targetsCompleted
-      ? "border-[#CBA9A2] bg-[#EAD8D3]/50 text-[#8F655E]"
-      : "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
-  }`}
->
-  {savingNourishSection === "targets"
-    ? "SAVING..."
-    : targetsCompleted
-      ? "✓ TARGETS COMPLETE"
-      : "MARK TARGETS COMPLETE ✓"}
-</button>
+          {macroResult && (
+            <p className="mt-3 text-[9px] text-[#806E68]">
+              Maintenance estimate:{" "}
+              {macroResult.maintenance.toLocaleString()} cal
+            </p>
+          )}
+
+          {macroResult && (
+            <button
+              type="button"
+              onClick={saveNutritionTargets}
+              disabled={!userId || isSavingTargets || isCurrentSaved}
+              className="mt-4 w-full rounded-full bg-[#A77B73] px-4 py-3 text-[9px] tracking-[0.12em] text-white transition hover:bg-[#956C64] disabled:opacity-60"
+            >
+              {isSavingTargets
+                ? "SAVING..."
+                : isCurrentSaved
+                  ? "✓ TARGETS SAVED"
+                  : "SAVE MY TARGETS ♡"}
+            </button>
+          )}
+
+          {savedTargets && !macroResult && (
+            <p className="mt-3 font-serif text-xs italic text-[#A77B73]">
+              your targets are saved. ♡
+            </p>
+          )}
+        </>
+      );
+    })()
+  ) : (
+    <div className="py-5">
+      <p className="font-serif text-lg italic text-[#A77B73]">
+        your numbers will appear here. ♡
+      </p>
+      <p className="mt-2 text-[10px] leading-5 text-[#806E68]">
+        Add your details to get started.
+      </p>
+    </div>
+  )}
+
+  {targetsSaveError && (
+    <p className="mt-3 text-center text-[10px] text-[#A44B42]">
+      {targetsSaveError}
+    </p>
+  )}
+</div>
+</div>
+)}
+
+<p className="mt-4 text-[9px] leading-5 text-[#927D76]">
+  General estimates only, not individualized nutrition advice.
+  Adjust for your needs and how you feel.
+</p>
+
+{savedTargets && (
+  <button
+    type="button"
+    onClick={resetNutritionTargets}
+    disabled={isSavingTargets}
+    className="mt-3 w-full py-2 text-center text-[9px] tracking-[0.12em] text-[#9D6F67] underline underline-offset-4 transition hover:text-[#211C19] disabled:opacity-50"
+  >
+    {isSavingTargets ? "RESETTING..." : "RESET TARGETS"}
+  </button>
+)}
+
+
 
                     </div>
                   )}
@@ -1070,12 +1997,17 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
                       </span>
 
                       <div>
-                        <p className="text-[9px] tracking-[0.16em]">
-                          FIND YOUR PLAN
-                        </p>
-                        <p className="mt-1 font-serif text-sm italic text-[#A77B73]">
-                          a little structure for your week.
-                        </p>
+                       <p className="text-[9px] tracking-[0.16em]">
+  {selectedPlan ? "YOUR PLAN" : "FIND YOUR PLAN"}
+</p>
+
+<p className="mt-1 font-serif text-sm italic text-[#A77B73]">
+  {selectedPlan
+  ? selectedPlan === "my-own-plan"
+    ? "MY OWN PLAN"
+    : plans.find((plan) => plan.href.endsWith(selectedPlan))?.title
+  : "a little structure for your week."}
+</p>
                       </div>
                     </div>
 
@@ -1132,12 +2064,26 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
                       </p>
 
                       <div className="divide-y divide-[#DED0CB] border-y border-[#DED0CB]">
-                        {plans.map((plan, index) => (
-                          <Link
-                            key={plan.title}
-                            href={plan.href}
-                            className="group flex items-center justify-between gap-4 py-4"
-                          >
+                      {plans.map((plan, index) => (
+  <div key={plan.title}>
+    <button
+    type="button"
+    disabled={isSavingPlan}
+    onClick={async () => {
+  const saved = await saveSelectedPlan(plan.href);
+if (saved) {
+  if (plan.href === "/dashboard/resources/meal-plans") {
+  setActiveHelperTab("plan");
+  setCustomPlanDate((current) => current || today);
+  setIsCustomPlanOpen((current) => !current);
+} else {
+  window.location.assign(plan.href);
+}
+}
+}}
+
+className="group flex w-full items-center justify-between gap-4 py-4 text-left transition hover:bg-[#F4ECE8]/40 disabled:opacity-50"
+>
                             <div className="flex items-center gap-4">
                               <span className="font-serif text-lg italic text-[#C39A92]">
                                 0{index + 1}
@@ -1153,30 +2099,86 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
                               </div>
                             </div>
 
-                            <span className="text-lg text-[#A77B73] transition group-hover:translate-x-1">
-                              →
-                            </span>
-                          </Link>
-                        ))}
+                            {selectedPlan ===
+  (plan.href === "/dashboard/resources/meal-plans"
+    ? "my-own-plan"
+    : plan.href.split("/").pop()) ? (
+  <span className="shrink-0 text-[9px] tracking-[0.12em] text-[#9D6F67]">
+    ✓ SELECTED
+  </span>
+) : (
+  <span className="text-lg text-[#A77B73] transition group-hover:translate-x-1">
+    →
+  </span>
+)}
+                            </button>
+
+{plan.title === "MY OWN PLAN" && isCustomPlanOpen && (
+  <div className="border-t border-[#DED0CB] bg-[#FBF8F6] px-4 pb-6 pt-5">
+    <h3 className="font-serif text-xl italic text-[#211C19]">
+      Build Your Own Week. ♡
+    </h3>
+
+    <p className="mt-2 text-[11px] text-[#806E68]">
+      Your meals. Your routine. Choose where to start.
+    </p>
+
+    <div className="mt-5">
+      <label htmlFor="custom-plan-date" className={labelClass}>
+        CHOOSE YOUR DAY
+      </label>
+
+      <input
+        id="custom-plan-date"
+        type="date"
+        value={customPlanDate}
+        onChange={(e) => setCustomPlanDate(e.target.value)}
+        className={inputClass}
+      />
+    </div>
+
+    <div className="mt-5">
+      <p className={labelClass}>CHOOSE YOUR MEAL</p>
+
+      <div className="grid grid-cols-2 gap-3">
+        {mealSlots.map((slot) => (
+          <button
+            key={slot}
+            type="button"
+            onClick={() => setCustomPlanSlot(slot)}
+            className={`rounded-xl border px-3 py-4 text-[9px] tracking-[0.12em] transition ${
+              customPlanSlot === slot
+                ? "border-[#A77B73] bg-[#EAD8D3]/50 text-[#8F655E]"
+                : "border-[#DED0CB] text-[#806E68]"
+            }`}
+          >
+            {slot}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <button
+      type="button"
+      disabled={!customPlanDate}
+      onClick={() => {
+        openMealPicker(customPlanDate, customPlanSlot);
+        setPickerTab("custom");
+        setIsCustomPlanOpen(false);
+      }}
+      className="mt-6 w-full rounded-full bg-[#211C19] px-5 py-3.5 text-[9px] tracking-[0.14em] text-[#F7F1ED] disabled:opacity-40"
+    >
+      ADD MY MEAL →
+    </button>
+  </div>
+)}
+
+  </div>
+))}
                       </div>
 
                       
-<button
-  type="button"
-  onClick={() => toggleNourishCompletion("plan")}
-  disabled={isLoadingNourishProgress || !!savingNourishSection}
-  className={`mt-6 flex w-full items-center justify-center gap-2 rounded-full border px-5 py-3.5 text-[9px] tracking-[0.12em] transition disabled:opacity-50 ${
-    planCompleted
-      ? "border-[#CBA9A2] bg-[#EAD8D3]/50 text-[#8F655E]"
-      : "border-[#211C19] bg-[#211C19] text-[#F7F1ED]"
-  }`}
->
-  {savingNourishSection === "plan"
-    ? "SAVING..."
-    : planCompleted
-      ? "✓ PLAN COMPLETE"
-      : "MARK PLAN COMPLETE ✓"}
-</button>
+
 
                     </div>
                   )}
@@ -1194,8 +2196,11 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
 )}
 
 
-            {/* WEEKLY PLANNER */}
-            <section className="pt-12">
+
+
+
+           {/* WEEKLY PLANNER */}
+<section id="weekly-planner" className="scroll-mt-6 pt-12">
               <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-[8px] tracking-[0.25em] text-[#9D6F67]">
@@ -1361,7 +2366,10 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
                 Tap a day to view or edit its meals. Use the arrows to
                 explore other weeks.
               </p>
-            </section>
+                       </section>
+
+            </div>
+            {/* END MEAL PLAN TAB */}
 
             {/* SMALL NUTRITION NOTE */}
             <section className="mt-12 border-t border-[#DED0CB] pt-6">
@@ -1545,6 +2553,58 @@ async function toggleNourishCompletion(section: "targets" | "plan") {
                       placeholder="e.g. chicken + rice bowl"
                       className={inputClass}
                     />
+
+                    <div className="mt-5">
+  <p className="mb-3 text-[8px] tracking-[0.16em] text-[#9D6F67]">
+    NUTRITION DETAILS (OPTIONAL)
+  </p>
+
+  <div className="grid grid-cols-2 gap-3">
+    {[
+      {
+        label: "CALORIES (KCAL)",
+        value: customMealCalories,
+        setter: setCustomMealCalories,
+      },
+      {
+        label: "PROTEIN (G)",
+        value: customMealProtein,
+        setter: setCustomMealProtein,
+      },
+      {
+        label: "CARBS (G)",
+        value: customMealCarbs,
+        setter: setCustomMealCarbs,
+      },
+      {
+        label: "FAT (G)",
+        value: customMealFat,
+        setter: setCustomMealFat,
+      },
+    ].map((field) => (
+      <div key={field.label}>
+        <label className={labelClass}>
+          {field.label}
+        </label>
+
+        <input
+          type="number"
+          min="0"
+          step="any"
+          inputMode="decimal"
+          value={field.value}
+          onChange={(e) => field.setter(e.target.value)}
+          placeholder="0"
+          className={inputClass}
+        />
+      </div>
+    ))}
+  </div>
+
+  <p className="mt-3 text-[10px] italic text-[#927D76]">
+    Add what you know. You can leave any field blank. ♡
+  </p>
+</div>
 
                     <button
                       type="button"

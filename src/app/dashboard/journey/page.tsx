@@ -146,6 +146,31 @@ const openToday = searchParams.get("open") === "today";
   const [editingMeasurements, setEditingMeasurements] =
     useState(false);
   const [dayWins, setDayWins] = useState<LittleWin[]>([]);
+
+  const [dayFoodEntries, setDayFoodEntries] = useState<
+  {
+    id: string;
+    meal_slot: string;
+    food_name: string;
+    calories: number | null;
+    protein: number | null;
+    carbs: number | null;
+    fat: number | null;
+  }[]
+>([]);
+
+const [dayFoodLoading, setDayFoodLoading] = useState(false);
+const [dayFoodExpanded, setDayFoodExpanded] = useState(false);
+
+const dayFoodTotals = dayFoodEntries.reduce(
+  (totals, entry) => ({
+    calories: totals.calories + Number(entry.calories ?? 0),
+    protein: totals.protein + Number(entry.protein ?? 0),
+    carbs: totals.carbs + Number(entry.carbs ?? 0),
+    fat: totals.fat + Number(entry.fat ?? 0),
+  }),
+  { calories: 0, protein: 0, carbs: 0, fat: 0 }
+);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -378,7 +403,7 @@ if (
       } = await supabase.auth.getUser();
       if (authError) throw authError;
       if (!user) throw new Error("Please sign in.");
-      const [m, w] = await Promise.all([
+      const [m, w, food] = await Promise.all([
         supabase
           .from("measurements")
           .select(
@@ -396,9 +421,24 @@ if (
           .eq("journey_id", activeJourneyId)
           .eq("challenge_day", day)
           .eq("is_completed", true),
+
+          supabase
+  .from("nourish_food_diary")
+  .select("id, meal_slot, food_name, calories, protein, carbs, fat")
+  .eq("user_id", user.id)
+  .eq(
+    "logged_date",
+    databaseDate(dateForDay(parseChallengeDate(startString!), day))
+  )
+  .order("created_at", { ascending: true }),
       ]);
       if (m.error) throw m.error;
       if (w.error) throw w.error;
+
+      if (food.error) throw food.error;
+
+setDayFoodEntries((food.data ?? []) as typeof dayFoodEntries);
+setDayFoodExpanded(false);
       const measurement =
         (m.data?.[0] as Measurement | undefined) ?? null;
       setSelectedMeasurement(measurement);
@@ -1221,6 +1261,8 @@ useEffect(() => {
                     )}
                   </section>
                 <div className="border-t border-[#EADDD7]" />
+
+
                 {/* LITTLE WINS FOR THIS DAY ONLY */}
                 <section>
                   <SmallLabel>03 · THE GOOD STUFF</SmallLabel>
@@ -1247,6 +1289,121 @@ useEffect(() => {
                     </p>
                   )}
                 </section>
+
+
+{/* NOURISHMENT FOR THIS DAY */}
+<section>
+  <SmallLabel>04 · NOURISHMENT</SmallLabel>
+
+  <button
+    type="button"
+    onClick={() => setDayFoodExpanded(!dayFoodExpanded)}
+    aria-expanded={dayFoodExpanded}
+    className="mt-4 w-full rounded-xl border border-[#EADDD7] bg-[#F8F1ED] px-4 py-4 text-left"
+  >
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <p className="font-serif text-lg text-[#211C19]">
+          Your Food Diary ♡
+        </p>
+        <p className="mt-1 text-xs text-[#8C7770]">
+          {dayFoodLoading
+            ? "Loading your food diary..."
+            : dayFoodEntries.length > 0
+             ? `${dayFoodEntries.length} food ${dayFoodEntries.length === 1 ? "entry" : "entries"} · ${Math.round(dayFoodTotals.calories).toLocaleString()} cal`
+              : "No food logged for this day."}
+        </p>
+      </div>
+
+      <span className="text-lg text-[#A77B73]">
+        {dayFoodExpanded ? "⌃" : "⌄"}
+      </span>
+    </div>
+  </button>
+
+  {dayFoodExpanded && (
+    <div className="mt-3 space-y-4 rounded-xl border border-[#EADDD7] bg-white p-4">
+
+      {/* DAILY NUTRITION TOTALS */}
+{dayFoodEntries.length > 0 && (
+  <div className="border-b border-[#EADDD7] pb-4">
+    <p className="text-[9px] tracking-[0.14em] text-[#A77B73]">
+      DAILY TOTAL
+    </p>
+
+    <p className="mt-2 font-serif text-2xl text-[#211C19]">
+      {Math.round(dayFoodTotals.calories).toLocaleString()}
+      <span className="ml-2 font-sans text-xs text-[#8C7770]">
+        calories
+      </span>
+    </p>
+
+    <div className="mt-3 grid grid-cols-3 gap-3">
+      {[
+        { label: "PROTEIN", value: dayFoodTotals.protein },
+        { label: "CARBS", value: dayFoodTotals.carbs },
+        { label: "FAT", value: dayFoodTotals.fat },
+      ].map((macro) => (
+        <div key={macro.label}>
+          <p className="font-serif text-lg text-[#211C19]">
+            {Math.round(macro.value)}g
+          </p>
+          <p className="mt-1 text-[8px] tracking-[0.1em] text-[#8C7770]">
+            {macro.label}
+          </p>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+      {dayFoodEntries.length === 0 ? (
+        <p className="text-sm italic text-[#8C7770]">
+          Nothing logged for this day yet. ♡
+        </p>
+      ) : (
+        <>
+          {["BREAKFAST", "LUNCH", "DINNER", "SNACK"].map((slot) => {
+            const foods = dayFoodEntries.filter(
+              (entry) => entry.meal_slot === slot
+            );
+
+            if (foods.length === 0) return null;
+
+            return (
+              <div key={slot}>
+                <p className="mb-2 text-[9px] tracking-[0.14em] text-[#A77B73]">
+                  {slot === "SNACK" ? "SNACKS" : slot}
+                </p>
+
+                {foods.map((food) => (
+                  <div
+                    key={food.id}
+                    className="flex items-start justify-between gap-3 py-2"
+                  >
+                    <div>
+                      <p className="text-sm text-[#211C19]">
+                        {food.food_name}
+                      </p>
+                      <p className="mt-1 text-[10px] text-[#8C7770]">
+                        P {food.protein ?? 0}g ·
+                        C {food.carbs ?? 0}g ·
+                        F {food.fat ?? 0}g
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-xs text-[#A77B73]">
+                      {food.calories ?? 0} cal
+                    </span>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </>
+      )}
+    </div>
+  )}
+</section>
+
                   {/* OPTIONAL MANUAL COMPLETION FOR PAST DAYS */}
                   {selectedPast && selectedCount < 7 && (
                     <section>
